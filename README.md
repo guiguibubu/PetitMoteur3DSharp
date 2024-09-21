@@ -1,2 +1,2 @@
 # PetitMoteur3DSharp
-Basic chat console app. Only for programming practice purpose
+Basic 3D engine console app. Only for programming practice purpose
