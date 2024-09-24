@@ -14,11 +14,13 @@ namespace PetitMoteur3D
         public ComPtr<ID3D11DeviceContext> DeviceContext { get { return _deviceContext; } }
         public ComPtr<IDXGISwapChain1> Swapchain { get { return _swapchain; } }
         public ComPtr<ID3D11RenderTargetView> RenderTargetView { get { return _renderTargetView; } }
+        public D3DCompiler ShaderCompiler { get { return _compiler; } }
 
         private ComPtr<ID3D11Device> _device;
         private ComPtr<ID3D11DeviceContext> _deviceContext;
         private ComPtr<IDXGISwapChain1> _swapchain;
         private ComPtr<ID3D11RenderTargetView> _renderTargetView;
+        private D3DCompiler _compiler;
 
         private readonly float[] _backgroundColour = new[] { 0.0f, 0.5f, 0.0f, 1.0f };
 
@@ -29,7 +31,7 @@ namespace PetitMoteur3D
 
             DXGI dxgi = DXGI.GetApi(window, forceDxvk);
             D3D11 d3d11 = D3D11.GetApi(window, forceDxvk);
-            D3DCompiler compiler = D3DCompiler.GetApi();
+            _compiler = D3DCompiler.GetApi();
 
             uint createDeviceFlags = 0;
 #if DEBUG
@@ -113,6 +115,7 @@ namespace PetitMoteur3D
             _deviceContext.Release();
             _swapchain.Release();
             _device.Release();
+            _compiler.Dispose();
         }
 
         public void Resize(Vector2D<int> size)

@@ -10,10 +10,29 @@ namespace PetitMoteur3D
     {
         private List<IObjet3D> _objects;
 
-        public void Initialise()
+        /// <summary>
+        /// Constructeur par défaut
+        /// </summary>
+        public Scene() : this(Array.Empty<IObjet3D>()) { }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="obj"></param>
+        public Scene(IObjet3D obj) : this(new IObjet3D[] { obj }) { }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="objets"></param>
+        public Scene(IReadOnlyList<IObjet3D> objets)
         {
-            _objects = new();
-            _objects.Add(new Bloc(2.0f, 2.0f, 2.0f));
+            _objects = new List<IObjet3D>(objets);
+        }
+
+        public void AddObjet(IObjet3D obj)
+        {
+            _objects.Add(obj);
         }
 
 

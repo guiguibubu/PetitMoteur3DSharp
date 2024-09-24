@@ -10,6 +10,7 @@ namespace PetitMoteur3D
     {
         private static IWindow _window = default!;
         private static DeviceD3D11 _deviceD3D11 = default!;
+        private static Scene _scene = default!;
         static void Main(string[] args)
         {
             _window = WindowManager.Create();
@@ -66,7 +67,7 @@ namespace PetitMoteur3D
 
         private static void InitScene()
         {
-
+            _scene = new Scene(new Bloc(2.0f, 2.0f, 2.0f, _deviceD3D11));
         }
     }
 }
