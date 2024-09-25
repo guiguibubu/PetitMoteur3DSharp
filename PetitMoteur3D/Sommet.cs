@@ -10,17 +10,24 @@ namespace PetitMoteur3D
     internal struct Sommet
     {
         public Vector3D<float> Position { get; private set; }
-        public Vector3D<float> Normale { get; private set; }
+        // public Vector3D<float> Normale { get; private set; }
+
+        static unsafe Sommet()
+        {
+            System.Console.WriteLine("sizeof(Sommet) = " + sizeof(Sommet));
+            System.Console.WriteLine("sizeof(Vector3D<float>) = " + sizeof(Vector3D<float>));
+            System.Console.WriteLine("sizeof(float) = " + sizeof(float));
+        }
 
         /// <summary>
         /// Constructeur
         /// </summary>
         /// <param name="position"></param>
-        /// <param name="normale"></param>
+        /// <param name="normale">Unused for the moment</param>
         public unsafe Sommet(Vector3D<float> position, Vector3D<float> normale)
         {
             Position = position;
-            Normale = normale;
+            //Normale = normale;
         }
 
         /// <summary>
@@ -30,16 +37,16 @@ namespace PetitMoteur3D
         {
             // Describe the layout of the input data for the shader.
             fixed (byte* semanticNamePosition = SilkMarshal.StringToMemory("POSITION"))
-            fixed (byte* semanticNameNormal = SilkMarshal.StringToMemory("NORMAL"))
+            // fixed (byte* semanticNameNormal = SilkMarshal.StringToMemory("NORMAL"))
             {
                 InputElementDesc[] inputElements = new[]
                 {
                     new InputElementDesc(
                         semanticNamePosition, 0, Silk.NET.DXGI.Format.FormatR32G32B32Float, 0, 0, InputClassification.PerVertexData, 0
                     ),
-                    new InputElementDesc(
-                        semanticNameNormal, 0, Silk.NET.DXGI.Format.FormatR32G32B32Float, 0, 12, InputClassification.PerVertexData, 0
-                    ),
+                    // new InputElementDesc(
+                    //     semanticNameNormal, 0, Silk.NET.DXGI.Format.FormatR32G32B32Float, 0, (uint)sizeof(Vector3D<float>), InputClassification.PerVertexData, 0
+                    // ),
                 };
 
                 SilkMarshal.ThrowHResult

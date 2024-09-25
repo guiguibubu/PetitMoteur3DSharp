@@ -17,11 +17,19 @@ namespace PetitMoteur3D
         private ComPtr<ID3D11Buffer> _constantBuffer = default;
 
         private ComPtr<ID3D11VertexShader> _vertexShader = default;
-        private ComPtr<ID3D11InputLayout> _vertextLayout = default;
+        private ComPtr<ID3D11InputLayout> _vertexLayout = default;
         private ComPtr<ID3D11PixelShader> _pixelShader = default;
+
+        private Matrix4X4<float> _matWorld = default;
+        private float _rotation = default;
+
+        private ushort[] _indices;
 
         public unsafe Bloc(float dx, float dy, float dz, DeviceD3D11 renderDevice)
         {
+            _matWorld = Matrix4X4<float>.Identity;
+            _rotation = 0f;
+
             Vector3D<float>[] vertices = new[]
             {
                 new Vector3D<float>(-dx / 2, dy / 2, -dz / 2),
@@ -41,6 +49,35 @@ namespace PetitMoteur3D
             Vector3D<float> n4 = new(-1.0f, 0.0f, 0.0f); // face gauche
             Vector3D<float> n5 = new(1.0f, 0.0f, 0.0f); // face droite
 
+            Sommet[] sommets = new[]
+            {
+                new Sommet(vertices[0], n0),
+                new Sommet(vertices[1], n0),
+                new Sommet(vertices[2], n0),
+                new Sommet(vertices[3], n0),
+                new Sommet(vertices[4], n1),
+                new Sommet(vertices[5], n1),
+                new Sommet(vertices[6], n1),
+                new Sommet(vertices[7], n1),
+            };
+
+            _indices = new ushort[]
+            {
+                0,1,2, // devant
+                0,2,3, // devant
+                4,7,6, // arrière
+                4,6,5, // arrière
+                2,6,5, // dessous
+                2,5,3, // dessous
+                0,7,1, // dessus
+                0,7,4, // dessus
+                0,5,3, // gauche
+                0,4,5, // gauche
+                1,6,2, // droite
+                1,7,6 // droite
+            };
+            // WIP A conserver pour quand on utilisera les normales
+            /*
             Sommet[] sommets = new[]
             {
                 // Le devant du bloc
@@ -74,8 +111,9 @@ namespace PetitMoteur3D
                 new Sommet(vertices[6], n5),
                 new Sommet(vertices[2], n5)
             };
+            
 
-            int[] indices = new[]
+            _indices = new[]
             {
                 0,1,2, // devant
                 0,2,3, // devant
@@ -90,14 +128,53 @@ namespace PetitMoteur3D
                 20,21,22, // droite
                 20,22,23 // droite
             };
+            */
 
-            InitBuffers(renderDevice.Device, sommets, indices);
+            InitBuffers(renderDevice.Device, sommets, _indices);
             InitShaders(renderDevice.Device, renderDevice.ShaderCompiler);
         }
 
-        public void Draw()
+        ~Bloc()
         {
-            throw new NotImplementedException();
+            _vertexBuffer.Dispose();
+            _indexBuffer.Dispose();
+            _constantBuffer.Dispose();
+
+            _vertexShader.Dispose();
+            _vertexLayout.Dispose();
+            _pixelShader.Dispose();
+        }
+
+        public void Anime(float elapsedTime)
+        {
+            // _rotation += (float)((Math.PI * 2.0f) / 3.0f * elapsedTime);
+            _rotation = (float)(Math.PI / 2.0f);
+            // modifier la matrice de l’objet bloc
+            _matWorld = Matrix4X4.CreateRotationX(_rotation);
+        }
+
+        public unsafe void Draw(ComPtr<ID3D11DeviceContext> _deviceContext, Matrix4X4<float> matViewProj)
+        {
+            // Choisir la topologie des primitives
+            _deviceContext.IASetPrimitiveTopology(D3DPrimitiveTopology.D3D11PrimitiveTopologyTrianglelist);
+            // Source des sommets
+            uint vertexStride = (uint)sizeof(Sommet);
+            uint vertextOffset = 0;
+            _deviceContext.IASetVertexBuffers(0, 1, ref _vertexBuffer, in vertexStride, in vertextOffset);
+            // Source des index
+            _deviceContext.IASetIndexBuffer(_indexBuffer, Silk.NET.DXGI.Format.FormatR16Uint, 0);
+            // input layout des sommets
+            _deviceContext.IASetInputLayout(_vertexLayout);
+            // Activer le VS
+            _deviceContext.VSSetShader(_vertexShader, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
+            // Initialiser et sélectionner les « constantes » du VS
+            Matrix4X4<float> matWorldViewProj = Matrix4X4.Transpose(_matWorld * matViewProj);
+            _deviceContext.UpdateSubresource(_constantBuffer, 0, ref Unsafe.NullRef<Box>(), ref matWorldViewProj, 0, 0);
+            _deviceContext.VSSetConstantBuffers(0, 1, ref _constantBuffer);
+            // Activer le PS
+            _deviceContext.PSSetShader(_pixelShader, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
+            // **** Rendu de l’objet
+            _deviceContext.DrawIndexed((uint)_indices.Length, 0, 0);
         }
 
         private unsafe void InitShaders(ComPtr<ID3D11Device> device, D3DCompiler compiler)
@@ -106,7 +183,9 @@ namespace PetitMoteur3D
             InitPixelShader(device, compiler);
         }
 
-        private unsafe void InitBuffers(ComPtr<ID3D11Device> device, Sommet[] sommets, int[] indices)
+        private unsafe void InitBuffers<TVertex,TIndice>(ComPtr<ID3D11Device> device, TVertex[] sommets, TIndice[] indices)
+            where TVertex : unmanaged 
+            where TIndice : unmanaged
         {
             // Create our vertex buffer.
             CreateVertexBuffer(device, sommets, ref _vertexBuffer);
@@ -118,6 +197,11 @@ namespace PetitMoteur3D
             CreateConstantBuffer<Matrix4X4<float>>(device, ref _constantBuffer);
         }
 
+        /// <summary>
+        /// Compilation et chargement du vertex shader
+        /// </summary>
+        /// <param name="device"></param>
+        /// <param name="compiler"></param>
         private unsafe void InitVertexShader(ComPtr<ID3D11Device> device, D3DCompiler compiler)
         {
             // Compilation et chargement du vertex shader
@@ -127,6 +211,17 @@ namespace PetitMoteur3D
             byte[] shaderCode = File.ReadAllBytes(filePath);
             string entryPoint = "VS1";
             string target = "vs_5_0";
+            // #define D3DCOMPILE_ENABLE_STRICTNESS                    (1 << 11)
+            uint flagStrictness = ((uint)0 << 11);
+            // #define D3DCOMPILE_DEBUG (1 << 0)
+            // #define D3DCOMPILE_SKIP_OPTIMIZATION                    (1 << 2)
+#if DEBUG
+            uint flagDebug = ((uint)1 << 0);
+            uint flagOptimization = ((uint)(1 << 2));
+#else
+            uint flagDebug = 0;
+            uint flagOptimization = 0;
+#endif
             HResult hr = compiler.Compile
             (
                 in shaderCode[0],
@@ -136,7 +231,7 @@ namespace PetitMoteur3D
                 ref Unsafe.NullRef<ID3DInclude>(),
                 entryPoint,
                 target,
-                ((uint)0 << 11), // #define D3DCOMPILE_ENABLE_STRICTNESS                    (1 << 11)
+                flagStrictness | flagDebug | flagOptimization,
                 0,
                 ref compilationBlob,
                 ref compilationErrors
@@ -166,7 +261,7 @@ namespace PetitMoteur3D
             );
 
             // Créer l’organisation des sommets
-            Sommet.CreateInputLayout(device, compilationBlob, ref _vertextLayout);
+            Sommet.CreateInputLayout(device, compilationBlob, ref _vertexLayout);
 
             compilationBlob.Dispose();
             compilationErrors.Dispose();
@@ -185,6 +280,17 @@ namespace PetitMoteur3D
             byte[] shaderCode = File.ReadAllBytes(filePath);
             string entryPoint = "PS1";
             string target = "ps_5_0";
+            // #define D3DCOMPILE_ENABLE_STRICTNESS                    (1 << 11)
+            uint flagStrictness = ((uint)0 << 11);
+            // #define D3DCOMPILE_DEBUG (1 << 0)
+            // #define D3DCOMPILE_SKIP_OPTIMIZATION                    (1 << 2)
+#if DEBUG
+            uint flagDebug = ((uint)1 << 0);
+            uint flagOptimization = ((uint)(1 << 2));
+#else
+            uint flagDebug = 0;
+            uint flagOptimization = 0;
+#endif
             HResult hr = compiler.Compile
             (
                 in shaderCode[0],
@@ -194,7 +300,7 @@ namespace PetitMoteur3D
                 ref Unsafe.NullRef<ID3DInclude>(),
                 entryPoint,
                 target,
-                ((uint)0 << 11), // #define D3DCOMPILE_ENABLE_STRICTNESS                    (1 << 11)
+                flagStrictness | flagDebug | flagOptimization,
                 0,
                 ref compilationBlob,
                 ref compilationErrors
@@ -251,12 +357,17 @@ namespace PetitMoteur3D
 
         private static unsafe void CreateIndexBuffer<T>(ComPtr<ID3D11Device> device, T[] indices, ref ComPtr<ID3D11Buffer> buffer) where T : unmanaged
         {
+            System.Console.WriteLine("(uint)(indices.Length * sizeof(T)) = " + (uint)(indices.Length * sizeof(T)));
+            System.Console.WriteLine("(uint)indices.Length = " + (uint)(indices.Length));
+            System.Console.WriteLine("(uint)(sizeof(uint)) = " + (uint)(sizeof(uint)));
+            System.Console.WriteLine("(uint)(indices.Length * sizeof(uint)) = " + (uint)(indices.Length * sizeof(uint)));
             BufferDesc bufferDesc = new()
             {
-                ByteWidth = (uint)(indices.Length * sizeof(int)),
+                ByteWidth = (uint)(indices.Length * sizeof(T)),
                 Usage = Usage.Immutable,
                 BindFlags = (uint)BindFlag.IndexBuffer,
-                CPUAccessFlags = 0
+                CPUAccessFlags = 0,
+                StructureByteStride = (uint)sizeof(T)
             };
 
             fixed (T* indexData = indices)
