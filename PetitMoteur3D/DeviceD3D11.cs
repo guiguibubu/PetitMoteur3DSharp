@@ -18,6 +18,7 @@ namespace PetitMoteur3D
         public ComPtr<IDXGISwapChain1> Swapchain { get { return _swapchain; } }
         public ComPtr<ID3D11RenderTargetView> RenderTargetView { get { return _renderTargetView; } }
         public ComPtr<ID3D11DepthStencilView> DepthStencilView { get { return _depthStencilView; } }
+        public ComPtr<ID3D11RasterizerState> SolidCullBackRS { get { return _solidCullBackRS; } }
         public D3DCompiler ShaderCompiler { get { return _compiler; } }
 
         private ComPtr<ID3D11Device> _device;
@@ -26,6 +27,7 @@ namespace PetitMoteur3D
         private ComPtr<ID3D11RenderTargetView> _renderTargetView;
         private ComPtr<ID3D11DepthStencilView> _depthStencilView;
         private ComPtr<ID3D11Texture2D> _depthTexture;
+        public ComPtr<ID3D11RasterizerState> _solidCullBackRS;
         private D3DCompiler _compiler;
 
         private Silk.NET.Windowing.IWindow _window;
@@ -132,6 +134,15 @@ namespace PetitMoteur3D
             Viewport viewport = new(0, 0, _window.FramebufferSize.X, _window.FramebufferSize.Y, 0, 1);
             _deviceContext.RSSetViewports(1, in viewport);
 
+            RasterizerDesc rsDesc = new()
+            {
+                FillMode = FillMode.Solid,
+                CullMode = CullMode.Back,
+                FrontCounterClockwise = false
+            };
+            SilkMarshal.ThrowHResult(_device.CreateRasterizerState(in rsDesc, ref _solidCullBackRS));
+            _deviceContext.RSSetState(_solidCullBackRS);
+
             RenderDoc.Load(out _renderDoc);
             _renderDoc.API.SetActiveWindow(new IntPtr(_device.Handle), _window.Native!.DXHandle!.Value);
             _renderDoc.API.SetActiveWindow(new IntPtr(_device.Handle), _window.Native!.Win32!.Value.Hwnd);
@@ -146,6 +157,7 @@ namespace PetitMoteur3D
                 _deviceContext.ClearState();
             }
 
+            _solidCullBackRS.Dispose();
             _depthStencilView.Dispose();
             _depthTexture.Dispose();
             _renderTargetView.Dispose();
