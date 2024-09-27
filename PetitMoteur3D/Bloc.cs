@@ -23,6 +23,7 @@ namespace PetitMoteur3D
         private Matrix4X4<float> _matWorld = default;
         private float _rotation = default;
 
+        private Sommet[] _sommets;
         private ushort[] _indices;
 
         public unsafe Bloc(float dx, float dy, float dz, DeviceD3D11 renderDevice)
@@ -49,7 +50,7 @@ namespace PetitMoteur3D
             Vector3D<float> n4 = new(-1.0f, 0.0f, 0.0f); // face gauche
             Vector3D<float> n5 = new(1.0f, 0.0f, 0.0f); // face droite
 
-            Sommet[] sommets = new[]
+            _sommets = new[]
             {
                 new Sommet(vertices[0], n0),
                 new Sommet(vertices[1], n0),
@@ -65,14 +66,14 @@ namespace PetitMoteur3D
             {
                 0,1,2, // devant
                 0,2,3, // devant
-                4,7,6, // arrière
-                4,6,5, // arrière
+                5,6,7, // arrière
+                5,7,4, // arrière
                 2,6,5, // dessous
                 2,5,3, // dessous
                 0,7,1, // dessus
-                0,7,4, // dessus
-                0,5,3, // gauche
-                0,4,5, // gauche
+                0,4,7, // dessus
+                0,3,5, // gauche
+                0,5,4, // gauche
                 1,6,2, // droite
                 1,7,6 // droite
             };
@@ -130,7 +131,7 @@ namespace PetitMoteur3D
             };
             */
 
-            InitBuffers(renderDevice.Device, sommets, _indices);
+            InitBuffers(renderDevice.Device, _sommets, _indices);
             InitShaders(renderDevice.Device, renderDevice.ShaderCompiler);
         }
 
@@ -147,10 +148,9 @@ namespace PetitMoteur3D
 
         public void Anime(float elapsedTime)
         {
-            // _rotation += (float)((Math.PI * 2.0f) / 3.0f * elapsedTime);
-            _rotation = (float)(Math.PI / 2.0f);
+            _rotation += (float)((Math.PI * 2.0f) / 3.0f * elapsedTime / 1000f);
             // modifier la matrice de l’objet bloc
-            _matWorld = Matrix4X4.CreateRotationX(_rotation);
+            _matWorld = Matrix4X4.CreateRotationY(_rotation);
         }
 
         public unsafe void Draw(ComPtr<ID3D11DeviceContext> _deviceContext, Matrix4X4<float> matViewProj)
@@ -183,8 +183,8 @@ namespace PetitMoteur3D
             InitPixelShader(device, compiler);
         }
 
-        private unsafe void InitBuffers<TVertex,TIndice>(ComPtr<ID3D11Device> device, TVertex[] sommets, TIndice[] indices)
-            where TVertex : unmanaged 
+        private unsafe void InitBuffers<TVertex, TIndice>(ComPtr<ID3D11Device> device, TVertex[] sommets, TIndice[] indices)
+            where TVertex : unmanaged
             where TIndice : unmanaged
         {
             // Create our vertex buffer.
@@ -357,10 +357,6 @@ namespace PetitMoteur3D
 
         private static unsafe void CreateIndexBuffer<T>(ComPtr<ID3D11Device> device, T[] indices, ref ComPtr<ID3D11Buffer> buffer) where T : unmanaged
         {
-            System.Console.WriteLine("(uint)(indices.Length * sizeof(T)) = " + (uint)(indices.Length * sizeof(T)));
-            System.Console.WriteLine("(uint)indices.Length = " + (uint)(indices.Length));
-            System.Console.WriteLine("(uint)(sizeof(uint)) = " + (uint)(sizeof(uint)));
-            System.Console.WriteLine("(uint)(indices.Length * sizeof(uint)) = " + (uint)(indices.Length * sizeof(uint)));
             BufferDesc bufferDesc = new()
             {
                 ByteWidth = (uint)(indices.Length * sizeof(T)),

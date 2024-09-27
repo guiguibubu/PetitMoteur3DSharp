@@ -12,13 +12,6 @@ namespace PetitMoteur3D
         public Vector3D<float> Position { get; private set; }
         // public Vector3D<float> Normale { get; private set; }
 
-        static unsafe Sommet()
-        {
-            System.Console.WriteLine("sizeof(Sommet) = " + sizeof(Sommet));
-            System.Console.WriteLine("sizeof(Vector3D<float>) = " + sizeof(Vector3D<float>));
-            System.Console.WriteLine("sizeof(float) = " + sizeof(float));
-        }
-
         /// <summary>
         /// Constructeur
         /// </summary>

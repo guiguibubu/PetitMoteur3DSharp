@@ -19,6 +19,7 @@ namespace PetitMoteur3D
         private const int IMAGESPARSECONDE = 60;
         private const double ECART_TEMPS = (1.0 / (double)IMAGESPARSECONDE) * 1000.0;
 
+        private static bool _initAnimationFinished = false;
         static void Main(string[] args)
         {
             _window = WindowManager.Create();
@@ -51,24 +52,14 @@ namespace PetitMoteur3D
         {
         }
 
-		private static int nbFrame = 0;
-		private static int nbFrameMax = 60;
         private static void OnRender(double elapsedTime)
         {
             double tempsEcoule = _horloge.ElapsedMilliseconds;
             // Est-il temps de rendre l’image ?
-            if (tempsEcoule > ECART_TEMPS && nbFrame < nbFrameMax)
+            if (tempsEcoule > ECART_TEMPS)
             {
-                if(_deviceD3D11.IsFrameCapturing() && nbFrame == 0)
-                {
-                    // _deviceD3D11.StartFrameCapture();
-                }
                 // Affichage optimisé
                 _deviceD3D11.Present();
-                if(nbFrame == 5)
-                {
-                    // _deviceD3D11.EndFrameCapture();
-                }
                 // On relance l'horloge pour être certain de garder la fréquence d'affichage
                 _horloge.Restart();
                 // On prépare la prochaine image
@@ -76,7 +67,6 @@ namespace PetitMoteur3D
                 // On rend l’image sur la surface de travail
                 // (tampon d’arrière plan)
                 RenderScene();
-				nbFrame++;
             }
         }
 
@@ -102,20 +92,22 @@ namespace PetitMoteur3D
 
             // Initialisation des matrices View et Proj
             // Dans notre cas, ces matrices sont fixes
-            _matView = Matrix4X4.CreateLookAt(
-                new Vector3D<float>(0.0f, 0.0f, 10.0f),
+            _matView = CreateLookAtLH(
+                new Vector3D<float>(0.0f, 0.0f, -10.0f),
                 new Vector3D<float>(0.0f, 0.0f, 0.0f),
                 new Vector3D<float>(0.0f, 1.0f, 0.0f));
             float champDeVision = (float)(Math.PI / 4); // 45 degrés
-            float ratioDAspect = 1.0f; // horrible, il faudra corriger ça
+            Monitor.GetMainMonitor(_window);
+            float largeurEcran = Monitor.GetMainMonitor(_window).Bounds.Size.X;
+            float hauteurEcran = Monitor.GetMainMonitor(_window).Bounds.Size.Y;
+            float aspectRatio = largeurEcran / hauteurEcran;
             float planRapproche = 2.0f;
             float planEloigne = 20.0f;
-            _matProj = Matrix4X4.CreatePerspectiveFieldOfView(
+            _matProj = CreatePerspectiveFieldOfViewLH(
             champDeVision,
-            ratioDAspect,
+            aspectRatio,
             planRapproche,
             planEloigne);
-            _matProj = Matrix4X4<float>.Identity;
         }
 
         private static void InitAnimation()
@@ -123,6 +115,7 @@ namespace PetitMoteur3D
             _horloge.Start();
             // première Image
             RenderScene();
+            _initAnimationFinished = true;
         }
 
         private static void AnimeScene(float tempsEcoule)
@@ -133,8 +126,50 @@ namespace PetitMoteur3D
         private static void RenderScene()
         {
             BeginRender();
-            Matrix4X4<float> matViewProj = _matProj * _matView;
-            _scene.Draw(_deviceD3D11.DeviceContext, matViewProj);
+            if (_initAnimationFinished)
+            {
+                Matrix4X4<float> matViewProj = _matView * _matProj;
+                _scene.Draw(_deviceD3D11.DeviceContext, matViewProj);
+            }
+        }
+
+        private static Matrix4X4<T> CreateLookAtLH<T>(Vector3D<T> cameraPosition, Vector3D<T> cameraTarget, Vector3D<T> cameraUpVector)
+           where T : unmanaged, IFormattable, IEquatable<T>, IComparable<T>
+        {
+            Vector3D<T> zaxis = Vector3D.Normalize(cameraTarget - cameraPosition);
+            Vector3D<T> xaxis = Vector3D.Normalize(Vector3D.Cross(cameraUpVector, zaxis));
+            Vector3D<T> yaxis = Vector3D.Cross(zaxis, xaxis);
+
+            Matrix4X4<T> result = Matrix4X4<T>.Identity;
+
+            result.M11 = xaxis.X;
+            result.M12 = yaxis.X;
+            result.M13 = zaxis.X;
+
+            result.M21 = xaxis.Y;
+            result.M22 = yaxis.Y;
+            result.M23 = zaxis.Y;
+
+            result.M31 = xaxis.Z;
+            result.M32 = yaxis.Z;
+            result.M33 = zaxis.Z;
+
+            result.M41 = Scalar.Negate(Vector3D.Dot(xaxis, cameraPosition));
+            result.M42 = Scalar.Negate(Vector3D.Dot(yaxis, cameraPosition));
+            result.M43 = Scalar.Negate(Vector3D.Dot(zaxis, cameraPosition));
+
+            return result;
+        }
+
+        public static Matrix4X4<T> CreatePerspectiveFieldOfViewLH<T>(T fieldOfView, T aspectRatio, T nearPlaneDistance, T farPlaneDistance)
+            where T : unmanaged, IFormattable, IEquatable<T>, IComparable<T>
+        {
+            Matrix4X4<T> result = Matrix4X4.CreatePerspectiveFieldOfView(fieldOfView, aspectRatio, nearPlaneDistance, farPlaneDistance);
+            result.M31 = Scalar.Negate(result.M31);
+            result.M32 = Scalar.Negate(result.M32);
+            result.M33 = Scalar.Negate(result.M33);
+            result.M34 = Scalar.Negate(result.M34);
+            return result;
         }
     }
 }
