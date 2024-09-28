@@ -54,7 +54,7 @@ namespace PetitMoteur3D
             // Obtain the framebuffer for the swapchain's backbuffer.
             InitRenderTargetView();
 
-            // Create de dpeth stenci view
+            // Create de depth stenci view
             InitDepthBuffer(window);
 
             // Tell the output merger about our render target view.
@@ -84,6 +84,9 @@ namespace PetitMoteur3D
 
         unsafe ~DeviceD3D11()
         {
+            // passer en mode fenêtré
+            _swapchain.SetFullscreenState(false, ref Unsafe.NullRef<IDXGIOutput>());
+
             if (_deviceContext.Handle is not null)
             {
                 _deviceContext.ClearState();
@@ -101,13 +104,9 @@ namespace PetitMoteur3D
 
         public unsafe void BeforePresent()
         {
-            _renderTargetView.Dispose();
-            // Create « render target view » 
-            // Obtain the framebuffer for the swapchain's backbuffer.
-            InitRenderTargetView();
-            // Tell the output merger about our render target view.
-            _deviceContext.OMSetRenderTargets(1, ref _renderTargetView, _depthStencilView);
+            // On efface la surface de rendu
             _deviceContext.ClearRenderTargetView(_renderTargetView, ref _backgroundColour[0]);
+            // On ré-initialise le tampon de profondeur
             _deviceContext.ClearDepthStencilView(_depthStencilView, (uint)ClearFlag.Depth, 1.0f, 0);
         }
 
@@ -232,14 +231,13 @@ namespace PetitMoteur3D
                     ref _swapchain
                 )
             );
-
         }
 
         private unsafe void InitRenderTargetView()
         {
             using (ComPtr<ID3D11Texture2D> framebuffer = _swapchain.GetBuffer<ID3D11Texture2D>(0))
             {
-                SilkMarshal.ThrowHResult(_device.CreateRenderTargetView(framebuffer, null, ref _renderTargetView));
+                SilkMarshal.ThrowHResult(_device.CreateRenderTargetView(framebuffer, ref Unsafe.NullRef<RenderTargetViewDesc>(), ref _renderTargetView));
             }
         }
 
