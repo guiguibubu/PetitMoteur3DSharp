@@ -17,7 +17,7 @@ namespace PetitMoteur3D
         /// <inheritdoc/>
         public Vector3D<float> Position { get { return _position; } }
         /// <inheritdoc/>
-        public Vector3D<float> Rotation { get{ return _rotation; } }
+        public Vector3D<float> Rotation { get { return _rotation; } }
 
         private ComPtr<ID3D11Buffer> _vertexBuffer = default;
         private ComPtr<ID3D11Buffer> _indexBuffer = default;
@@ -35,9 +35,9 @@ namespace PetitMoteur3D
         protected Sommet[] _sommets;
         protected ushort[] _indices;
 
-        private DeviceD3D11 _renderDevice;
+        private readonly DeviceD3D11 _renderDevice;
 
-        public unsafe BaseObjet3D(DeviceD3D11 renderDevice)
+        protected unsafe BaseObjet3D(DeviceD3D11 renderDevice)
         {
             _position = Vector3D<float>.Zero;
             _rotation = Vector3D<float>.Zero;
@@ -69,28 +69,28 @@ namespace PetitMoteur3D
         }
 
         /// <inheritdoc/>
-        public unsafe void Draw(ComPtr<ID3D11DeviceContext> _deviceContext, Matrix4X4<float> matViewProj)
+        public unsafe void Draw(ComPtr<ID3D11DeviceContext> deviceContext, Matrix4X4<float> matViewProj)
         {
             // Choisir la topologie des primitives
-            _deviceContext.IASetPrimitiveTopology(D3DPrimitiveTopology.D3D11PrimitiveTopologyTrianglelist);
+            deviceContext.IASetPrimitiveTopology(D3DPrimitiveTopology.D3D11PrimitiveTopologyTrianglelist);
             // Source des sommets
             uint vertexStride = (uint)sizeof(Sommet);
             uint vertextOffset = 0;
-            _deviceContext.IASetVertexBuffers(0, 1, ref _vertexBuffer, in vertexStride, in vertextOffset);
+            deviceContext.IASetVertexBuffers(0, 1, ref _vertexBuffer, in vertexStride, in vertextOffset);
             // Source des index
-            _deviceContext.IASetIndexBuffer(_indexBuffer, Silk.NET.DXGI.Format.FormatR16Uint, 0);
+            deviceContext.IASetIndexBuffer(_indexBuffer, Silk.NET.DXGI.Format.FormatR16Uint, 0);
             // input layout des sommets
-            _deviceContext.IASetInputLayout(_vertexLayout);
+            deviceContext.IASetInputLayout(_vertexLayout);
             // Activer le VS
-            _deviceContext.VSSetShader(_vertexShader, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
+            deviceContext.VSSetShader(_vertexShader, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
             // Initialiser et sélectionner les « constantes » du VS
             Matrix4X4<float> matWorldViewProj = Matrix4X4.Transpose(_matWorld * matViewProj);
-            _deviceContext.UpdateSubresource(_constantBuffer, 0, ref Unsafe.NullRef<Box>(), ref matWorldViewProj, 0, 0);
-            _deviceContext.VSSetConstantBuffers(0, 1, ref _constantBuffer);
+            deviceContext.UpdateSubresource(_constantBuffer, 0, ref Unsafe.NullRef<Box>(), ref matWorldViewProj, 0, 0);
+            deviceContext.VSSetConstantBuffers(0, 1, ref _constantBuffer);
             // Activer le PS
-            _deviceContext.PSSetShader(_pixelShader, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
+            deviceContext.PSSetShader(_pixelShader, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
             // **** Rendu de l’objet
-            _deviceContext.DrawIndexed((uint)_indices.Length, 0, 0);
+            deviceContext.DrawIndexed((uint)_indices.Length, 0, 0);
         }
 
         protected void Initialisation()
@@ -149,15 +149,15 @@ namespace PetitMoteur3D
             string entryPoint = "VS1";
             string target = "vs_5_0";
             // #define D3DCOMPILE_ENABLE_STRICTNESS                    (1 << 11)
-            uint flagStrictness = ((uint)0 << 11);
+            uint flagStrictness = ((uint)1 << 11);
             // #define D3DCOMPILE_DEBUG (1 << 0)
             // #define D3DCOMPILE_SKIP_OPTIMIZATION                    (1 << 2)
 #if DEBUG
             uint flagDebug = ((uint)1 << 0);
-            uint flagOptimization = ((uint)(1 << 2));
+            uint flagSkipOptimization = ((uint)(1 << 2));
 #else
             uint flagDebug = 0;
-            uint flagOptimization = 0;
+            uint flagSkipOptimization = 0;
 #endif
             HResult hr = compiler.Compile
             (
@@ -168,7 +168,7 @@ namespace PetitMoteur3D
                 ref Unsafe.NullRef<ID3DInclude>(),
                 entryPoint,
                 target,
-                flagStrictness | flagDebug | flagOptimization,
+                flagStrictness | flagDebug | flagSkipOptimization,
                 0,
                 ref compilationBlob,
                 ref compilationErrors
@@ -218,15 +218,15 @@ namespace PetitMoteur3D
             string entryPoint = "PS1";
             string target = "ps_5_0";
             // #define D3DCOMPILE_ENABLE_STRICTNESS                    (1 << 11)
-            uint flagStrictness = ((uint)0 << 11);
+            uint flagStrictness = ((uint)1 << 11);
             // #define D3DCOMPILE_DEBUG (1 << 0)
             // #define D3DCOMPILE_SKIP_OPTIMIZATION                    (1 << 2)
 #if DEBUG
             uint flagDebug = ((uint)1 << 0);
-            uint flagOptimization = ((uint)(1 << 2));
+            uint flagSkipOptimization = ((uint)(1 << 2));
 #else
             uint flagDebug = 0;
-            uint flagOptimization = 0;
+            uint flagSkipOptimization = 0;
 #endif
             HResult hr = compiler.Compile
             (
@@ -237,7 +237,7 @@ namespace PetitMoteur3D
                 ref Unsafe.NullRef<ID3DInclude>(),
                 entryPoint,
                 target,
-                flagStrictness | flagDebug | flagOptimization,
+                flagStrictness | flagDebug | flagSkipOptimization,
                 0,
                 ref compilationBlob,
                 ref compilationErrors
@@ -268,7 +268,6 @@ namespace PetitMoteur3D
 
             compilationBlob.Dispose();
             compilationErrors.Dispose();
-
         }
 
         private static unsafe void CreateVertexBuffer<T>(ComPtr<ID3D11Device> device, T[] sommets, ref ComPtr<ID3D11Buffer> buffer) where T : unmanaged

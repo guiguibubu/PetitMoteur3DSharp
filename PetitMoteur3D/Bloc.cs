@@ -90,7 +90,6 @@ namespace PetitMoteur3D
         /// <returns></returns>
         protected override IReadOnlyList<Sommet> InitVertex()
         {
-
             return _sommets;
         }
 

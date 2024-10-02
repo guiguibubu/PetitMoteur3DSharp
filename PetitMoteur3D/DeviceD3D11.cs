@@ -231,6 +231,8 @@ namespace PetitMoteur3D
                     ref _swapchain
                 )
             );
+
+            factory.Dispose();
         }
 
         private unsafe void InitRenderTargetView()

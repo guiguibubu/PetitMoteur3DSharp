@@ -1,4 +1,5 @@
-﻿using Silk.NET.Core.Native;
+﻿using ImGuiNET;
+using Silk.NET.Core.Native;
 using Silk.NET.DXGI;
 using Silk.NET.Maths;
 using Silk.NET.Windowing;
@@ -26,6 +27,7 @@ namespace PetitMoteur3D
 
             // Assign events.
             _window.Load += OnLoad;
+            _window.Closing += OnClosing;
             _window.Render += OnRender;
             _window.FramebufferResize += OnFramebufferResize;
 
@@ -46,6 +48,22 @@ namespace PetitMoteur3D
             System.Console.WriteLine("OnLoad InitScene Finished");
             InitAnimation();
             System.Console.WriteLine("OnLoad InitAnimation Finished");
+
+            ImGui.CreateContext();
+            System.Console.WriteLine("OnLoad ImGui.CreateContext Finished");
+
+            ImGuiIOPtr io = ImGui.GetIO();
+            // Build atlas
+            nint tex_pixels;
+            int tex_w, tex_h;
+            io.Fonts.GetTexDataAsRGBA32(out tex_pixels, out tex_w, out tex_h);
+        }
+
+        private static void OnClosing()
+        {
+            System.Console.WriteLine("OnClosing");
+            ImGuiNET.ImGui.DestroyContext();
+            System.Console.WriteLine("OnClosing ImGui.DestroyContext Finished");
         }
 
         private static void OnUpdate(double elapsedTime)
@@ -67,6 +85,19 @@ namespace PetitMoteur3D
                 // On rend l’image sur la surface de travail
                 // (tampon d’arrière plan)
                 RenderScene();
+
+                ImGuiIOPtr io = ImGui.GetIO();
+                io.DisplaySize = new System.Numerics.Vector2(_window.FramebufferSize.X, _window.FramebufferSize.Y);
+                io.DeltaTime = 1.0f / 60.0f;
+                ImGui.NewFrame();
+
+                float f = 0.0f;
+                ImGui.Text("Hello, world!");
+                ImGui.SliderFloat("float", ref f, 0.0f, 1.0f);
+                ImGui.Text(string.Format("Application average {0} ms/frame ({1} FPS)", (1000.0f / io.Framerate).ToString("F3", System.Globalization.CultureInfo.InvariantCulture), io.Framerate.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)));
+                ImGui.ShowDemoWindow();
+
+                ImGui.Render();
             }
         }
 
