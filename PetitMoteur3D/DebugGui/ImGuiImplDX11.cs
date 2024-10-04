@@ -18,14 +18,14 @@ namespace PetitMoteur3D.DebugGui
     /// <remarks>
     /// Adapted from official ImGui code (https://github.com/ocornut/imgui/blob/master/backends/imgui_impl_dx11.cpp)
     /// </remarks>
-    internal class ImGuiImplDX11
+    internal class ImGuiImplDX11 : IDisposable
     {
         /// <summary>
         /// Singleton
         /// </summary>
         private unsafe readonly nint _backendRendererName;
         private ImGuiImplDX11Data _backendRendererUserData;
-        private ComPtr<ImGuiImplDX11Data> _backendRendererUserDataPtr;
+        private bool _backendInitialized = false;
 
         private readonly DeviceD3D11 _renderDevice;
 
@@ -34,25 +34,27 @@ namespace PetitMoteur3D.DebugGui
             _renderDevice = renderDevice;
             _backendRendererName = Marshal.StringToHGlobalAuto("imgui_impl_dx11");
             _backendRendererUserData = new();
-            _backendRendererUserDataPtr = (ImGuiImplDX11Data*)Unsafe.AsPointer(ref _backendRendererUserData);
         }
 
-        unsafe ~ImGuiImplDX11()
+        ~ImGuiImplDX11()
         {
-            Marshal.FreeHGlobal(_backendRendererName);
-            _backendRendererUserDataPtr.Dispose();
+            Dispose(disposing: false);
         }
 
-        public unsafe bool Init(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> deviceContext)
+        public unsafe bool Init(ImGuiIOPtr io)
         {
-            ImGuiIOPtr io = ImGui.GetIO();
-            if (io.BackendRendererUserData != IntPtr.Zero)
+            return InitImpl(io, _renderDevice.Device, _renderDevice.DeviceContext);
+        }
+
+        private unsafe bool InitImpl(ImGuiIOPtr io, ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> deviceContext)
+        {
+            if (io.BackendRendererUserData != IntPtr.Zero || _backendInitialized)
             {
                 throw new InvalidOperationException("Already initialized a renderer backend!");
             }
 
             // Setup backend capabilities flags
-            io.BackendRendererUserData = (nint)_backendRendererUserDataPtr.GetAddressOf();
+            // io.BackendRendererUserData = (nint)_backendRendererUserDataPtr.GetAddressOf();
             io.NativePtr->BackendRendererName = (byte*)_backendRendererName;
             io.BackendFlags |= ImGuiBackendFlags.RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
 
@@ -79,39 +81,39 @@ namespace PetitMoteur3D.DebugGui
             dxgiDevice.Dispose();
             dxgiAdapter.Dispose();
 
+            _backendInitialized = true;
+
             return true;
         }
 
         public unsafe void Shutdown()
         {
-            ComPtr<ImGuiImplDX11Data> backendRendererUserDataPtr = GetBackendData();
-            if (backendRendererUserDataPtr.Handle is null)
+            if (!_backendInitialized)
             {
                 throw new InvalidOperationException("No renderer backend to shutdown, or already shutdown?");
             }
 
             InvalidateDeviceObjects();
-            ImGuiImplDX11Data backendRendererUserData = backendRendererUserDataPtr.Get();
-            backendRendererUserData.Factory.Dispose();
-            backendRendererUserData.D3dDevice.Dispose();
-            backendRendererUserData.D3dDeviceContext.Dispose();
+            _backendRendererUserData.Factory.Dispose();
+            _backendRendererUserData.D3dDevice.Dispose();
+            _backendRendererUserData.D3dDeviceContext.Dispose();
 
             ImGuiIOPtr io = ImGui.GetIO();
             io.NativePtr->BackendRendererName = null;
             io.BackendRendererUserData = IntPtr.Zero;
             io.BackendFlags &= ~ImGuiBackendFlags.RendererHasVtxOffset;
-            backendRendererUserDataPtr.Dispose();
+
+            _backendInitialized = false;
         }
 
         public unsafe void NewFrame()
         {
-            ComPtr<ImGuiImplDX11Data> backendRendererUserDataPtr = GetBackendData();
-            if (backendRendererUserDataPtr.Handle is null)
+            if (!_backendInitialized)
             {
                 throw new InvalidOperationException("Context or backend not initialized! Did you call ImGuiImplDX11.Init()?");
             }
 
-            if (backendRendererUserDataPtr.Get().FontSampler.Handle is null)
+            if (_backendRendererUserData.FontSampler.Handle is null)
                 CreateDeviceObjects(_renderDevice.ShaderCompiler);
         }
 
@@ -121,131 +123,144 @@ namespace PetitMoteur3D.DebugGui
             if (drawData.DisplaySize.X <= 0.0f || drawData.DisplaySize.Y <= 0.0f)
                 return;
 
-            ComPtr<ImGuiImplDX11Data> backendRendererPtr = GetBackendData();
-            ImGuiImplDX11Data backendRenderer = backendRendererPtr.Get();
-            ComPtr<ID3D11DeviceContext> deviceContext = backendRenderer.D3dDeviceContext;
+            ComPtr<ID3D11DeviceContext> deviceContext = _backendRendererUserData.D3dDeviceContext;
 
             // Create and grow vertex/index buffers if needed
-            if (backendRenderer.VertexBuffer.Handle is null || backendRenderer.VertexBufferSize < drawData.TotalVtxCount)
+            if (_backendRendererUserData.VertexBuffer.Handle is null || _backendRendererUserData.VertexBufferSize < drawData.TotalVtxCount)
             {
-                if (backendRenderer.VertexBuffer.Handle is not null) { backendRenderer.VertexBuffer.Dispose(); backendRenderer.VertexBuffer = null; }
-                backendRenderer.VertexBufferSize = drawData.TotalVtxCount + 5000;
-                CreateVertexBuffer(backendRenderer.D3dDevice, (uint)(backendRenderer.VertexBufferSize * sizeof(ImDrawVert)), ref backendRenderer.VertexBuffer);
+                if (_backendRendererUserData.VertexBuffer.Handle is not null) { _backendRendererUserData.VertexBuffer.Dispose(); _backendRendererUserData.VertexBuffer = null; }
+                _backendRendererUserData.VertexBufferSize = drawData.TotalVtxCount + 5000;
+                CreateVertexBuffer(_backendRendererUserData.D3dDevice, (uint)(_backendRendererUserData.VertexBufferSize * sizeof(ImDrawVert)), ref _backendRendererUserData.VertexBuffer);
             }
-            if (backendRenderer.IndexBuffer.Handle is null || backendRenderer.IndexBufferSize < drawData.TotalIdxCount)
+            if (_backendRendererUserData.IndexBuffer.Handle is null || _backendRendererUserData.IndexBufferSize < drawData.TotalIdxCount)
             {
-                if (backendRenderer.IndexBuffer.Handle is not null) { backendRenderer.IndexBuffer.Dispose(); backendRenderer.IndexBuffer = null; }
-                backendRenderer.IndexBufferSize = drawData.TotalIdxCount + 10000;
-                CreateIndexBuffer(backendRenderer.D3dDevice, (uint)(backendRenderer.IndexBufferSize * sizeof(ushort)), ref backendRenderer.IndexBuffer);
+                if (_backendRendererUserData.IndexBuffer.Handle is not null) { _backendRendererUserData.IndexBuffer.Dispose(); _backendRendererUserData.IndexBuffer = null; }
+                _backendRendererUserData.IndexBufferSize = drawData.TotalIdxCount + 10000;
+                CreateIndexBuffer(_backendRendererUserData.D3dDevice, (uint)(_backendRendererUserData.IndexBufferSize * sizeof(ushort)), ref _backendRendererUserData.IndexBuffer);
             }
 
             // Upload vertex/index data into a single contiguous GPU buffer
-            MappedSubresource vertexResource = default;
-            MappedSubresource indexResource = default;
-            SilkMarshal.ThrowHResult(
-                deviceContext.Map(backendRenderer.VertexBuffer, 0, Map.WriteDiscard, 0, ref vertexResource)
-            );
-            SilkMarshal.ThrowHResult(
-                deviceContext.Map(backendRenderer.IndexBuffer, 0, Map.WriteDiscard, 0, ref indexResource)
-            );
-            ImDrawVert* vertexDest = (ImDrawVert*)(vertexResource.PData);
-            uint* indexDest = (uint*)(indexResource.PData);
-            for (int n = 0; n < drawData.CmdListsCount; n++)
             {
-                ImDrawListPtr cmdList = drawData.CmdLists[n];
-                //MemoryCopy (void* source, void* destination, long destinationSizeInBytes, long sourceBytesToCopy)
-                System.Buffer.MemoryCopy((void*)cmdList.VtxBuffer.Data, vertexDest, backendRenderer.VertexBufferSize, cmdList.VtxBuffer.Size * sizeof(ImDrawVert));
-                System.Buffer.MemoryCopy((void*)cmdList.IdxBuffer.Data, indexDest, backendRenderer.IndexBufferSize, cmdList.IdxBuffer.Size * sizeof(ushort));
-                vertexDest += cmdList.VtxBuffer.Size;
-                indexDest += cmdList.IdxBuffer.Size;
+                MappedSubresource vertexResource = default;
+                MappedSubresource indexResource = default;
+                SilkMarshal.ThrowHResult(
+                    deviceContext.Map(_backendRendererUserData.VertexBuffer, 0, Map.WriteDiscard, 0, ref vertexResource)
+                );
+                SilkMarshal.ThrowHResult(
+                    deviceContext.Map(_backendRendererUserData.IndexBuffer, 0, Map.WriteDiscard, 0, ref indexResource)
+                );
+                ImDrawVert* vertexDest = (ImDrawVert*)(vertexResource.PData);
+                uint* indexDest = (uint*)(indexResource.PData);
+                int remainingVertexBufferSpace = _backendRendererUserData.VertexBufferSize;
+                int remainingIndexBufferSpace = _backendRendererUserData.IndexBufferSize;
+                for (int n = 0; n < drawData.CmdListsCount; n++)
+                {
+                    ImDrawListPtr cmdList = drawData.CmdLists[n];
+                    //MemoryCopy (void* source, void* destination, long destinationSizeInBytes, long sourceBytesToCopy)
+                    System.Buffer.MemoryCopy((void*)cmdList.VtxBuffer.Data, vertexDest, remainingVertexBufferSpace * sizeof(ImDrawVert), cmdList.VtxBuffer.Size * sizeof(ImDrawVert));
+                    System.Buffer.MemoryCopy((void*)cmdList.IdxBuffer.Data, indexDest, remainingIndexBufferSpace * sizeof(ushort), cmdList.IdxBuffer.Size * sizeof(ushort));
+                    remainingVertexBufferSpace -= cmdList.VtxBuffer.Size;
+                    remainingIndexBufferSpace -= cmdList.IdxBuffer.Size;
+                    vertexDest += cmdList.VtxBuffer.Size;
+                    indexDest += cmdList.IdxBuffer.Size;
+                }
+                deviceContext.Unmap(_backendRendererUserData.VertexBuffer, 0);
+                deviceContext.Unmap(_backendRendererUserData.IndexBuffer, 0);
             }
-            deviceContext.Unmap(backendRenderer.VertexBuffer, 0);
-            deviceContext.Unmap(backendRenderer.IndexBuffer, 0);
 
             // Setup orthographic projection matrix into our constant buffer
             // Our visible imgui space lies from drawData->DisplayPos (top left) to drawData->DisplayPos+data_data->DisplaySize (bottom right). DisplayPos is (0,0) for single viewport apps.
             {
                 MappedSubresource mappedResource = default;
                 SilkMarshal.ThrowHResult(
-                    deviceContext.Map(backendRenderer.VertexConstantBuffer, 0, Map.WriteDiscard, 0, ref mappedResource)
+                    deviceContext.Map(_backendRendererUserData.VertexConstantBuffer, 0, Map.WriteDiscard, 0, ref mappedResource)
                 );
                 void* constantBufferPtr = mappedResource.PData;
                 float left = drawData.DisplayPos.X;
                 float right = drawData.DisplayPos.X + drawData.DisplaySize.X;
                 float top = drawData.DisplayPos.Y;
                 float bottom = drawData.DisplayPos.Y + drawData.DisplaySize.Y;
-                Matrix4X4<float> mvp = CreateOrthographicOffCenterLH(left, right, bottom, top, 1, 3);
+                float nearPlane = 1f;
+                Matrix4X4<float> matriceMonde = Matrix4X4.CreateTranslation(0, 0, nearPlane);
+                Matrix4X4<float> matriceProjection = CreateOrthographicOffCenterLH(left, right, bottom, top, nearPlane, 3);
+                Matrix4X4<float> mvp = matriceMonde * matriceProjection;
                 System.Buffer.MemoryCopy(Unsafe.AsPointer(ref mvp), constantBufferPtr, (uint)sizeof(Matrix4X4<float>), (uint)sizeof(Matrix4X4<float>));
-                deviceContext.Unmap(backendRenderer.VertexConstantBuffer, 0);
+                deviceContext.Unmap(_backendRendererUserData.VertexConstantBuffer, 0);
             }
 
+            // Saveold DX conf
             BackupDX11State old = new();
-            deviceContext.RSGetScissorRects(ref old.ScissorRectsCount, ref old.ScissorRects.AsSpan()[0]);
-            deviceContext.RSGetViewports(ref old.ViewportsCount, ref old.Viewports[0]);
-            deviceContext.RSGetState(ref old.RasterizerState);
-            deviceContext.OMGetBlendState(ref old.BlendState, ref old.BlendFactor[0], ref old.SampleMask);
-            deviceContext.OMGetDepthStencilState(ref old.DepthStencilState, ref old.StencilRef);
-            deviceContext.PSGetShaderResources(0, 1, ref old.PSShaderResource);
-            deviceContext.PSGetSamplers(0, 1, ref old.PSSampler);
-            deviceContext.PSGetShader(ref old.PixelShader, ref old.PSInstances, ref old.PSInstancesCount);
-            deviceContext.VSGetShader(ref old.VertexShader, ref old.VSInstances, ref old.VSInstancesCount);
-            deviceContext.VSGetConstantBuffers(0, 1, ref old.VSConstantBuffer);
-            deviceContext.GSGetShader(ref old.GeometryShader, ref old.GSInstances, ref old.GSInstancesCount);
-            deviceContext.IAGetPrimitiveTopology(ref old.PrimitiveTopology);
-            deviceContext.IAGetIndexBuffer(ref old.IndexBuffer, ref old.IndexBufferFormat, ref old.IndexBufferOffset);
-            deviceContext.IAGetVertexBuffers(0, 1, ref old.VertexBuffer, ref old.VertexBufferStride, ref old.VertexBufferOffset);
-            deviceContext.IAGetInputLayout(ref old.InputLayout);
+            {
+                deviceContext.RSGetScissorRects(ref old.ScissorRectsCount, ref old.ScissorRects.AsSpan()[0]);
+                deviceContext.RSGetViewports(ref old.ViewportsCount, ref old.Viewports[0]);
+                deviceContext.RSGetState(ref old.RasterizerState);
+                deviceContext.OMGetBlendState(ref old.BlendState, ref old.BlendFactor[0], ref old.SampleMask);
+                deviceContext.OMGetDepthStencilState(ref old.DepthStencilState, ref old.StencilRef);
+                deviceContext.PSGetShaderResources(0, 1, ref old.PSShaderResource);
+                deviceContext.PSGetSamplers(0, 1, ref old.PSSampler);
+                deviceContext.PSGetShader(ref old.PixelShader, ref old.PSInstances, ref old.PSInstancesCount);
+                deviceContext.VSGetShader(ref old.VertexShader, ref old.VSInstances, ref old.VSInstancesCount);
+                deviceContext.VSGetConstantBuffers(0, 1, ref old.VSConstantBuffer);
+                deviceContext.GSGetShader(ref old.GeometryShader, ref old.GSInstances, ref old.GSInstancesCount);
+                deviceContext.IAGetPrimitiveTopology(ref old.PrimitiveTopology);
+                deviceContext.IAGetIndexBuffer(ref old.IndexBuffer, ref old.IndexBufferFormat, ref old.IndexBufferOffset);
+                deviceContext.IAGetVertexBuffers(0, 1, ref old.VertexBuffer, ref old.VertexBufferStride, ref old.VertexBufferOffset);
+                deviceContext.IAGetInputLayout(ref old.InputLayout);
+            }
+
             // Setup desired DX state
             SetupRenderState(drawData, deviceContext);
 
             // Render command lists
             // (Because we merged all buffers into a single one, we maintain our own offset into them)
-            int globalIdxOffset = 0;
-            int globalVtxOffset = 0;
-            System.Numerics.Vector2 clipOff = drawData.DisplayPos;
-            for (int i = 0; i < drawData.CmdListsCount; i++)
             {
-                ImDrawListPtr cmdList = drawData.CmdLists[i];
-                for (int j = 0; j < cmdList.CmdBuffer.Size; j++)
+                int globalIdxOffset = 0;
+                int globalVtxOffset = 0;
+                System.Numerics.Vector2 clipOff = drawData.DisplayPos;
+                for (int i = 0; i < drawData.CmdListsCount; i++)
                 {
-                    ImDrawCmdPtr cmd = cmdList.CmdBuffer[j];
-                    if (cmd.UserCallback != IntPtr.Zero)
+                    ImDrawListPtr cmdList = drawData.CmdLists[i];
+                    for (int j = 0; j < cmdList.CmdBuffer.Size; j++)
                     {
-                        // User callback, registered via ImDrawList::AddCallback()
-                        // (ImDrawCallback_ResetRenderState is a special callback value used by the user to request the renderer to reset render state.)
-                        // #define ImDrawCallback_ResetRenderState     (ImDrawCallback)(-8)
-                        if (cmd.UserCallback == -8)
+                        ImDrawCmdPtr cmd = cmdList.CmdBuffer[j];
+                        if (cmd.UserCallback != IntPtr.Zero)
                         {
-                            SetupRenderState(drawData, deviceContext);
+                            // User callback, registered via ImDrawList::AddCallback()
+                            // (ImDrawCallback_ResetRenderState is a special callback value used by the user to request the renderer to reset render state.)
+                            // #define ImDrawCallback_ResetRenderState     (ImDrawCallback)(-8)
+                            if (cmd.UserCallback == -8)
+                            {
+                                SetupRenderState(drawData, deviceContext);
+                            }
+                            else
+                            {
+                                throw new NotImplementedException();
+                            }
                         }
                         else
                         {
-                            throw new NotImplementedException();
+                            // Project scissor/clipping rectangles into framebuffer space
+                            System.Numerics.Vector2 clipMin = new(cmd.ClipRect.X - clipOff.X, cmd.ClipRect.Y - clipOff.Y);
+                            System.Numerics.Vector2 clipMax = new(cmd.ClipRect.Z - clipOff.X, cmd.ClipRect.W - clipOff.Y);
+                            if (clipMax.X <= clipMin.X || clipMax.Y <= clipMin.Y)
+                                continue;
+
+                            // Apply scissor/clipping rectangle
+                            Box2D<int> r = new Box2D<int>((int)clipMin.X, (int)clipMin.Y, (int)clipMax.X, (int)clipMax.Y);
+                            deviceContext.RSSetScissorRects(1, ref r);
+
+                            // Bind texture, Draw
+                            ID3D11ShaderResourceView* texture_srv = (ID3D11ShaderResourceView*)cmd.GetTexID();
+                            deviceContext.PSSetShaderResources(0, 1, in texture_srv);
+                            uint nbIndexToDraw = cmd.ElemCount;
+                            uint indexOffset = (uint)(cmd.IdxOffset + globalIdxOffset);
+                            int baseVertexLocation = (int)(cmd.VtxOffset + globalVtxOffset);
+                            deviceContext.DrawIndexed(nbIndexToDraw, indexOffset, baseVertexLocation);
                         }
                     }
-                    else
-                    {
-                        // Project scissor/clipping rectangles into framebuffer space
-                        System.Numerics.Vector2 clipMin = new(cmd.ClipRect.X - clipOff.X, cmd.ClipRect.Y - clipOff.Y);
-                        System.Numerics.Vector2 clipMax = new(cmd.ClipRect.Z - clipOff.X, cmd.ClipRect.W - clipOff.Y);
-                        if (clipMax.X <= clipMin.X || clipMax.Y <= clipMin.Y)
-                            continue;
-
-                        // Apply scissor/clipping rectangle
-                        Box2D<int> r = new Box2D<int>((int)clipMin.X, (int)clipMin.Y, (int)clipMax.X, (int)clipMax.Y);
-                        deviceContext.RSSetScissorRects(1, ref r);
-
-                        // Bind texture, Draw
-                        ID3D11ShaderResourceView* texture_srv = (ID3D11ShaderResourceView*)cmd.GetTexID();
-                        deviceContext.PSSetShaderResources(0, 1, in texture_srv);
-                        uint nbIndexToDraw = cmd.ElemCount;
-                        uint indexOffset = (uint)(cmd.IdxOffset + globalIdxOffset);
-                        int baseVertexLocation = (int)(cmd.VtxOffset + globalVtxOffset);
-                        deviceContext.DrawIndexed(nbIndexToDraw, indexOffset, baseVertexLocation);
-                    }
+                    globalIdxOffset += cmdList.IdxBuffer.Size;
+                    globalVtxOffset += cmdList.VtxBuffer.Size;
                 }
-                globalIdxOffset += cmdList.IdxBuffer.Size;
-                globalVtxOffset += cmdList.VtxBuffer.Size;
             }
 
             // Restore modified DX state
@@ -294,20 +309,11 @@ namespace PetitMoteur3D.DebugGui
             deviceContext.IASetInputLayout(old.InputLayout); old.InputLayout.Dispose();
         }
 
-        // Backend data stored in io.BackendRendererUserData to allow support for multiple Dear ImGui contexts
-        // It is STRONGLY preferred that you use docking branch with multi-viewports (== single Dear ImGui context + multiple windows) instead of multiple Dear ImGui contexts.
-        private static unsafe ComPtr<ImGuiImplDX11Data> GetBackendData()
-        {
-            return ImGui.GetCurrentContext() != IntPtr.Zero ? (ImGuiImplDX11Data*)ImGui.GetIO().BackendRendererUserData : (ImGuiImplDX11Data*)Unsafe.AsPointer(ref Unsafe.NullRef<ImGuiImplDX11Data>());
-        }
-
         private unsafe bool CreateDeviceObjects(D3DCompiler shaderCompiler)
         {
-            ComPtr<ImGuiImplDX11Data> backendRendererUserDataPtr = GetBackendData();
-            ImGuiImplDX11Data backendRendererUserData = backendRendererUserDataPtr.Get();
-            if (backendRendererUserData.D3dDevice.Handle is null)
+            if (_backendRendererUserData.D3dDevice.Handle is null)
                 return false;
-            if (backendRendererUserData.FontSampler.Handle is not null)
+            if (_backendRendererUserData.FontSampler.Handle is not null)
                 InvalidateDeviceObjects();
 
             // By using D3DCompile() from <d3dcompiler.h> / d3dcompiler.lib, we introduce a dependency to a given version of d3dcompiler_XX.dll (see D3DCOMPILER_DLL_A)
@@ -317,25 +323,25 @@ namespace PetitMoteur3D.DebugGui
             // See https://github.com/ocornut/imgui/pull/638 for sources and details.
 
             // Create the vertex shader
-            if (!InitVertexShader(backendRendererUserData.D3dDevice, shaderCompiler))
+            if (!InitVertexShader(_backendRendererUserData.D3dDevice, shaderCompiler))
             {
                 return false;
             }
 
             // Create the pixel shader
-            if (!InitPixelShader(backendRendererUserData.D3dDevice, shaderCompiler))
+            if (!InitPixelShader(_backendRendererUserData.D3dDevice, shaderCompiler))
             {
                 return false;
             }
 
             // Create the blending setup
-            InitBlendingState(backendRendererUserData.D3dDevice);
+            InitBlendingState(_backendRendererUserData.D3dDevice);
 
             // Create the rasterizer state
-            InitRasterizerState(backendRendererUserData.D3dDevice);
+            InitRasterizerState(_backendRendererUserData.D3dDevice);
 
             // Create depth-stencil State
-            InitDepthStencil(backendRendererUserData.D3dDevice);
+            InitDepthStencil(_backendRendererUserData.D3dDevice);
 
             CreateFontsTexture();
 
@@ -346,11 +352,9 @@ namespace PetitMoteur3D.DebugGui
         {
             // Build texture atlas
             ImGuiIOPtr io = ImGui.GetIO();
-            ComPtr<ImGuiImplDX11Data> backendRendererUserDataPtr = GetBackendData();
-            ImGuiImplDX11Data backendRendererUserData = backendRendererUserDataPtr.Get();
             byte* pixels;
-            int width, height;
-            io.Fonts.GetTexDataAsRGBA32(out pixels, out width, out height);
+            int width, height, bytesPerPixel;
+            io.Fonts.GetTexDataAsRGBA32(out pixels, out width, out height, out bytesPerPixel);
 
             // Upload texture to graphics system
             {
@@ -371,11 +375,11 @@ namespace PetitMoteur3D.DebugGui
                 SubresourceData subResource = new()
                 {
                     PSysMem = pixels,
-                    SysMemPitch = desc.Width * 4,
+                    SysMemPitch = (uint)(width * bytesPerPixel),
                     SysMemSlicePitch = 0
                 };
                 SilkMarshal.ThrowHResult(
-                    backendRendererUserData.D3dDevice.CreateTexture2D(in desc, in subResource, ref texture)
+                    _backendRendererUserData.D3dDevice.CreateTexture2D(in desc, in subResource, ref texture)
                 );
 
                 // Create texture view
@@ -463,7 +467,6 @@ namespace PetitMoteur3D.DebugGui
                 {
                     Console.WriteLine(SilkMarshal.PtrToString((nint)compilationErrors.GetBufferPointer()));
                 }
-
                 return false;
             }
 
@@ -569,7 +572,6 @@ namespace PetitMoteur3D.DebugGui
                 {
                     Console.WriteLine(SilkMarshal.PtrToString((nint)compilationErrors.GetBufferPointer()));
                 }
-
                 return false;
             }
 
@@ -688,9 +690,9 @@ namespace PetitMoteur3D.DebugGui
             BufferDesc bufferDesc = new()
             {
                 ByteWidth = (uint)(sizeof(T)),
-                Usage = Usage.Default,
+                Usage = Usage.Dynamic,
                 BindFlags = (uint)BindFlag.ConstantBuffer,
-                CPUAccessFlags = 0,
+                CPUAccessFlags = (uint)CpuAccessFlag.Write,
                 MiscFlags = 0
             };
 
@@ -698,11 +700,8 @@ namespace PetitMoteur3D.DebugGui
             return !hr.IsFailure;
         }
 
-        private static unsafe void SetupRenderState(ImDrawDataPtr drawData, ComPtr<ID3D11DeviceContext> deviceContext)
+        private unsafe void SetupRenderState(ImDrawDataPtr drawData, ComPtr<ID3D11DeviceContext> deviceContext)
         {
-            ComPtr<ImGuiImplDX11Data> backendRendererPtr = GetBackendData();
-            ImGuiImplDX11Data backendRenderer = backendRendererPtr.Get();
-
             // Setup viewport
             Viewport viewPort = new()
             {
@@ -718,44 +717,42 @@ namespace PetitMoteur3D.DebugGui
             // Setup shader and vertex buffers
             uint stride = (uint)sizeof(ImDrawVert);
             uint offset = 0;
-            deviceContext.IASetInputLayout(backendRenderer.InputLayout);
-            deviceContext.IASetVertexBuffers(0, 1, ref backendRenderer.VertexBuffer, ref stride, ref offset);
-            deviceContext.IASetIndexBuffer(backendRenderer.IndexBuffer, sizeof(ushort) == 2 ? Format.FormatR16Uint : Format.FormatR32Uint, 0);
+            deviceContext.IASetInputLayout(_backendRendererUserData.InputLayout);
+            deviceContext.IASetVertexBuffers(0, 1, ref _backendRendererUserData.VertexBuffer, ref stride, ref offset);
+            deviceContext.IASetIndexBuffer(_backendRendererUserData.IndexBuffer, sizeof(ushort) == 2 ? Format.FormatR16Uint : Format.FormatR32Uint, 0);
             deviceContext.IASetPrimitiveTopology(D3DPrimitiveTopology.D3D11PrimitiveTopologyTrianglelist);
-            deviceContext.VSSetShader(backendRenderer.VertexShader, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
-            deviceContext.VSSetConstantBuffers(0, 1, ref backendRenderer.VertexConstantBuffer);
-            deviceContext.PSSetShader(backendRenderer.PixelShader, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
-            deviceContext.PSSetSamplers(0, 1, ref backendRenderer.FontSampler);
-            deviceContext.GSSetShader(Unsafe.NullRef<ComPtr<ID3D11GeometryShader>>(), ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
-            deviceContext.HSSetShader(Unsafe.NullRef<ComPtr<ID3D11HullShader>>(), ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0); // In theory we should backup and restore this as well.. very infrequently used..
-            deviceContext.DSSetShader(Unsafe.NullRef<ComPtr<ID3D11DomainShader>>(), ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0); // In theory we should backup and restore this as well.. very infrequently used..
-            deviceContext.CSSetShader(Unsafe.NullRef<ComPtr<ID3D11ComputeShader>>(), ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0); // In theory we should backup and restore this as well.. very infrequently used..
+            deviceContext.VSSetShader(_backendRendererUserData.VertexShader, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
+            deviceContext.VSSetConstantBuffers(0, 1, ref _backendRendererUserData.VertexConstantBuffer);
+            deviceContext.PSSetShader(_backendRendererUserData.PixelShader, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
+            deviceContext.PSSetSamplers(0, 1, ref _backendRendererUserData.FontSampler);
+            // deviceContext.GSSetShader(Unsafe.NullRef<ComPtr<ID3D11GeometryShader>>(), ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
+            // deviceContext.HSSetShader(Unsafe.NullRef<ComPtr<ID3D11HullShader>>(), ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0); // In theory we should backup and restore this as well.. very infrequently used..
+            // deviceContext.DSSetShader(Unsafe.NullRef<ComPtr<ID3D11DomainShader>>(), ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0); // In theory we should backup and restore this as well.. very infrequently used..
+            // deviceContext.CSSetShader(Unsafe.NullRef<ComPtr<ID3D11ComputeShader>>(), ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0); // In theory we should backup and restore this as well.. very infrequently used..
 
             // Setup blend state
             float[] blendFactor = { 0f, 0f, 0f, 0f };
-            deviceContext.OMSetBlendState(backendRenderer.BlendState, blendFactor, 0xffffffff);
-            deviceContext.OMSetDepthStencilState(backendRenderer.DepthStencilState, 0);
-            deviceContext.RSSetState(backendRenderer.RasterizerState);
+            deviceContext.OMSetBlendState(_backendRendererUserData.BlendState, blendFactor, 0xffffffff);
+            deviceContext.OMSetDepthStencilState(_backendRendererUserData.DepthStencilState, 0);
+            deviceContext.RSSetState(_backendRendererUserData.RasterizerState);
         }
 
-        private static unsafe void InvalidateDeviceObjects()
+        private unsafe void InvalidateDeviceObjects()
         {
-            ComPtr<ImGuiImplDX11Data> bdPtr = GetBackendData();
-            ImGuiImplDX11Data bd = bdPtr.Get();
-            if (bd.D3dDevice.Handle is null)
+            if (_backendRendererUserData.D3dDevice.Handle is null)
                 return;
 
-            if (bd.FontSampler.Handle != null) { bd.FontSampler.Dispose(); bd.FontSampler = null; }
-            if (bd.FontTextureView.Handle != null) { bd.FontTextureView.Dispose(); bd.FontTextureView = null; ImGui.GetIO().Fonts.SetTexID(0); } // We copied data.FontTextureView to io.Fonts.TexID so let's clear that as well.
-            if (bd.IndexBuffer.Handle != null) { bd.IndexBuffer.Dispose(); bd.IndexBuffer = null; }
-            if (bd.VertexBuffer.Handle != null) { bd.VertexBuffer.Dispose(); bd.VertexBuffer = null; }
-            if (bd.BlendState.Handle != null) { bd.BlendState.Dispose(); bd.BlendState = null; }
-            if (bd.DepthStencilState.Handle != null) { bd.DepthStencilState.Dispose(); bd.DepthStencilState = null; }
-            if (bd.RasterizerState.Handle != null) { bd.RasterizerState.Dispose(); bd.RasterizerState = null; }
-            if (bd.PixelShader.Handle != null) { bd.PixelShader.Dispose(); bd.PixelShader = null; }
-            if (bd.VertexConstantBuffer.Handle != null) { bd.VertexConstantBuffer.Dispose(); bd.VertexConstantBuffer = null; }
-            if (bd.InputLayout.Handle != null) { bd.InputLayout.Dispose(); bd.InputLayout = null; }
-            if (bd.VertexShader.Handle != null) { bd.VertexShader.Dispose(); bd.VertexShader = null; }
+            if (_backendRendererUserData.FontSampler.Handle != null) { _backendRendererUserData.FontSampler.Dispose(); _backendRendererUserData.FontSampler = null; }
+            if (_backendRendererUserData.FontTextureView.Handle != null) { _backendRendererUserData.FontTextureView.Dispose(); _backendRendererUserData.FontTextureView = null; ImGui.GetIO().Fonts.SetTexID(0); } // We copied data.FontTextureView to io.Fonts.TexID so let's clear that as well.
+            if (_backendRendererUserData.IndexBuffer.Handle != null) { _backendRendererUserData.IndexBuffer.Dispose(); _backendRendererUserData.IndexBuffer = null; }
+            if (_backendRendererUserData.VertexBuffer.Handle != null) { _backendRendererUserData.VertexBuffer.Dispose(); _backendRendererUserData.VertexBuffer = null; }
+            if (_backendRendererUserData.BlendState.Handle != null) { _backendRendererUserData.BlendState.Dispose(); _backendRendererUserData.BlendState = null; }
+            if (_backendRendererUserData.DepthStencilState.Handle != null) { _backendRendererUserData.DepthStencilState.Dispose(); _backendRendererUserData.DepthStencilState = null; }
+            if (_backendRendererUserData.RasterizerState.Handle != null) { _backendRendererUserData.RasterizerState.Dispose(); _backendRendererUserData.RasterizerState = null; }
+            if (_backendRendererUserData.PixelShader.Handle != null) { _backendRendererUserData.PixelShader.Dispose(); _backendRendererUserData.PixelShader = null; }
+            if (_backendRendererUserData.VertexConstantBuffer.Handle != null) { _backendRendererUserData.VertexConstantBuffer.Dispose(); _backendRendererUserData.VertexConstantBuffer = null; }
+            if (_backendRendererUserData.InputLayout.Handle != null) { _backendRendererUserData.InputLayout.Dispose(); _backendRendererUserData.InputLayout = null; }
+            if (_backendRendererUserData.VertexShader.Handle != null) { _backendRendererUserData.VertexShader.Dispose(); _backendRendererUserData.VertexShader = null; }
         }
 
         public static Matrix4X4<T> CreateOrthographicOffCenterLH<T>(T left, T right, T bottom, T top, T zNearPlane, T zFarPlane) where T : unmanaged, IFormattable, IEquatable<T>, IComparable<T>
@@ -763,6 +760,51 @@ namespace PetitMoteur3D.DebugGui
             Matrix4X4<T> result = Matrix4X4.CreateOrthographicOffCenter(left, right, bottom, top, zNearPlane, zFarPlane);
             result.M33 = Scalar.Negate(result.M33);
             return result;
+        }
+
+        private bool _disposed = false;
+
+        /// <inheritdoc/>
+        public void Dispose()
+        {
+            Dispose(disposing: true);
+            // This object will be cleaned up by the Dispose method.
+            // Therefore, you should call GC.SuppressFinalize to
+            // take this object off the finalization queue
+            // and prevent finalization code for this object
+            // from executing a second time.
+            GC.SuppressFinalize(this);
+        }
+
+        // Dispose(bool disposing) executes in two distinct scenarios.
+        // If disposing equals true, the method has been called directly
+        // or indirectly by a user's code. Managed and unmanaged resources
+        // can be disposed.
+        // If disposing equals false, the method has been called by the
+        // runtime from inside the finalizer and you should not reference
+        // other objects. Only unmanaged resources can be disposed.
+        protected virtual void Dispose(bool disposing)
+        {
+            // Check to see if Dispose has already been called.
+            if (!_disposed)
+            {
+                // If disposing equals true, dispose all managed
+                // and unmanaged resources.
+                if (disposing)
+                {
+                    // Dispose managed resources.
+                    // _backendRendererUserDataPtr.Dispose();
+                }
+
+                // Call the appropriate methods to clean up
+                // unmanaged resources here.
+                // If disposing is false,
+                // only the following code is executed.
+                Marshal.FreeHGlobal(_backendRendererName);
+
+                // Note disposing has been done.
+                _disposed = true;
+            }
         }
     }
 }

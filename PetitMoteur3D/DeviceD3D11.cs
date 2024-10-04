@@ -59,7 +59,7 @@ namespace PetitMoteur3D
 
             // Tell the output merger about our render target view.
             _deviceContext.OMSetRenderTargets(1, ref _renderTargetView, _depthStencilView);
-            _deviceContext.ClearRenderTargetView(_renderTargetView, ref _backgroundColour[0]);
+            _deviceContext.ClearRenderTargetView(_renderTargetView, _backgroundColour.AsSpan());
             _deviceContext.ClearDepthStencilView(_depthStencilView, (uint)ClearFlag.Depth, 1.0f, 0);
 
             // Set the rasterizer state with the current viewport.
@@ -105,7 +105,7 @@ namespace PetitMoteur3D
         public unsafe void BeforePresent()
         {
             // On efface la surface de rendu
-            _deviceContext.ClearRenderTargetView(_renderTargetView, ref _backgroundColour[0]);
+            _deviceContext.ClearRenderTargetView(_renderTargetView, _backgroundColour.AsSpan());
             // On ré-initialise le tampon de profondeur
             _deviceContext.ClearDepthStencilView(_depthStencilView, (uint)ClearFlag.Depth, 1.0f, 0);
         }
@@ -151,6 +151,18 @@ namespace PetitMoteur3D
             {
                 System.Console.WriteLine("EndFrameCapture fail to capture");
             }
+        }
+
+        public Vector4D<float> GetBackgroundColour(){
+            return new Vector4D<float>(_backgroundColour[0], _backgroundColour[1], _backgroundColour[2], _backgroundColour[3]);
+        }
+
+        public void SetBackgroundColour(float r, float g, float b, float a)
+        {
+            _backgroundColour[0] = r;
+            _backgroundColour[1] = g;
+            _backgroundColour[2] = b;
+            _backgroundColour[3] = a;
         }
 
         private unsafe void InitDevice(bool forceDxvk)

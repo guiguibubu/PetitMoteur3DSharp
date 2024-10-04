@@ -1,8 +1,8 @@
 ﻿using ImGuiNET;
-using Silk.NET.Core.Native;
-using Silk.NET.DXGI;
+using PetitMoteur3D.DebugGui;
 using Silk.NET.Maths;
 using Silk.NET.Windowing;
+using Silk.NET.Input;
 using System;
 using System.Diagnostics;
 
@@ -11,10 +11,14 @@ namespace PetitMoteur3D
     internal class Program
     {
         private static IWindow _window = default!;
+        private static ImGuiController _imGuiController = default!;
         private static DeviceD3D11 _deviceD3D11 = default!;
         private static Scene _scene = default!;
         private static Matrix4X4<float> _matView = default;
         private static Matrix4X4<float> _matProj = default;
+
+        private static bool _imGuiShowDemo = false;
+        private static System.Numerics.Vector4 _backgroundColour = default!;
 
         private static Stopwatch _horloge = new Stopwatch();
         private const int IMAGESPARSECONDE = 60;
@@ -49,21 +53,16 @@ namespace PetitMoteur3D
             InitAnimation();
             System.Console.WriteLine("OnLoad InitAnimation Finished");
 
-            ImGui.CreateContext();
-            System.Console.WriteLine("OnLoad ImGui.CreateContext Finished");
-
-            ImGuiIOPtr io = ImGui.GetIO();
-            // Build atlas
-            nint tex_pixels;
-            int tex_w, tex_h;
-            io.Fonts.GetTexDataAsRGBA32(out tex_pixels, out tex_w, out tex_h);
+            IInputContext inputContext = _window.CreateInput();
+            _imGuiController = new ImGuiController(_deviceD3D11, _window, inputContext);
+            System.Console.WriteLine("OnLoad ImGuiController Finished");
         }
 
         private static void OnClosing()
         {
             System.Console.WriteLine("OnClosing");
-            ImGuiNET.ImGui.DestroyContext();
-            System.Console.WriteLine("OnClosing ImGui.DestroyContext Finished");
+            _imGuiController.Dispose();
+            System.Console.WriteLine("OnClosing ImGuiController.Dispose Finished");
         }
 
         private static void OnUpdate(double elapsedTime)
@@ -86,18 +85,26 @@ namespace PetitMoteur3D
                 // (tampon d’arrière plan)
                 RenderScene();
 
+                _imGuiController.Update((float)tempsEcoule);
+                _imGuiController.NewFrame();
+                
                 ImGuiIOPtr io = ImGui.GetIO();
-                io.DisplaySize = new System.Numerics.Vector2(_window.FramebufferSize.X, _window.FramebufferSize.Y);
-                io.DeltaTime = 1.0f / 60.0f;
-                ImGui.NewFrame();
 
                 float f = 0.0f;
+                ImGui.Begin("Title : Hello, world!");  
                 ImGui.Text("Hello, world!");
                 ImGui.SliderFloat("float", ref f, 0.0f, 1.0f);
                 ImGui.Text(string.Format("Application average {0} ms/frame ({1} FPS)", (1000.0f / io.Framerate).ToString("F3", System.Globalization.CultureInfo.InvariantCulture), io.Framerate.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)));
-                ImGui.ShowDemoWindow();
+                ImGui.Checkbox("Demo Window", ref _imGuiShowDemo);      // Edit bools storing our window open/close state
+                ImGui.ColorEdit4("Background Color", ref _backgroundColour);     // Edit 4 floats representing a color
+                ImGui.End();  
+                // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
+                if (_imGuiShowDemo)
+                    ImGui.ShowDemoWindow(ref _imGuiShowDemo);
 
-                ImGui.Render();
+                _imGuiController.Render();
+
+                _deviceD3D11.SetBackgroundColour(_backgroundColour.X / _backgroundColour.W, _backgroundColour.Y / _backgroundColour.W, _backgroundColour.Z / _backgroundColour.W, _backgroundColour.W);
             }
         }
 
@@ -115,6 +122,7 @@ namespace PetitMoteur3D
         private static void InitRendering()
         {
             _deviceD3D11 = new(_window);
+            _backgroundColour = _deviceD3D11.GetBackgroundColour().ToSystem();
         }
 
         private static void InitScene()
@@ -128,7 +136,6 @@ namespace PetitMoteur3D
                 new Vector3D<float>(0.0f, 0.0f, 0.0f),
                 new Vector3D<float>(0.0f, 1.0f, 0.0f));
             float champDeVision = (float)(Math.PI / 4); // 45 degrés
-            Monitor.GetMainMonitor(_window);
             float largeurEcran = Monitor.GetMainMonitor(_window).Bounds.Size.X;
             float hauteurEcran = Monitor.GetMainMonitor(_window).Bounds.Size.Y;
             float aspectRatio = largeurEcran / hauteurEcran;
