@@ -18,6 +18,7 @@ namespace PetitMoteur3D
         private static Matrix4X4<float> _matProj = default;
 
         private static bool _imGuiShowDemo = false;
+        private static bool _showWireFrame = false;
         private static System.Numerics.Vector4 _backgroundColour = default!;
 
         private static Stopwatch _horloge = new Stopwatch();
@@ -69,7 +70,7 @@ namespace PetitMoteur3D
         {
         }
 
-        private static void OnRender(double elapsedTime)
+        private static unsafe void OnRender(double elapsedTime)
         {
             double tempsEcoule = _horloge.ElapsedMilliseconds;
             // Est-il temps de rendre l’image ?
@@ -87,24 +88,40 @@ namespace PetitMoteur3D
 
                 _imGuiController.Update((float)tempsEcoule);
                 _imGuiController.NewFrame();
-                
+
                 ImGuiIOPtr io = ImGui.GetIO();
 
                 float f = 0.0f;
-                ImGui.Begin("Title : Hello, world!");  
+                ImGui.Begin("Title : Hello, world!");
                 ImGui.Text("Hello, world!");
                 ImGui.SliderFloat("float", ref f, 0.0f, 1.0f);
                 ImGui.Text(string.Format("Application average {0} ms/frame ({1} FPS)", (1000.0f / io.Framerate).ToString("F3", System.Globalization.CultureInfo.InvariantCulture), io.Framerate.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)));
-                ImGui.Checkbox("Demo Window", ref _imGuiShowDemo);      // Edit bools storing our window open/close state
-                ImGui.ColorEdit4("Background Color", ref _backgroundColour);     // Edit 4 floats representing a color
-                ImGui.End();  
+                bool colorChanged = ImGui.ColorEdit4("Background Color", ref _backgroundColour);     // Edit 4 floats representing a color
+                bool wireFrameChanged = ImGui.Checkbox("WireFrame", ref _showWireFrame);     // Edit 4 floats representing a color
+                ImGui.End();
+
                 // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
                 if (_imGuiShowDemo)
                     ImGui.ShowDemoWindow(ref _imGuiShowDemo);
 
                 _imGuiController.Render();
 
-                _deviceD3D11.SetBackgroundColour(_backgroundColour.X / _backgroundColour.W, _backgroundColour.Y / _backgroundColour.W, _backgroundColour.Z / _backgroundColour.W, _backgroundColour.W);
+                if (colorChanged)
+                {
+                    _deviceD3D11.SetBackgroundColour(_backgroundColour.X / _backgroundColour.W, _backgroundColour.Y / _backgroundColour.W, _backgroundColour.Z / _backgroundColour.W, _backgroundColour.W);
+                }
+
+                if (wireFrameChanged)
+                {
+                    if (_showWireFrame && _deviceD3D11.GetRasterizerState().Handle != _deviceD3D11.WireFrameCullBackRS.Handle)
+                    {
+                        _deviceD3D11.SetRasterizerState(_deviceD3D11.WireFrameCullBackRS);
+                    }
+                    if (!_showWireFrame && _deviceD3D11.GetRasterizerState().Handle != _deviceD3D11.SolidCullBackRS.Handle)
+                    {
+                        _deviceD3D11.SetRasterizerState(_deviceD3D11.SolidCullBackRS);
+                    }
+                }
             }
         }
 

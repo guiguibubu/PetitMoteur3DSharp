@@ -19,6 +19,7 @@ namespace PetitMoteur3D
         public ComPtr<ID3D11RenderTargetView> RenderTargetView { get { return _renderTargetView; } }
         public ComPtr<ID3D11DepthStencilView> DepthStencilView { get { return _depthStencilView; } }
         public ComPtr<ID3D11RasterizerState> SolidCullBackRS { get { return _solidCullBackRS; } }
+        public ComPtr<ID3D11RasterizerState> WireFrameCullBackRS { get { return _wireFrameCullBackRS; } }
         public D3DCompiler ShaderCompiler { get { return _compiler; } }
 
         private ComPtr<ID3D11Device> _device;
@@ -28,9 +29,10 @@ namespace PetitMoteur3D
         private ComPtr<ID3D11DepthStencilView> _depthStencilView;
         private ComPtr<ID3D11Texture2D> _depthTexture;
         public ComPtr<ID3D11RasterizerState> _solidCullBackRS;
-        private D3DCompiler _compiler;
+        public ComPtr<ID3D11RasterizerState> _wireFrameCullBackRS;
+        private readonly D3DCompiler _compiler;
 
-        private Silk.NET.Windowing.IWindow _window;
+        private readonly Silk.NET.Windowing.IWindow _window;
 
         private readonly float[] _backgroundColour = new[] { 0.0f, 0.5f, 0.0f, 1.0f };
 
@@ -66,13 +68,20 @@ namespace PetitMoteur3D
             Viewport viewport = new(0, 0, _window.FramebufferSize.X, _window.FramebufferSize.Y, 0, 1);
             _deviceContext.RSSetViewports(1, in viewport);
 
-            RasterizerDesc rsDesc = new()
+            RasterizerDesc rsSolidDesc = new()
             {
                 FillMode = FillMode.Solid,
                 CullMode = CullMode.Back,
                 FrontCounterClockwise = false
             };
-            SilkMarshal.ThrowHResult(_device.CreateRasterizerState(in rsDesc, ref _solidCullBackRS));
+            SilkMarshal.ThrowHResult(_device.CreateRasterizerState(in rsSolidDesc, ref _solidCullBackRS));
+            RasterizerDesc rsWireDesc = new()
+            {
+                FillMode = FillMode.Wireframe,
+                CullMode = CullMode.None,
+                FrontCounterClockwise = false
+            };
+            SilkMarshal.ThrowHResult(_device.CreateRasterizerState(in rsWireDesc, ref _wireFrameCullBackRS));
             _deviceContext.RSSetState(_solidCullBackRS);
 
             RenderDoc.Load(out _renderDoc);
@@ -153,7 +162,8 @@ namespace PetitMoteur3D
             }
         }
 
-        public Vector4D<float> GetBackgroundColour(){
+        public Vector4D<float> GetBackgroundColour()
+        {
             return new Vector4D<float>(_backgroundColour[0], _backgroundColour[1], _backgroundColour[2], _backgroundColour[3]);
         }
 
@@ -163,6 +173,22 @@ namespace PetitMoteur3D
             _backgroundColour[1] = g;
             _backgroundColour[2] = b;
             _backgroundColour[3] = a;
+        }
+
+        public ComPtr<ID3D11RasterizerState> GetRasterizerState()
+        {
+            ComPtr<ID3D11RasterizerState> result = null;
+            _deviceContext.RSGetState(ref result);
+            return result;
+        }
+
+        public unsafe void SetRasterizerState(ComPtr<ID3D11RasterizerState> rsState)
+        {
+            if (rsState.Handle is null)
+            {
+                return;
+            }
+            _deviceContext.RSSetState(rsState);
         }
 
         private unsafe void InitDevice(bool forceDxvk)
