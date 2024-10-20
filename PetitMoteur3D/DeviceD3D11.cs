@@ -223,6 +223,7 @@ namespace PetitMoteur3D
             );
             d3d11.Dispose();
 
+#if DEBUG
             //This is not supported under DXVK 
             //TODO: PR a stub into DXVK for this maybe?
             if (OperatingSystem.IsWindows())
@@ -230,6 +231,7 @@ namespace PetitMoteur3D
                 // Log debug messages for this device (given that we've enabled the debug flag). Don't do this in release code!
                 _device.SetInfoQueueCallback(msg => Console.WriteLine(SilkMarshal.PtrToString((nint)msg.PDescription)));
             }
+#endif
         }
 
         private unsafe void InitSwapChain(IWindow window, bool forceDxvk)
