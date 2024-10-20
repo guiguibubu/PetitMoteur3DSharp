@@ -11,6 +11,7 @@ namespace PetitMoteur3D
     internal class Program
     {
         private static IWindow _window = default!;
+        private static IInputContext _inputContext = default!;
         private static ImGuiController _imGuiController = default!;
         private static DeviceD3D11 _deviceD3D11 = default!;
         private static Scene _scene = default!;
@@ -18,6 +19,8 @@ namespace PetitMoteur3D
         private static Matrix4X4<float> _matProj = default;
 
         private static bool _imGuiShowDemo = false;
+        private static bool _debugToolKeyPressed = false;
+        private static bool _showDebugTool = false;
         private static bool _showWireFrame = false;
         private static System.Numerics.Vector4 _backgroundColour = default!;
 
@@ -33,6 +36,7 @@ namespace PetitMoteur3D
             // Assign events.
             _window.Load += OnLoad;
             _window.Closing += OnClosing;
+            _window.Update += OnUpdate;
             _window.Render += OnRender;
             _window.FramebufferResize += OnFramebufferResize;
 
@@ -53,10 +57,10 @@ namespace PetitMoteur3D
             System.Console.WriteLine("OnLoad InitScene Finished");
             InitAnimation();
             System.Console.WriteLine("OnLoad InitAnimation Finished");
-
-            IInputContext inputContext = _window.CreateInput();
-            _imGuiController = new ImGuiController(_deviceD3D11, _window, inputContext);
-            System.Console.WriteLine("OnLoad ImGuiController Finished");
+            InitInput();
+            System.Console.WriteLine("OnLoad InitInput Finished");
+            InitDebugTools();
+            System.Console.WriteLine("OnLoad InitDebugTools Finished");
         }
 
         private static void OnClosing()
@@ -68,6 +72,18 @@ namespace PetitMoteur3D
 
         private static void OnUpdate(double elapsedTime)
         {
+            if (_inputContext.Keyboards[0].IsKeyPressed(Key.F12) && !_debugToolKeyPressed)
+            {
+                _debugToolKeyPressed = true;
+                _inputContext.Keyboards[0].KeyUp += (keyboard, key, i) =>
+                {
+                    if (key == Key.F12 && _debugToolKeyPressed)
+                    {
+                        _showDebugTool = !_showDebugTool;
+                        _debugToolKeyPressed = false;
+                    }
+                };
+            }
         }
 
         private static unsafe void OnRender(double elapsedTime)
@@ -86,40 +102,43 @@ namespace PetitMoteur3D
                 // (tampon d’arrière plan)
                 RenderScene();
 
-                _imGuiController.Update((float)tempsEcoule);
-                _imGuiController.NewFrame();
-
-                ImGuiIOPtr io = ImGui.GetIO();
-
-                float f = 0.0f;
-                ImGui.Begin("Title : Hello, world!");
-                ImGui.Text("Hello, world!");
-                ImGui.SliderFloat("float", ref f, 0.0f, 1.0f);
-                ImGui.Text(string.Format("Application average {0} ms/frame ({1} FPS)", (1000.0f / io.Framerate).ToString("F3", System.Globalization.CultureInfo.InvariantCulture), io.Framerate.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)));
-                bool colorChanged = ImGui.ColorEdit4("Background Color", ref _backgroundColour);     // Edit 4 floats representing a color
-                bool wireFrameChanged = ImGui.Checkbox("WireFrame", ref _showWireFrame);     // Edit 4 floats representing a color
-                ImGui.End();
-
-                // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
-                if (_imGuiShowDemo)
-                    ImGui.ShowDemoWindow(ref _imGuiShowDemo);
-
-                _imGuiController.Render();
-
-                if (colorChanged)
+                if (_showDebugTool)
                 {
-                    _deviceD3D11.SetBackgroundColour(_backgroundColour.X / _backgroundColour.W, _backgroundColour.Y / _backgroundColour.W, _backgroundColour.Z / _backgroundColour.W, _backgroundColour.W);
-                }
+                    _imGuiController.Update((float)tempsEcoule);
+                    _imGuiController.NewFrame();
 
-                if (wireFrameChanged)
-                {
-                    if (_showWireFrame && _deviceD3D11.GetRasterizerState().Handle != _deviceD3D11.WireFrameCullBackRS.Handle)
+                    ImGuiIOPtr io = ImGui.GetIO();
+
+                    float f = 0.0f;
+                    ImGui.Begin("Title : Hello, world!");
+                    ImGui.Text("Hello, world!");
+                    ImGui.SliderFloat("float", ref f, 0.0f, 1.0f);
+                    ImGui.Text(string.Format("Application average {0} ms/frame ({1} FPS)", (1000.0f / io.Framerate).ToString("F3", System.Globalization.CultureInfo.InvariantCulture), io.Framerate.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)));
+                    bool colorChanged = ImGui.ColorEdit4("Background Color", ref _backgroundColour);     // Edit 4 floats representing a color
+                    bool wireFrameChanged = ImGui.Checkbox("WireFrame", ref _showWireFrame);     // Edit 4 floats representing a color
+                    ImGui.End();
+
+                    // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
+                    if (_imGuiShowDemo)
+                        ImGui.ShowDemoWindow(ref _imGuiShowDemo);
+
+                    _imGuiController.Render();
+
+                    if (colorChanged)
                     {
-                        _deviceD3D11.SetRasterizerState(_deviceD3D11.WireFrameCullBackRS);
+                        _deviceD3D11.SetBackgroundColour(_backgroundColour.X / _backgroundColour.W, _backgroundColour.Y / _backgroundColour.W, _backgroundColour.Z / _backgroundColour.W, _backgroundColour.W);
                     }
-                    if (!_showWireFrame && _deviceD3D11.GetRasterizerState().Handle != _deviceD3D11.SolidCullBackRS.Handle)
+
+                    if (wireFrameChanged)
                     {
-                        _deviceD3D11.SetRasterizerState(_deviceD3D11.SolidCullBackRS);
+                        if (_showWireFrame && _deviceD3D11.GetRasterizerState().Handle != _deviceD3D11.WireFrameCullBackRS.Handle)
+                        {
+                            _deviceD3D11.SetRasterizerState(_deviceD3D11.WireFrameCullBackRS);
+                        }
+                        if (!_showWireFrame && _deviceD3D11.GetRasterizerState().Handle != _deviceD3D11.SolidCullBackRS.Handle)
+                        {
+                            _deviceD3D11.SetRasterizerState(_deviceD3D11.SolidCullBackRS);
+                        }
                     }
                 }
             }
@@ -171,6 +190,31 @@ namespace PetitMoteur3D
             // première Image
             RenderScene();
             _initAnimationFinished = true;
+        }
+
+        private static void InitInput()
+        {
+            _inputContext = _window.CreateInput();
+            _inputContext.Keyboards[0].KeyDown += (keyboard, key, i) =>
+            {
+                if (key == Key.F12 && !_debugToolKeyPressed)
+                {
+                    _debugToolKeyPressed = true;
+                }
+            };
+            _inputContext.Keyboards[0].KeyUp += (keyboard, key, i) =>
+                {
+                    if (key == Key.F12 && _debugToolKeyPressed)
+                    {
+                        _showDebugTool = !_showDebugTool;
+                        _debugToolKeyPressed = false;
+                    }
+                };
+        }
+
+        private static void InitDebugTools()
+        {
+            _imGuiController = new ImGuiController(_deviceD3D11, _window, _inputContext);
         }
 
         private static void AnimeScene(float tempsEcoule)
