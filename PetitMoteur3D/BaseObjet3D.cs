@@ -81,14 +81,27 @@ namespace PetitMoteur3D
             deviceContext.IASetIndexBuffer(_indexBuffer, Silk.NET.DXGI.Format.FormatR16Uint, 0);
             // input layout des sommets
             deviceContext.IASetInputLayout(_vertexLayout);
+            // Initialiser et sélectionner les « constantes » du VS
+            ShadersParams shadersParams = new()
+            {
+                matWorldViewProj = Matrix4X4.Transpose(_matWorld * matViewProj),
+                matWorld = Matrix4X4.Transpose(_matWorld),
+                vLumiere = new Vector4D<float>(-10f, 10f, -10f, 1f),
+                vCamera = new Vector4D<float>(0.0f, 0.0f, -10.0f, 1.0f),
+                vAEcl = new Vector4D<float>(0.2f, 0.2f, 0.2f, 1.0f),
+                vAMat = new Vector4D<float>(1.0f, 0.0f, 0.0f, 1.0f),
+                vDEcl = new Vector4D<float>(1.0f, 1.0f, 1.0f, 1.0f),
+                vDMat = new Vector4D<float>(1.0f, 0.0f, 0.0f, 1.0f)
+            };
             // Activer le VS
             deviceContext.VSSetShader(_vertexShader, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
-            // Initialiser et sélectionner les « constantes » du VS
-            Matrix4X4<float> matWorldViewProj = Matrix4X4.Transpose(_matWorld * matViewProj);
-            deviceContext.UpdateSubresource(_constantBuffer, 0, ref Unsafe.NullRef<Box>(), ref matWorldViewProj, 0, 0);
+            deviceContext.UpdateSubresource(_constantBuffer, 0, ref Unsafe.NullRef<Box>(), ref shadersParams, 0, 0);
             deviceContext.VSSetConstantBuffers(0, 1, ref _constantBuffer);
+            // Activer le GS
+            deviceContext.GSSetShader((ID3D11GeometryShader*)null, (ID3D11ClassInstance**)null, 0);
             // Activer le PS
             deviceContext.PSSetShader(_pixelShader, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
+            deviceContext.PSSetConstantBuffers( 0, 1, ref _constantBuffer);
             // **** Rendu de l’objet
             deviceContext.DrawIndexed((uint)_indices.Length, 0, 0);
         }
@@ -131,7 +144,7 @@ namespace PetitMoteur3D
             CreateIndexBuffer(device, indices, ref _indexBuffer);
 
             // Create our constant buffer.
-            CreateConstantBuffer<Matrix4X4<float>>(device, ref _constantBuffer);
+            CreateConstantBuffer<ShadersParams>(device, ref _constantBuffer);
         }
 
         /// <summary>
@@ -144,9 +157,9 @@ namespace PetitMoteur3D
             // Compilation et chargement du vertex shader
             ComPtr<ID3D10Blob> compilationBlob = default;
             ComPtr<ID3D10Blob> compilationErrors = default;
-            string filePath = "shaders\\VS1.hlsl";
+            string filePath = "shaders\\MiniPhong_VS.hlsl";
             byte[] shaderCode = File.ReadAllBytes(filePath);
-            string entryPoint = "VS1";
+            string entryPoint = "MiniPhongVS";
             string target = "vs_5_0";
             // #define D3DCOMPILE_ENABLE_STRICTNESS                    (1 << 11)
             uint flagStrictness = ((uint)1 << 11);
@@ -213,9 +226,9 @@ namespace PetitMoteur3D
         {
             ComPtr<ID3D10Blob> compilationBlob = default;
             ComPtr<ID3D10Blob> compilationErrors = default;
-            string filePath = "shaders\\PS1.hlsl";
+            string filePath = "shaders\\MiniPhong_PS.hlsl";
             byte[] shaderCode = File.ReadAllBytes(filePath);
-            string entryPoint = "PS1";
+            string entryPoint = "MiniPhongPS";
             string target = "ps_5_0";
             // #define D3DCOMPILE_ENABLE_STRICTNESS                    (1 << 11)
             uint flagStrictness = ((uint)1 << 11);

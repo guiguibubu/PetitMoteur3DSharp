@@ -36,7 +36,6 @@ namespace PetitMoteur3D
             // Assign events.
             _window.Load += OnLoad;
             _window.Closing += OnClosing;
-            _window.Update += OnUpdate;
             _window.Render += OnRender;
             _window.FramebufferResize += OnFramebufferResize;
 
@@ -68,22 +67,6 @@ namespace PetitMoteur3D
             System.Console.WriteLine("OnClosing");
             _imGuiController.Dispose();
             System.Console.WriteLine("OnClosing ImGuiController.Dispose Finished");
-        }
-
-        private static void OnUpdate(double elapsedTime)
-        {
-            if (_inputContext.Keyboards[0].IsKeyPressed(Key.F12) && !_debugToolKeyPressed)
-            {
-                _debugToolKeyPressed = true;
-                _inputContext.Keyboards[0].KeyUp += (keyboard, key, i) =>
-                {
-                    if (key == Key.F12 && _debugToolKeyPressed)
-                    {
-                        _showDebugTool = !_showDebugTool;
-                        _debugToolKeyPressed = false;
-                    }
-                };
-            }
         }
 
         private static unsafe void OnRender(double elapsedTime)
