@@ -4,13 +4,37 @@ namespace PetitMoteur3D
 {
     internal struct ShadersParams
     {
-        public Matrix4X4<float> matWorldViewProj; // la matrice totale
-        public Matrix4X4<float> matWorld; // matrice de transformation dans le monde
-        public Vector4D<float> vLumiere; // la position de la source d’éclairage (Point)
-        public Vector4D<float> vCamera; // la position de la caméra
-        public Vector4D<float> vAEcl; // la valeur ambiante de l’éclairage
-        public Vector4D<float> vAMat; // la valeur ambiante du matériau
-        public Vector4D<float> vDEcl; // la valeur diffuse de l’éclairage
-        public Vector4D<float> vDMat; // la valeur diffuse du matériau
+        /// <summary>
+        /// la matrice totale
+        /// </summary>
+        public Matrix4X4<float> matWorldViewProj;
+        /// <summary>
+        /// matrice de transformation dans le monde
+        /// </summary>
+        public Matrix4X4<float> matWorld;
+        /// <summary>
+        /// la position de la source d’éclairage (Point)
+        /// </summary>
+        public Vector4D<float> lightPos;
+        /// <summary>
+        /// la position de la caméra
+        /// </summary>
+        public Vector4D<float> cameraPos;
+        /// <summary>
+        /// la valeur ambiante de l’éclairage
+        /// </summary>
+        public Vector4D<float> ambiantLightValue;
+        /// <summary>
+        /// la valeur ambiante du matériau
+        /// </summary>
+        public Vector4D<float> ambiantMaterialValue;
+        /// <summary>
+        /// la valeur diffuse de l’éclairage
+        /// </summary>
+        public Vector4D<float> diffuseLightValue;
+        /// <summary>
+        /// la valeur diffuse du matériau
+        /// </summary>
+        public Vector4D<float> diffuseMaterialValue;
     }
 }

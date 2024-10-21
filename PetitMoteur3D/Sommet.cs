@@ -1,9 +1,7 @@
 ﻿using Silk.NET.Core.Native;
 using Silk.NET.Direct3D.Compilers;
 using Silk.NET.Direct3D11;
-using Silk.NET.DXGI;
 using Silk.NET.Maths;
-using System.Collections.Generic;
 
 namespace PetitMoteur3D
 {
@@ -11,17 +9,30 @@ namespace PetitMoteur3D
     {
         public Vector3D<float> Position { get; private set; }
         public Vector3D<float> Normale { get; private set; }
+        public Vector2D<float> CoordTex { get; private set; }
 
         /// <summary>
         /// Constructeur
         /// </summary>
         /// <param name="position"></param>
-        /// <param name="normale">Unused for the moment</param>
-        public unsafe Sommet(Vector3D<float> position, Vector3D<float> normale)
+        /// <param name="normale"></param>
+        /// <param name="coordTex"></param>
+        public unsafe Sommet(Vector3D<float> position, Vector3D<float> normale, Vector2D<float> coordTex)
         {
             Position = position;
             Normale = normale;
+            CoordTex = coordTex;
         }
+
+        /// <summary>
+        /// Constructeur
+        /// </summary>
+        /// <param name="position"></param>
+        /// <param name="normale"></param>
+        /// <param name="coordTex"></param>
+        public unsafe Sommet(Vector3D<float> position, Vector3D<float> normale)
+        : this(position, normale, Vector2D<float>.Zero)
+        { }
 
         /// <summary>
         /// Defini l’organisation de notre sommet
@@ -31,6 +42,7 @@ namespace PetitMoteur3D
             // Describe the layout of the input data for the shader.
             fixed (byte* semanticNamePosition = SilkMarshal.StringToMemory("POSITION"))
             fixed (byte* semanticNameNormal = SilkMarshal.StringToMemory("NORMAL"))
+            fixed (byte* semanticNameTexCoord = SilkMarshal.StringToMemory("TEXCOORD"))
             {
                 InputElementDesc[] inputElements = new[]
                 {
@@ -39,6 +51,9 @@ namespace PetitMoteur3D
                     ),
                     new InputElementDesc(
                         semanticNameNormal, 0, Silk.NET.DXGI.Format.FormatR32G32B32Float, 0, (uint)sizeof(Vector3D<float>), InputClassification.PerVertexData, 0
+                    ),
+                    new InputElementDesc(
+                        semanticNameTexCoord, 0, Silk.NET.DXGI.Format.FormatR32G32Float, 0, 2 * (uint)sizeof(Vector3D<float>), InputClassification.PerVertexData, 0
                     ),
                 };
 

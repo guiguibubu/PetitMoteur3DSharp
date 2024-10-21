@@ -14,6 +14,7 @@ namespace PetitMoteur3D
         private static IInputContext _inputContext = default!;
         private static ImGuiController _imGuiController = default!;
         private static DeviceD3D11 _deviceD3D11 = default!;
+        private static TextureManager _textureManager = default!;
         private static Scene _scene = default!;
         private static Matrix4X4<float> _matView = default;
         private static Matrix4X4<float> _matProj = default;
@@ -142,11 +143,14 @@ namespace PetitMoteur3D
         {
             _deviceD3D11 = new(_window);
             _backgroundColour = _deviceD3D11.GetBackgroundColour().ToSystem();
+            _textureManager = new TextureManager(_deviceD3D11.Device);
         }
 
         private static void InitScene()
         {
-            _scene = new Scene(new Bloc(2.0f, 2.0f, 2.0f, _deviceD3D11));
+            Bloc bloc = new(2.0f, 2.0f, 2.0f, _deviceD3D11);
+            bloc.SetTexture(_textureManager.GetOrLoadTexture("textures\\silk.png"));
+            _scene = new Scene(bloc);
 
             // Initialisation des matrices View et Proj
             // Dans notre cas, ces matrices sont fixes

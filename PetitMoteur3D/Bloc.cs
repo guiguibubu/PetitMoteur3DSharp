@@ -34,35 +34,35 @@ namespace PetitMoteur3D
             _sommets = new Sommet[]
             {
                 // Le devant du bloc
-                new(_vertices[0], _normales[0]),
-                new(_vertices[1], _normales[0]),
-                new(_vertices[2], _normales[0]),
-                new(_vertices[3], _normales[0]),
+                new(_vertices[0], _normales[0], new Vector2D<float>(0f, 0f)),
+                new(_vertices[1], _normales[0], new Vector2D<float>(1f, 0f)),
+                new(_vertices[2], _normales[0], new Vector2D<float>(1f, 1f)),
+                new(_vertices[3], _normales[0], new Vector2D<float>(0f, 1f)),
                 // L’arrière du bloc
-                new(_vertices[4], _normales[1]),
-                new(_vertices[5], _normales[1]),
-                new(_vertices[6], _normales[1]),
-                new(_vertices[7], _normales[1]),
+                new(_vertices[4], _normales[1], new Vector2D<float>(0f, 1f)),
+                new(_vertices[5], _normales[1], new Vector2D<float>(0f, 0f)),
+                new(_vertices[6], _normales[1], new Vector2D<float>(1f, 0f)),
+                new(_vertices[7], _normales[1], new Vector2D<float>(1f, 1f)),
                 // Le dessous du bloc
-                new(_vertices[3], _normales[2]),
-                new(_vertices[2], _normales[2]),
-                new(_vertices[6], _normales[2]),
-                new(_vertices[5], _normales[2]),
+                new(_vertices[3], _normales[2], new Vector2D<float>(0f, 0f)),
+                new(_vertices[2], _normales[2], new Vector2D<float>(1f, 0f)),
+                new(_vertices[6], _normales[2], new Vector2D<float>(1f, 1f)),
+                new(_vertices[5], _normales[2], new Vector2D<float>(0f, 1f)),
                 // Le dessus du bloc
-                new(_vertices[0], _normales[3]),
-                new(_vertices[4], _normales[3]),
-                new(_vertices[7], _normales[3]),
-                new(_vertices[1], _normales[3]),
+                new(_vertices[0], _normales[3], new Vector2D<float>(0f, 1f)),
+                new(_vertices[4], _normales[3], new Vector2D<float>(0f, 0f)),
+                new(_vertices[7], _normales[3], new Vector2D<float>(1f, 0f)),
+                new(_vertices[1], _normales[3], new Vector2D<float>(1f, 1f)),
                 // La face gauche
-                new(_vertices[0], _normales[4]),
-                new(_vertices[3], _normales[4]),
-                new(_vertices[5], _normales[4]),
-                new(_vertices[4], _normales[4]),
+                new(_vertices[0], _normales[4], new Vector2D<float>(0f, 0f)),
+                new(_vertices[3], _normales[4], new Vector2D<float>(1f, 0f)),
+                new(_vertices[5], _normales[4], new Vector2D<float>(1f, 1f)),
+                new(_vertices[4], _normales[4], new Vector2D<float>(0f, 1f)),
                 // La face droite
-                new(_vertices[1], _normales[5]),
-                new(_vertices[7], _normales[5]),
-                new(_vertices[6], _normales[5]),
-                new(_vertices[2], _normales[5])
+                new(_vertices[1], _normales[5], new Vector2D<float>(0f, 0f)),
+                new(_vertices[7], _normales[5], new Vector2D<float>(1f, 0f)),
+                new(_vertices[6], _normales[5], new Vector2D<float>(1f, 1f)),
+                new(_vertices[2], _normales[5], new Vector2D<float>(0f, 1f))
             };
 
             _indices = new ushort[]
