@@ -16,6 +16,7 @@ namespace PetitMoteur3D
         private static DeviceD3D11 _deviceD3D11 = default!;
         private static ShaderManager _shaderManager = default!;
         private static TextureManager _textureManager = default!;
+        private static MeshLoader _meshLoader = default!;
         private static Scene _scene = default!;
         private static Matrix4X4<float> _matView = default;
         private static Matrix4X4<float> _matProj = default;
@@ -152,7 +153,9 @@ namespace PetitMoteur3D
         {
             Bloc bloc = new(2.0f, 2.0f, 2.0f, _deviceD3D11, _shaderManager);
             bloc.SetTexture(_textureManager.GetOrLoadTexture("textures\\silk.png"));
-            _scene = new Scene(bloc);
+
+            ObjetMesh objetMesh = new("models\\teapot.gltf", _meshLoader, _deviceD3D11, _shaderManager);
+            _scene = new Scene(bloc, objetMesh);
 
             // Initialisation des matrices View et Proj
             // Dans notre cas, ces matrices sont fixes

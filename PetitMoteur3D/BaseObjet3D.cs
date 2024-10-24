@@ -35,8 +35,8 @@ namespace PetitMoteur3D
         private Vector3D<float> _position;
         private Vector3D<float> _rotation;
 
-        protected Sommet[] _sommets;
-        protected ushort[] _indices;
+        private Sommet[] _sommets;
+        private ushort[] _indices;
 
         private readonly DeviceD3D11 _renderDevice;
         private readonly ShaderManager _shaderManager;
@@ -142,6 +142,12 @@ namespace PetitMoteur3D
         /// </summary>
         /// <returns></returns>
         protected abstract IReadOnlyList<ushort> InitIndex();
+
+        /// <summary>
+        /// Renvoie la liste des parties de l'objet pour le rendu
+        /// </summary>
+        /// <returns></returns>
+        protected abstract IReadOnlyList<SubObjet> GetSubObjets();
 
         private unsafe void InitShaders(ShaderManager shaderManager)
         {
