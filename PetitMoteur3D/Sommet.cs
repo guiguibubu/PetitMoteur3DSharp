@@ -10,6 +10,37 @@ namespace PetitMoteur3D
         public Vector3D<float> Position { get; private set; }
         public Vector3D<float> Normale { get; private set; }
         public Vector2D<float> CoordTex { get; private set; }
+        /// <summary>
+        /// Defini l’organisation de notre sommet
+        /// </summary>
+
+        public static InputElementDesc[] InputLayoutDesc => s_inputElements;
+
+        private static readonly GlobalMemory s_semanticNamePosition;
+        private static readonly GlobalMemory s_semanticNameNormal;
+        private static readonly GlobalMemory s_semanticNameTexCoord;
+        private static readonly InputElementDesc[] s_inputElements;
+
+
+        static unsafe Sommet()
+        {
+            s_semanticNamePosition = SilkMarshal.StringToMemory("POSITION", NativeStringEncoding.LPStr);
+            s_semanticNameNormal = SilkMarshal.StringToMemory("NORMAL", NativeStringEncoding.LPStr);
+            s_semanticNameTexCoord = SilkMarshal.StringToMemory("TEXCOORD", NativeStringEncoding.LPStr);
+
+            s_inputElements = new[]
+            {
+                new InputElementDesc(
+                    s_semanticNamePosition.AsPtr<byte>(), 0, Silk.NET.DXGI.Format.FormatR32G32B32Float, 0, 0, InputClassification.PerVertexData, 0
+                ),
+                new InputElementDesc(
+                    s_semanticNameNormal.AsPtr<byte>(), 0, Silk.NET.DXGI.Format.FormatR32G32B32Float, 0, (uint)sizeof(Vector3D<float>), InputClassification.PerVertexData, 0
+                ),
+                new InputElementDesc(
+                    s_semanticNameTexCoord.AsPtr<byte>(), 0, Silk.NET.DXGI.Format.FormatR32G32Float, 0, 2 * (uint)sizeof(Vector3D<float>), InputClassification.PerVertexData, 0
+                ),
+            };
+        }
 
         /// <summary>
         /// Constructeur
@@ -33,42 +64,5 @@ namespace PetitMoteur3D
         public unsafe Sommet(Vector3D<float> position, Vector3D<float> normale)
         : this(position, normale, Vector2D<float>.Zero)
         { }
-
-        /// <summary>
-        /// Defini l’organisation de notre sommet
-        /// </summary>
-        public static unsafe void CreateInputLayout(ComPtr<ID3D11Device> device, ComPtr<ID3D10Blob> vertexCode, ref ComPtr<ID3D11InputLayout> inputLayout)
-        {
-            // Describe the layout of the input data for the shader.
-            fixed (byte* semanticNamePosition = SilkMarshal.StringToMemory("POSITION"))
-            fixed (byte* semanticNameNormal = SilkMarshal.StringToMemory("NORMAL"))
-            fixed (byte* semanticNameTexCoord = SilkMarshal.StringToMemory("TEXCOORD"))
-            {
-                InputElementDesc[] inputElements = new[]
-                {
-                    new InputElementDesc(
-                        semanticNamePosition, 0, Silk.NET.DXGI.Format.FormatR32G32B32Float, 0, 0, InputClassification.PerVertexData, 0
-                    ),
-                    new InputElementDesc(
-                        semanticNameNormal, 0, Silk.NET.DXGI.Format.FormatR32G32B32Float, 0, (uint)sizeof(Vector3D<float>), InputClassification.PerVertexData, 0
-                    ),
-                    new InputElementDesc(
-                        semanticNameTexCoord, 0, Silk.NET.DXGI.Format.FormatR32G32Float, 0, 2 * (uint)sizeof(Vector3D<float>), InputClassification.PerVertexData, 0
-                    ),
-                };
-
-                SilkMarshal.ThrowHResult
-                (
-                    device.CreateInputLayout
-                    (
-                        in inputElements[0],
-                        (uint)inputElements.Length,
-                        vertexCode.GetBufferPointer(),
-                        vertexCode.GetBufferSize(),
-                        ref inputLayout
-                    )
-                );
-            }
-        }
     }
 }

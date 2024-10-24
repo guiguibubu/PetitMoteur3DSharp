@@ -7,7 +7,7 @@ namespace PetitMoteur3D
     {
         private Vector3D<float>[] _vertices;
         private Vector3D<float>[] _normales;
-        public unsafe Bloc(float dx, float dy, float dz, DeviceD3D11 renderDevice) : base(renderDevice)
+        public unsafe Bloc(float dx, float dy, float dz, DeviceD3D11 renderDevice, ShaderManager shaderManager) : base(renderDevice, shaderManager)
         {
             _vertices = new Vector3D<float>[]
             {

@@ -39,8 +39,9 @@ namespace PetitMoteur3D
         protected ushort[] _indices;
 
         private readonly DeviceD3D11 _renderDevice;
+        private readonly ShaderManager _shaderManager;
 
-        protected unsafe BaseObjet3D(DeviceD3D11 renderDevice)
+        protected unsafe BaseObjet3D(DeviceD3D11 renderDevice, ShaderManager shaderManager)
         {
             _position = Vector3D<float>.Zero;
             _rotation = Vector3D<float>.Zero;
@@ -50,6 +51,7 @@ namespace PetitMoteur3D
             _indices = Array.Empty<ushort>();
 
             _renderDevice = renderDevice;
+            _shaderManager = shaderManager;
         }
 
         ~BaseObjet3D()
@@ -97,7 +99,7 @@ namespace PetitMoteur3D
                 diffuseMaterialValue = Vector4D<float>.One,
             };
             deviceContext.UpdateSubresource(_constantBuffer, 0, ref Unsafe.NullRef<Box>(), ref shadersParams, 0, 0);
-            
+
             // Activer le VS
             deviceContext.VSSetShader(_vertexShader, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
             deviceContext.VSSetConstantBuffers(0, 1, ref _constantBuffer);
@@ -125,7 +127,7 @@ namespace PetitMoteur3D
             _indices = InitIndex().ToArray();
 
             InitBuffers(_renderDevice.Device, _sommets, _indices);
-            InitShaders(_renderDevice.Device, _renderDevice.ShaderCompiler);
+            InitShaders(_shaderManager);
             InitTexture(_renderDevice.Device);
         }
 
@@ -141,10 +143,10 @@ namespace PetitMoteur3D
         /// <returns></returns>
         protected abstract IReadOnlyList<ushort> InitIndex();
 
-        private unsafe void InitShaders(ComPtr<ID3D11Device> device, D3DCompiler compiler)
+        private unsafe void InitShaders(ShaderManager shaderManager)
         {
-            InitVertexShader(device, compiler);
-            InitPixelShader(device, compiler);
+            InitVertexShader(shaderManager);
+            InitPixelShader(shaderManager);
         }
 
         private unsafe void InitTexture(ComPtr<ID3D11Device> device)
@@ -193,13 +195,10 @@ namespace PetitMoteur3D
         /// </summary>
         /// <param name="device"></param>
         /// <param name="compiler"></param>
-        private unsafe void InitVertexShader(ComPtr<ID3D11Device> device, D3DCompiler compiler)
+        private unsafe void InitVertexShader(ShaderManager shaderManager)
         {
             // Compilation et chargement du vertex shader
-            ComPtr<ID3D10Blob> compilationBlob = default;
-            ComPtr<ID3D10Blob> compilationErrors = default;
             string filePath = "shaders\\MiniPhong_VS.hlsl";
-            byte[] shaderCode = File.ReadAllBytes(filePath);
             string entryPoint = "MiniPhongVS";
             string target = "vs_5_0";
             // #define D3DCOMPILE_ENABLE_STRICTNESS                    (1 << 11)
@@ -213,49 +212,15 @@ namespace PetitMoteur3D
             uint flagDebug = 0;
             uint flagSkipOptimization = 0;
 #endif
-            HResult hr = compiler.Compile
-            (
-                in shaderCode[0],
-                (nuint)shaderCode.Length,
-                filePath,
-                ref Unsafe.NullRef<D3DShaderMacro>(),
-                ref Unsafe.NullRef<ID3DInclude>(),
-                entryPoint,
-                target,
-                flagStrictness | flagDebug | flagSkipOptimization,
-                0,
-                ref compilationBlob,
-                ref compilationErrors
-            );
-
-            // Check for compilation errors.
-            if (hr.IsFailure)
+            uint compilationFlags = flagStrictness | flagDebug | flagSkipOptimization;
+            ShaderManager.ShaderDesc shaderDesc = new()
             {
-                if (compilationErrors.Handle is not null)
-                {
-                    Console.WriteLine(SilkMarshal.PtrToString((nint)compilationErrors.GetBufferPointer()));
-                }
-
-                hr.Throw();
-            }
-
-            // Create vertex shader.
-            SilkMarshal.ThrowHResult
-            (
-                device.CreateVertexShader
-                (
-                    compilationBlob.GetBufferPointer(),
-                    compilationBlob.GetBufferSize(),
-                    ref Unsafe.NullRef<ID3D11ClassLinkage>(),
-                    ref _vertexShader
-                )
-            );
-
-            // Créer l’organisation des sommets
-            Sommet.CreateInputLayout(device, compilationBlob, ref _vertexLayout);
-
-            compilationBlob.Dispose();
-            compilationErrors.Dispose();
+                FilePath = filePath,
+                EntryPoint = entryPoint,
+                Target = target,
+                CompilationFlags = compilationFlags
+            };
+            shaderManager.GetOrLoadVertexShaderAndLayout(shaderDesc, Sommet.InputLayoutDesc, ref _vertexShader, ref _vertexLayout);
         }
 
         /// <summary>
@@ -263,12 +228,9 @@ namespace PetitMoteur3D
         /// </summary>
         /// <param name="device"></param>
         /// <param name="compiler"></param>
-        private unsafe void InitPixelShader(ComPtr<ID3D11Device> device, D3DCompiler compiler)
+        private unsafe void InitPixelShader(ShaderManager shaderManager)
         {
-            ComPtr<ID3D10Blob> compilationBlob = default;
-            ComPtr<ID3D10Blob> compilationErrors = default;
             string filePath = "shaders\\MiniPhong_PS.hlsl";
-            byte[] shaderCode = File.ReadAllBytes(filePath);
             string entryPoint = "MiniPhongPS";
             string target = "ps_5_0";
             // #define D3DCOMPILE_ENABLE_STRICTNESS                    (1 << 11)
@@ -282,46 +244,15 @@ namespace PetitMoteur3D
             uint flagDebug = 0;
             uint flagSkipOptimization = 0;
 #endif
-            HResult hr = compiler.Compile
-            (
-                in shaderCode[0],
-                (nuint)shaderCode.Length,
-                filePath,
-                ref Unsafe.NullRef<D3DShaderMacro>(),
-                ref Unsafe.NullRef<ID3DInclude>(),
-                entryPoint,
-                target,
-                flagStrictness | flagDebug | flagSkipOptimization,
-                0,
-                ref compilationBlob,
-                ref compilationErrors
-            );
-
-            // Check for compilation errors.
-            if (hr.IsFailure)
+            uint compilationFlags = flagStrictness | flagDebug | flagSkipOptimization;
+            ShaderManager.ShaderDesc shaderDesc = new()
             {
-                if (compilationErrors.Handle is not null)
-                {
-                    Console.WriteLine(SilkMarshal.PtrToString((nint)compilationErrors.GetBufferPointer()));
-                }
-
-                hr.Throw();
-            }
-
-            // Create pixel shader.
-            SilkMarshal.ThrowHResult
-            (
-                device.CreatePixelShader
-                (
-                    compilationBlob.GetBufferPointer(),
-                    compilationBlob.GetBufferSize(),
-                    ref Unsafe.NullRef<ID3D11ClassLinkage>(),
-                    ref _pixelShader
-                )
-            );
-
-            compilationBlob.Dispose();
-            compilationErrors.Dispose();
+                FilePath = filePath,
+                EntryPoint = entryPoint,
+                Target = target,
+                CompilationFlags = compilationFlags
+            };
+            _pixelShader = shaderManager.GetOrLoadPixelShader(shaderDesc);
         }
 
         private static unsafe void CreateVertexBuffer<T>(ComPtr<ID3D11Device> device, T[] sommets, ref ComPtr<ID3D11Buffer> buffer) where T : unmanaged
