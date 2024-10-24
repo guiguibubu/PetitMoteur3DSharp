@@ -5,8 +5,11 @@ namespace PetitMoteur3D
 {
     internal class Bloc : BaseObjet3D
     {
-        private Vector3D<float>[] _vertices;
-        private Vector3D<float>[] _normales;
+        private readonly Vector3D<float>[] _vertices;
+        private readonly Vector3D<float>[] _normales;
+        private readonly Sommet[] _sommets;
+        private readonly ushort[] _indices;
+
         public unsafe Bloc(float dx, float dy, float dz, DeviceD3D11 renderDevice, ShaderManager shaderManager) : base(renderDevice, shaderManager)
         {
             _vertices = new Vector3D<float>[]
@@ -84,22 +87,27 @@ namespace PetitMoteur3D
             Initialisation();
         }
 
-        /// <summary>
-        /// Initialise les vertex
-        /// </summary>
-        /// <returns></returns>
+        /// <inheritdoc/>
         protected override IReadOnlyList<Sommet> InitVertex()
         {
             return _sommets;
         }
 
-        /// <summary>
-        /// Initialise l'index de rendu
-        /// </summary>
-        /// <returns></returns>
+        /// <inheritdoc/>
         protected override IReadOnlyList<ushort> InitIndex()
         {
             return _indices;
+        }
+
+        protected override IReadOnlyList<SubObjet3D> GetSubObjets()
+        {
+            return new SubObjet3D[] {new SubObjet3D()
+                {
+                    Indices = _indices,
+                    Material = new Material(),
+                    Transformation = Matrix4X4<float>.Identity
+                }
+            };
         }
     }
 }

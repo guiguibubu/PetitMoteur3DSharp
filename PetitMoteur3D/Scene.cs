@@ -22,13 +22,13 @@ namespace PetitMoteur3D
         /// 
         /// </summary>
         /// <param name="obj"></param>
-        public Scene(IObjet3D obj) : this(new IObjet3D[] { obj }) { }
+        public Scene(params IObjet3D[] obj) : this(obj.AsEnumerable()) { }
 
         /// <summary>
         /// 
         /// </summary>
         /// <param name="objets"></param>
-        public Scene(IReadOnlyList<IObjet3D> objets)
+        public Scene(IEnumerable<IObjet3D> objets)
         {
             _objects = new List<IObjet3D>(objets);
         }

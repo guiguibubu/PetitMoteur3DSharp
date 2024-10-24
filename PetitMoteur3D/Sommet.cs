@@ -1,5 +1,4 @@
 ﻿using Silk.NET.Core.Native;
-using Silk.NET.Direct3D.Compilers;
 using Silk.NET.Direct3D11;
 using Silk.NET.Maths;
 
@@ -10,10 +9,10 @@ namespace PetitMoteur3D
         public Vector3D<float> Position { get; private set; }
         public Vector3D<float> Normale { get; private set; }
         public Vector2D<float> CoordTex { get; private set; }
+        
         /// <summary>
         /// Defini l’organisation de notre sommet
         /// </summary>
-
         public static InputElementDesc[] InputLayoutDesc => s_inputElements;
 
         private static readonly GlobalMemory s_semanticNamePosition;
@@ -64,5 +63,14 @@ namespace PetitMoteur3D
         public unsafe Sommet(Vector3D<float> position, Vector3D<float> normale)
         : this(position, normale, Vector2D<float>.Zero)
         { }
+
+        public Sommet Clone()
+        {
+            Sommet copy =  (Sommet)this.MemberwiseClone();
+            copy.Position = new Vector3D<float>(Position.X, Position.Y, Position.Z);
+            copy.Normale = new Vector3D<float>(Normale.X, Normale.Y, Normale.Z);
+            copy.CoordTex = new Vector2D<float>(CoordTex.X, CoordTex.Y);
+            return copy;
+        }
     }
 }

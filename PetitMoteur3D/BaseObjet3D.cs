@@ -35,8 +35,8 @@ namespace PetitMoteur3D
         private Vector3D<float> _position;
         private Vector3D<float> _rotation;
 
-        protected Sommet[] _sommets;
-        protected ushort[] _indices;
+        private Sommet[] _sommets;
+        private ushort[] _indices;
 
         private readonly DeviceD3D11 _renderDevice;
         private readonly ShaderManager _shaderManager;
@@ -86,34 +86,37 @@ namespace PetitMoteur3D
             deviceContext.IASetIndexBuffer(_indexBuffer, Silk.NET.DXGI.Format.FormatR16Uint, 0);
             // input layout des sommets
             deviceContext.IASetInputLayout(_vertexLayout);
-            // Initialiser et sélectionner les « constantes » du VS
-            ShadersParams shadersParams = new()
+            foreach (SubObjet3D subObjet3D in GetSubObjets())
             {
-                matWorldViewProj = Matrix4X4.Transpose(_matWorld * matViewProj),
-                matWorld = Matrix4X4.Transpose(_matWorld),
-                lightPos = new Vector4D<float>(-10f, 10f, -10f, 1f),
-                cameraPos = new Vector4D<float>(0.0f, 0.0f, -10.0f, 1.0f),
-                ambiantLightValue = new Vector4D<float>(0.2f, 0.2f, 0.2f, 1.0f),
-                ambiantMaterialValue = Vector4D<float>.One,
-                diffuseLightValue = new Vector4D<float>(1.0f, 1.0f, 1.0f, 1.0f),
-                diffuseMaterialValue = Vector4D<float>.One,
-            };
-            deviceContext.UpdateSubresource(_constantBuffer, 0, ref Unsafe.NullRef<Box>(), ref shadersParams, 0, 0);
+                // Initialiser et sélectionner les « constantes » du VS
+                ShadersParams shadersParams = new()
+                {
+                    matWorldViewProj = Matrix4X4.Transpose(subObjet3D.Transformation * _matWorld * matViewProj),
+                    matWorld = Matrix4X4.Transpose(subObjet3D.Transformation * _matWorld),
+                    lightPos = new Vector4D<float>(-10f, 10f, -10f, 1f),
+                    cameraPos = new Vector4D<float>(0.0f, 0.0f, -10.0f, 1.0f),
+                    ambiantLightValue = new Vector4D<float>(0.2f, 0.2f, 0.2f, 1.0f),
+                    ambiantMaterialValue = subObjet3D.Material.Ambient,
+                    diffuseLightValue = new Vector4D<float>(1.0f, 1.0f, 1.0f, 1.0f),
+                    diffuseMaterialValue = subObjet3D.Material.Diffuse,
+                };
+                deviceContext.UpdateSubresource(_constantBuffer, 0, ref Unsafe.NullRef<Box>(), ref shadersParams, 0, 0);
 
-            // Activer le VS
-            deviceContext.VSSetShader(_vertexShader, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
-            deviceContext.VSSetConstantBuffers(0, 1, ref _constantBuffer);
-            // Activer le GS
-            deviceContext.GSSetShader((ID3D11GeometryShader*)null, (ID3D11ClassInstance**)null, 0);
-            // Activer le PS
-            deviceContext.PSSetShader(_pixelShader, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
-            deviceContext.PSSetConstantBuffers(0, 1, ref _constantBuffer);
-            // Activation de la texture
-            deviceContext.PSSetShaderResources(0, 1, ref _textureD3D);
-            // Le sampler state
-            deviceContext.PSSetSamplers(0, 1, ref _sampleState);
-            // **** Rendu de l’objet
-            deviceContext.DrawIndexed((uint)_indices.Length, 0, 0);
+                // Activer le VS
+                deviceContext.VSSetShader(_vertexShader, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
+                deviceContext.VSSetConstantBuffers(0, 1, ref _constantBuffer);
+                // Activer le GS
+                deviceContext.GSSetShader((ID3D11GeometryShader*)null, (ID3D11ClassInstance**)null, 0);
+                // Activer le PS
+                deviceContext.PSSetShader(_pixelShader, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
+                deviceContext.PSSetConstantBuffers(0, 1, ref _constantBuffer);
+                // Activation de la texture
+                deviceContext.PSSetShaderResources(0, 1, ref _textureD3D);
+                // Le sampler state
+                deviceContext.PSSetSamplers(0, 1, ref _sampleState);
+                // **** Rendu de l’objet
+                deviceContext.DrawIndexed((uint)_indices.Length, 0, 0);
+            }
         }
 
         public void SetTexture(Texture texture)
@@ -142,6 +145,12 @@ namespace PetitMoteur3D
         /// </summary>
         /// <returns></returns>
         protected abstract IReadOnlyList<ushort> InitIndex();
+
+        /// <summary>
+        /// Renvoie la liste des parties de l'objet pour le rendu
+        /// </summary>
+        /// <returns></returns>
+        protected abstract IReadOnlyList<SubObjet3D> GetSubObjets();
 
         private unsafe void InitShaders(ShaderManager shaderManager)
         {
@@ -309,6 +318,13 @@ namespace PetitMoteur3D
             };
 
             SilkMarshal.ThrowHResult(device.CreateBuffer(in bufferDesc, in Unsafe.NullRef<SubresourceData>(), ref buffer));
+        }
+
+        public struct SubObjet3D
+        {
+            public IReadOnlyList<ushort> Indices;
+            public Matrix4X4<float> Transformation;
+            public Material Material;
         }
     }
 }
