@@ -35,20 +35,41 @@ namespace PetitMoteur3D
         private static bool _initAnimationFinished = false;
         static void Main(string[] args)
         {
-            _window = WindowManager.Create();
+            try
+            {
 
-            // Assign events.
-            _window.Load += OnLoad;
-            _window.Closing += OnClosing;
-            _window.Render += OnRender;
-            _window.FramebufferResize += OnFramebufferResize;
+                _window = WindowManager.Create();
 
-            // Run the window.
-            _window.Run();
+                // Assign events.
+                _window.Load += OnLoad;
+                _window.Closing += OnClosing;
+                _window.Render += OnRender;
+                _window.FramebufferResize += OnFramebufferResize;
 
-            //dispose the window, and its internal resources
-            _window.Dispose();
+                // Run the window.
+                _window.Run();
 
+                //dispose the window, and its internal resources
+                _window.Dispose();
+            }
+            catch (Exception ex)
+            {
+                Exception currentEx = ex;
+                bool logFinished = false;
+                do
+                {
+                    System.Console.WriteLine(ex.Message);
+                    System.Console.WriteLine(ex.StackTrace);
+                    if (currentEx.InnerException is not null)
+                    {
+                        currentEx = currentEx.InnerException;
+                    }
+                    else
+                    {
+                        logFinished = true;
+                    }
+                } while (!logFinished);
+            }
         }
 
         private static void OnLoad()
@@ -157,10 +178,10 @@ namespace PetitMoteur3D
 
             Bloc bloc = new(2.0f, 2.0f, 2.0f, _deviceD3D11, _shaderManager);
             bloc.SetTexture(_textureManager.GetOrLoadTexture("textures\\silk.png"));
-            
+
             IReadOnlyList<SceneMesh>? meshes = _meshLoader.Load("models\\teapot.gltf");
             ObjetMesh objetMesh = new(meshes[0], _deviceD3D11, _shaderManager);
-            
+
             // _scene.AddObjet(bloc);
             _scene.AddObjet(objetMesh);
 
@@ -173,7 +194,7 @@ namespace PetitMoteur3D
             float dimZ = boundingBox.Max.Z - boundingBox.Min.Z;
             Vector3D<float> sceneCenter = new(centerX, centerY, centerZ);
             Vector3D<float> sceneDim = new(dimX, dimY, dimZ);
-            
+
             objetMesh.Mesh.AddTransform(Matrix4X4.CreateScale(4f / float.Max(float.Max(dimX, dimY), dimZ)));
 
             // Initialisation des matrices View et Proj
