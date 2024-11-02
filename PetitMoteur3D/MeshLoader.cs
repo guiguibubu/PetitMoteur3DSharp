@@ -105,14 +105,33 @@ namespace PetitMoteur3D
         private static unsafe IReadOnlyList<SceneMesh> ReadNode(Silk.NET.Assimp.Node node, IReadOnlyList<Mesh> meshes)
         {
             uint nbSubmesh = node.MNumMeshes;
-            SceneMesh[] sceneMeshes = new SceneMesh[nbSubmesh];
-            for (int i = 0; i < nbSubmesh; i++)
+            List<SceneMesh> sceneMeshes;
+            if (nbSubmesh > 0)
             {
-                uint indexMesh = node.MMeshes[i];
-                Mesh mesh = meshes[(int)indexMesh];
-                Matrix4X4<float> transformation = node.MTransformation.ToGeneric();
-                SceneMesh sceneMesh = new(mesh, transformation);
+                sceneMeshes = new List<SceneMesh>((int)nbSubmesh);
+                for (int i = 0; i < nbSubmesh; i++)
+                {
+                    uint indexMesh = node.MMeshes[i];
+                    Mesh mesh = meshes[(int)indexMesh];
+                    Matrix4X4<float> transformation = node.MTransformation.ToGeneric();
+                    SceneMesh sceneMesh = new(mesh, transformation);
+                    uint nbChildren = node.MNumChildren;
+                    for (int j = 0; j < nbChildren; j++)
+                    {
+                        Silk.NET.Assimp.Node* child = node.MChildren[j];
+                        if (child is null)
+                        {
+                            continue;
+                        }
+                        sceneMesh.AddChildren(ReadNode(*child, meshes));
+                    }
+                    sceneMeshes.Add(sceneMesh);
+                }
+            }
+            else
+            {
                 uint nbChildren = node.MNumChildren;
+                sceneMeshes = new List<SceneMesh>((int)nbChildren);
                 for (int j = 0; j < nbChildren; j++)
                 {
                     Silk.NET.Assimp.Node* child = node.MChildren[j];
@@ -120,9 +139,8 @@ namespace PetitMoteur3D
                     {
                         continue;
                     }
-                    sceneMesh.AddChildren(ReadNode(*child, meshes));
+                    sceneMeshes.AddRange(ReadNode(*child, meshes));
                 }
-                sceneMeshes[i] = sceneMesh;
             }
             return sceneMeshes;
         }

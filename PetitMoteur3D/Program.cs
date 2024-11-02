@@ -179,7 +179,7 @@ namespace PetitMoteur3D
             Bloc bloc = new(2.0f, 2.0f, 2.0f, _deviceD3D11, _shaderManager);
             bloc.SetTexture(_textureManager.GetOrLoadTexture("textures\\silk.png"));
 
-            IReadOnlyList<SceneMesh>? meshes = _meshLoader.Load("models\\teapot.gltf");
+            IReadOnlyList<SceneMesh>? meshes = _meshLoader.Load("models\\teapot.obj");
             ObjetMesh objetMesh = new(meshes[0], _deviceD3D11, _shaderManager);
 
             // _scene.AddObjet(bloc);
