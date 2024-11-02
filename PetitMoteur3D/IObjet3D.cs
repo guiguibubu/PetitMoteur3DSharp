@@ -21,6 +21,20 @@ namespace PetitMoteur3D
         Vector3D<float> Rotation { get; }
 
         /// <summary>
+        /// Move the object
+        /// </summary>
+        /// <param name="move"></param>
+        /// <returns></returns>
+        Vector3D<float> Move(Vector3D<float> move);
+
+        /// <summary>
+        /// Rotate the object
+        /// </summary>
+        /// <param name="rotation"></param>
+        /// <returns></returns>
+        Vector3D<float> Rotate(Vector3D<float> rotation);
+
+        /// <summary>
         /// Anime l'objet
         /// </summary>
         /// <param name="elapsedTime"></param>

@@ -8,6 +8,7 @@ namespace PetitMoteur3D
     {
         public Vector3D<float> Position { get; private set; }
         public Vector3D<float> Normale { get; private set; }
+        public Vector3D<float> Tangente { get; private set; }
         public Vector2D<float> CoordTex { get; private set; }
         
         /// <summary>
@@ -18,6 +19,7 @@ namespace PetitMoteur3D
         private static readonly GlobalMemory s_semanticNamePosition;
         private static readonly GlobalMemory s_semanticNameNormal;
         private static readonly GlobalMemory s_semanticNameTexCoord;
+        private static readonly GlobalMemory s_semanticNameTangent;
         private static readonly InputElementDesc[] s_inputElements;
 
 
@@ -25,6 +27,7 @@ namespace PetitMoteur3D
         {
             s_semanticNamePosition = SilkMarshal.StringToMemory("POSITION", NativeStringEncoding.LPStr);
             s_semanticNameNormal = SilkMarshal.StringToMemory("NORMAL", NativeStringEncoding.LPStr);
+            s_semanticNameTangent = SilkMarshal.StringToMemory("TANGENT", NativeStringEncoding.LPStr);
             s_semanticNameTexCoord = SilkMarshal.StringToMemory("TEXCOORD", NativeStringEncoding.LPStr);
 
             s_inputElements = new[]
@@ -36,7 +39,10 @@ namespace PetitMoteur3D
                     s_semanticNameNormal.AsPtr<byte>(), 0, Silk.NET.DXGI.Format.FormatR32G32B32Float, 0, (uint)sizeof(Vector3D<float>), InputClassification.PerVertexData, 0
                 ),
                 new InputElementDesc(
-                    s_semanticNameTexCoord.AsPtr<byte>(), 0, Silk.NET.DXGI.Format.FormatR32G32Float, 0, 2 * (uint)sizeof(Vector3D<float>), InputClassification.PerVertexData, 0
+                    s_semanticNameTangent.AsPtr<byte>(), 0, Silk.NET.DXGI.Format.FormatR32G32Float, 0, 2 * (uint)sizeof(Vector3D<float>), InputClassification.PerVertexData, 0
+                ),
+                new InputElementDesc(
+                    s_semanticNameTexCoord.AsPtr<byte>(), 0, Silk.NET.DXGI.Format.FormatR32G32Float, 0, 3 * (uint)sizeof(Vector3D<float>), InputClassification.PerVertexData, 0
                 ),
             };
         }
@@ -47,10 +53,11 @@ namespace PetitMoteur3D
         /// <param name="position"></param>
         /// <param name="normale"></param>
         /// <param name="coordTex"></param>
-        public unsafe Sommet(Vector3D<float> position, Vector3D<float> normale, Vector2D<float> coordTex)
+        public unsafe Sommet(Vector3D<float> position, Vector3D<float> normale, Vector3D<float> tangente, Vector2D<float> coordTex)
         {
             Position = position;
             Normale = normale;
+            Tangente = tangente;
             CoordTex = coordTex;
         }
 
@@ -60,8 +67,18 @@ namespace PetitMoteur3D
         /// <param name="position"></param>
         /// <param name="normale"></param>
         /// <param name="coordTex"></param>
+        public unsafe Sommet(Vector3D<float> position, Vector3D<float> normale, Vector3D<float> tangente)
+        : this(position, normale, tangente, Vector2D<float>.Zero)
+        { }
+
+        /// <summary>
+        /// Constructeur
+        /// </summary>
+        /// <param name="position"></param>
+        /// <param name="normale"></param>
+        /// <param name="coordTex"></param>
         public unsafe Sommet(Vector3D<float> position, Vector3D<float> normale)
-        : this(position, normale, Vector2D<float>.Zero)
+        : this(position, normale, Vector3D<float>.Zero, Vector2D<float>.Zero)
         { }
 
         public Sommet Clone()

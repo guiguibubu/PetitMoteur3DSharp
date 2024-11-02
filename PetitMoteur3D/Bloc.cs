@@ -7,8 +7,11 @@ namespace PetitMoteur3D
     {
         private readonly Vector3D<float>[] _vertices;
         private readonly Vector3D<float>[] _normales;
+        private readonly Vector3D<float>[] _tangentes;
         private readonly Sommet[] _sommets;
         private readonly ushort[] _indices;
+
+        private Matrix4X4<float> _transformation;
 
         public unsafe Bloc(float dx, float dy, float dz, DeviceD3D11 renderDevice, ShaderManager shaderManager) : base(renderDevice, shaderManager)
         {
@@ -26,46 +29,56 @@ namespace PetitMoteur3D
 
             _normales = new Vector3D<float>[]
             {
-                new(0.0f, 0.0f, -1.0f), // devant
-                new(0.0f, 0.0f, 1.0f), // arrière
-                new(0.0f, -1.0f, 0.0f), // dessous
-                new(0.0f, 1.0f, 0.0f), // dessus
-                new(-1.0f, 0.0f, 0.0f), // face gauche
-                new(1.0f, 0.0f, 0.0f) // face droite
+                new(0f, 0f, -1f), // devant
+                new(0f, 0f, 1f), // arrière
+                new(0f, -1f, 0f), // dessous
+                new(0f, 1f, 0f), // dessus
+                new(-1f, 0f, 0f), // face gauche
+                new(1f, 0f, 0f) // face droite
+            };
+
+            _tangentes = new Vector3D<float>[]
+            {
+                new(1f, 0f, 0f), // devant
+                new(-1f, 0f, 0f), // arrière
+                new(1f, 0f, 0f), // dessous
+                new(1f, 0f, 0f), // dessus
+                new(0f, -1f, 0f), // face gauche
+                new(0f, 1f, 0f) // face droite
             };
 
             _sommets = new Sommet[]
             {
                 // Le devant du bloc
-                new(_vertices[0], _normales[0], new Vector2D<float>(0f, 0f)),
-                new(_vertices[1], _normales[0], new Vector2D<float>(1f, 0f)),
-                new(_vertices[2], _normales[0], new Vector2D<float>(1f, 1f)),
-                new(_vertices[3], _normales[0], new Vector2D<float>(0f, 1f)),
+                new(_vertices[0], _normales[0], _tangentes[0], new Vector2D<float>(0f, 0f)),
+                new(_vertices[1], _normales[0], _tangentes[0], new Vector2D<float>(1f, 0f)),
+                new(_vertices[2], _normales[0], _tangentes[0], new Vector2D<float>(1f, 1f)),
+                new(_vertices[3], _normales[0], _tangentes[0], new Vector2D<float>(0f, 1f)),
                 // L’arrière du bloc
-                new(_vertices[4], _normales[1], new Vector2D<float>(0f, 1f)),
-                new(_vertices[5], _normales[1], new Vector2D<float>(0f, 0f)),
-                new(_vertices[6], _normales[1], new Vector2D<float>(1f, 0f)),
-                new(_vertices[7], _normales[1], new Vector2D<float>(1f, 1f)),
+                new(_vertices[4], _normales[1], _tangentes[1], new Vector2D<float>(1f, 0f)),
+                new(_vertices[5], _normales[1], _tangentes[1], new Vector2D<float>(1f, 1f)),
+                new(_vertices[6], _normales[1], _tangentes[1], new Vector2D<float>(0f, 1f)),
+                new(_vertices[7], _normales[1], _tangentes[1], new Vector2D<float>(0f, 0f)),
                 // Le dessous du bloc
-                new(_vertices[3], _normales[2], new Vector2D<float>(0f, 0f)),
-                new(_vertices[2], _normales[2], new Vector2D<float>(1f, 0f)),
-                new(_vertices[6], _normales[2], new Vector2D<float>(1f, 1f)),
-                new(_vertices[5], _normales[2], new Vector2D<float>(0f, 1f)),
+                new(_vertices[3], _normales[2], _tangentes[2], new Vector2D<float>(0f, 0f)),
+                new(_vertices[2], _normales[2], _tangentes[2], new Vector2D<float>(1f, 0f)),
+                new(_vertices[6], _normales[2], _tangentes[2], new Vector2D<float>(1f, 1f)),
+                new(_vertices[5], _normales[2], _tangentes[2], new Vector2D<float>(0f, 1f)),
                 // Le dessus du bloc
-                new(_vertices[0], _normales[3], new Vector2D<float>(0f, 1f)),
-                new(_vertices[4], _normales[3], new Vector2D<float>(0f, 0f)),
-                new(_vertices[7], _normales[3], new Vector2D<float>(1f, 0f)),
-                new(_vertices[1], _normales[3], new Vector2D<float>(1f, 1f)),
+                new(_vertices[0], _normales[3], _tangentes[3], new Vector2D<float>(0f, 1f)),
+                new(_vertices[4], _normales[3], _tangentes[3], new Vector2D<float>(0f, 0f)),
+                new(_vertices[7], _normales[3], _tangentes[3], new Vector2D<float>(1f, 0f)),
+                new(_vertices[1], _normales[3], _tangentes[3], new Vector2D<float>(1f, 1f)),
                 // La face gauche
-                new(_vertices[0], _normales[4], new Vector2D<float>(0f, 0f)),
-                new(_vertices[3], _normales[4], new Vector2D<float>(1f, 0f)),
-                new(_vertices[5], _normales[4], new Vector2D<float>(1f, 1f)),
-                new(_vertices[4], _normales[4], new Vector2D<float>(0f, 1f)),
+                new(_vertices[0], _normales[4], _tangentes[4], new Vector2D<float>(1f, 0f)),
+                new(_vertices[3], _normales[4], _tangentes[4], new Vector2D<float>(1f, 1f)),
+                new(_vertices[5], _normales[4], _tangentes[4], new Vector2D<float>(0f, 1f)),
+                new(_vertices[4], _normales[4], _tangentes[4], new Vector2D<float>(0f, 0f)),
                 // La face droite
-                new(_vertices[1], _normales[5], new Vector2D<float>(0f, 0f)),
-                new(_vertices[7], _normales[5], new Vector2D<float>(1f, 0f)),
-                new(_vertices[6], _normales[5], new Vector2D<float>(1f, 1f)),
-                new(_vertices[2], _normales[5], new Vector2D<float>(0f, 1f))
+                new(_vertices[1], _normales[5], _tangentes[5], new Vector2D<float>(0f, 0f)),
+                new(_vertices[7], _normales[5], _tangentes[5], new Vector2D<float>(1f, 0f)),
+                new(_vertices[6], _normales[5], _tangentes[5], new Vector2D<float>(1f, 1f)),
+                new(_vertices[2], _normales[5], _tangentes[5], new Vector2D<float>(0f, 1f))
             };
 
             _indices = new ushort[]
@@ -84,7 +97,14 @@ namespace PetitMoteur3D
                 20,22,23 // droite
             };
 
+            _transformation = Matrix4X4<float>.Identity;
+
             Initialisation();
+        }
+
+        public void AddTransform(Matrix4X4<float> transformation)
+        {
+            _transformation = transformation * _transformation;
         }
 
         /// <inheritdoc/>
@@ -105,7 +125,7 @@ namespace PetitMoteur3D
                 {
                     Indices = _indices,
                     Material = new Material(),
-                    Transformation = Matrix4X4<float>.Identity
+                    Transformation = _transformation
                 }
             };
         }

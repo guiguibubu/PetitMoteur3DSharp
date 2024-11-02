@@ -69,6 +69,10 @@ namespace PetitMoteur3D
                         logFinished = true;
                     }
                 } while (!logFinished);
+                if (System.Diagnostics.Debugger.IsAttached)
+                {
+                    throw;
+                }
             }
         }
 
@@ -176,15 +180,17 @@ namespace PetitMoteur3D
         {
             _scene = new Scene();
 
-            Bloc bloc = new(2.0f, 2.0f, 2.0f, _deviceD3D11, _shaderManager);
-            bloc.SetTexture(_textureManager.GetOrLoadTexture("textures\\silk.png"));
+            Bloc bloc1 = new(4.0f, 4.0f, 4.0f, _deviceD3D11, _shaderManager);
+            bloc1.SetTexture(_textureManager.GetOrLoadTexture("textures\\brickwall.jpg"));
+            bloc1.SetNormalMapTexture(_textureManager.GetOrLoadTexture("textures\\brickwall_normal.jpg"));
+            bloc1.Move(new Vector3D<float>(-4f, 0f, 0f));
+
+            Bloc bloc2 = new(4.0f, 4.0f, 4.0f, _deviceD3D11, _shaderManager);
+            bloc2.SetTexture(_textureManager.GetOrLoadTexture("textures\\brickwall.jpg"));
+            bloc2.Move(new Vector3D<float>(4f, 0f, 0f));
 
             IReadOnlyList<SceneMesh>? meshes = _meshLoader.Load("models\\teapot.obj");
             ObjetMesh objetMesh = new(meshes[0], _deviceD3D11, _shaderManager);
-
-            // _scene.AddObjet(bloc);
-            _scene.AddObjet(objetMesh);
-
             BoundingBox boundingBox = objetMesh.Mesh.GetBoundingBox();
             float centerX = (boundingBox.Min.X + boundingBox.Max.X) / 2f;
             float centerY = (boundingBox.Min.Y + boundingBox.Max.Y) / 2f;
@@ -196,6 +202,10 @@ namespace PetitMoteur3D
             Vector3D<float> sceneDim = new(dimX, dimY, dimZ);
 
             objetMesh.Mesh.AddTransform(Matrix4X4.CreateScale(4f / float.Max(float.Max(dimX, dimY), dimZ)));
+
+            _scene.AddObjet(bloc1);
+            _scene.AddObjet(bloc2);
+            //_scene.AddObjet(objetMesh);
 
             // Initialisation des matrices View et Proj
             // Dans notre cas, ces matrices sont fixes

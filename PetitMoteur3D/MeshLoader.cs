@@ -20,6 +20,7 @@ namespace PetitMoteur3D
             uint postProcessFlags = (uint)PostProcessSteps.Triangulate
             | (uint)PostProcessSteps.FindInvalidData
             | (uint)PostProcessSteps.GenerateNormals
+            | (uint)PostProcessSteps.CalculateTangentSpace
             | (uint)PostProcessSteps.MakeLeftHanded
             | (uint)PostProcessSteps.FlipWindingOrder
             | (uint)PostProcessSteps.FlipUVs;
@@ -150,14 +151,17 @@ namespace PetitMoteur3D
             uint nbVertices = mesh.MNumVertices;
             Sommet[] vertices = new Sommet[nbVertices];
             bool hasTexture = mesh.MTextureCoords[0] is not null;
+            bool hasTangent = mesh.MTangents is not null;
             for (int k = 0; k < nbVertices; k++)
             {
                 System.Numerics.Vector3 position = mesh.MVertices[k];
                 System.Numerics.Vector3 normal = mesh.MNormals[k];
+                System.Numerics.Vector3 tangent = hasTangent ? mesh.MTangents[k] : System.Numerics.Vector3.Zero;
                 System.Numerics.Vector3 textureCoordPtr = hasTexture ? mesh.MTextureCoords[0][k] : System.Numerics.Vector3.Zero;
                 Sommet vertex = new Sommet(
                     position.ToGeneric(),
                     normal.ToGeneric(),
+                    tangent.ToGeneric(),
                     new Vector2D<float>(textureCoordPtr.X, textureCoordPtr.Y)
                 );
 

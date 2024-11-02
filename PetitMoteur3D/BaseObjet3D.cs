@@ -1,14 +1,11 @@
 ﻿using Silk.NET.Core.Native;
-using Silk.NET.Direct3D.Compilers;
 using Silk.NET.Direct3D11;
-using Silk.NET.DXGI;
 using Silk.NET.Maths;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
+using System.Runtime.InteropServices;
 
 namespace PetitMoteur3D
 {
@@ -28,6 +25,7 @@ namespace PetitMoteur3D
         private ComPtr<ID3D11PixelShader> _pixelShader = default;
 
         private ComPtr<ID3D11ShaderResourceView> _textureD3D;
+        private ComPtr<ID3D11ShaderResourceView> _normalMap;
         private ComPtr<ID3D11SamplerState> _sampleState;
 
         private Matrix4X4<float> _matWorld = default;
@@ -66,11 +64,25 @@ namespace PetitMoteur3D
         }
 
         /// <inheritdoc/>
+        public Vector3D<float> Move(Vector3D<float> move)
+        {
+            _position += move;
+            return _position;
+        }
+
+        /// <inheritdoc/>
+        public Vector3D<float> Rotate(Vector3D<float> rotation)
+        {
+            _rotation += rotation;
+            return rotation;
+        }
+
+        /// <inheritdoc/>
         public virtual void Anime(float elapsedTime)
         {
-            _rotation.Y += (float)((Math.PI * 2.0f) / 3.0f * elapsedTime / 1000f);
+            _rotation.Y += (float)((Math.PI * 2.0f) / 24.0f * elapsedTime / 1000f);
             // modifier la matrice de l’objet bloc
-            _matWorld = Matrix4X4.CreateRotationY(Rotation.Y);
+            _matWorld = Matrix4X4.CreateRotationY(_rotation.Y) * Matrix4X4.CreateTranslation(_position);
         }
 
         /// <inheritdoc/>
@@ -93,12 +105,14 @@ namespace PetitMoteur3D
                 {
                     matWorldViewProj = Matrix4X4.Transpose(subObjet3D.Transformation * _matWorld * matViewProj),
                     matWorld = Matrix4X4.Transpose(subObjet3D.Transformation * _matWorld),
-                    lightPos = new Vector4D<float>(-10f, 10f, -10f, 1f),
+                    lightPos = new Vector4D<float>(0f, 0f, 0f, 1f),
                     cameraPos = new Vector4D<float>(0.0f, 0.0f, -10.0f, 1.0f),
                     ambiantLightValue = new Vector4D<float>(0.2f, 0.2f, 0.2f, 1.0f),
                     ambiantMaterialValue = subObjet3D.Material.Ambient,
                     diffuseLightValue = new Vector4D<float>(1.0f, 1.0f, 1.0f, 1.0f),
                     diffuseMaterialValue = subObjet3D.Material.Diffuse,
+                    hasTexture = Convert.ToInt32(_textureD3D.Handle is not null),
+                    hasNormalMap = Convert.ToInt32(_normalMap.Handle is not null),
                 };
                 deviceContext.UpdateSubresource(_constantBuffer, 0, ref Unsafe.NullRef<Box>(), ref shadersParams, 0, 0);
 
@@ -111,7 +125,14 @@ namespace PetitMoteur3D
                 deviceContext.PSSetShader(_pixelShader, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
                 deviceContext.PSSetConstantBuffers(0, 1, ref _constantBuffer);
                 // Activation de la texture
-                deviceContext.PSSetShaderResources(0, 1, ref _textureD3D);
+                if (_textureD3D.Handle is not null)
+                {
+                    deviceContext.PSSetShaderResources(0, 1, ref _textureD3D);
+                }
+                if (_normalMap.Handle is not null)
+                {
+                    deviceContext.PSSetShaderResources(1, 1, ref _normalMap);
+                }
                 // Le sampler state
                 deviceContext.PSSetSamplers(0, 1, ref _sampleState);
                 // **** Rendu de l’objet
@@ -122,6 +143,11 @@ namespace PetitMoteur3D
         public void SetTexture(Texture texture)
         {
             _textureD3D = texture.TextureView;
+        }
+
+        public void SetNormalMapTexture(Texture texture)
+        {
+            _normalMap = texture.TextureView;
         }
 
         protected void Initialisation()
@@ -207,8 +233,8 @@ namespace PetitMoteur3D
         private unsafe void InitVertexShader(ShaderManager shaderManager)
         {
             // Compilation et chargement du vertex shader
-            string filePath = "shaders\\MiniPhong_VS.hlsl";
-            string entryPoint = "MiniPhongVS";
+            string filePath = "shaders\\MiniPhongNormalMap.hlsl";
+            string entryPoint = "MiniPhongNormalMapVS";
             string target = "vs_5_0";
             // #define D3DCOMPILE_ENABLE_STRICTNESS                    (1 << 11)
             uint flagStrictness = ((uint)1 << 11);
@@ -239,8 +265,8 @@ namespace PetitMoteur3D
         /// <param name="compiler"></param>
         private unsafe void InitPixelShader(ShaderManager shaderManager)
         {
-            string filePath = "shaders\\MiniPhong_PS.hlsl";
-            string entryPoint = "MiniPhongPS";
+            string filePath = "shaders\\MiniPhongNormalMap.hlsl";
+            string entryPoint = "MiniPhongNormalMapPS";
             string target = "ps_5_0";
             // #define D3DCOMPILE_ENABLE_STRICTNESS                    (1 << 11)
             uint flagStrictness = ((uint)1 << 11);
@@ -311,7 +337,7 @@ namespace PetitMoteur3D
         {
             BufferDesc bufferDesc = new()
             {
-                ByteWidth = (uint)(sizeof(T)),
+                ByteWidth = (uint)(Marshal.SizeOf<T>()),
                 Usage = Usage.Default,
                 BindFlags = (uint)BindFlag.ConstantBuffer,
                 CPUAccessFlags = 0
