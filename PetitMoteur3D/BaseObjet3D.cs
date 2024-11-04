@@ -100,16 +100,12 @@ namespace PetitMoteur3D
             deviceContext.IASetInputLayout(_vertexLayout);
             foreach (SubObjet3D subObjet3D in GetSubObjets())
             {
-                // Initialiser et sélectionner les « constantes » du VS
-                ShadersParams shadersParams = new()
+                // Initialiser et sélectionner les « constantes » des shaders
+                ObjectShadersParams shadersParams = new()
                 {
                     matWorldViewProj = Matrix4X4.Transpose(subObjet3D.Transformation * _matWorld * matViewProj),
                     matWorld = Matrix4X4.Transpose(subObjet3D.Transformation * _matWorld),
-                    lightPos = new Vector4D<float>(0f, 0f, 0f, 1f),
-                    cameraPos = new Vector4D<float>(0.0f, 0.0f, -10.0f, 1.0f),
-                    ambiantLightValue = new Vector4D<float>(0.2f, 0.2f, 0.2f, 1.0f),
                     ambiantMaterialValue = subObjet3D.Material.Ambient,
-                    diffuseLightValue = new Vector4D<float>(1.0f, 1.0f, 1.0f, 1.0f),
                     diffuseMaterialValue = subObjet3D.Material.Diffuse,
                     hasTexture = Convert.ToInt32(_textureD3D.Handle is not null),
                     hasNormalMap = Convert.ToInt32(_normalMap.Handle is not null),
@@ -118,12 +114,12 @@ namespace PetitMoteur3D
 
                 // Activer le VS
                 deviceContext.VSSetShader(_vertexShader, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
-                deviceContext.VSSetConstantBuffers(0, 1, ref _constantBuffer);
+                deviceContext.VSSetConstantBuffers(1, 1, ref _constantBuffer);
                 // Activer le GS
                 deviceContext.GSSetShader((ID3D11GeometryShader*)null, (ID3D11ClassInstance**)null, 0);
                 // Activer le PS
                 deviceContext.PSSetShader(_pixelShader, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
-                deviceContext.PSSetConstantBuffers(0, 1, ref _constantBuffer);
+                deviceContext.PSSetConstantBuffers(1, 1, ref _constantBuffer);
                 // Activation de la texture
                 if (_textureD3D.Handle is not null)
                 {
@@ -222,7 +218,7 @@ namespace PetitMoteur3D
             CreateIndexBuffer(device, indices, ref _indexBuffer);
 
             // Create our constant buffer.
-            CreateConstantBuffer<ShadersParams>(device, ref _constantBuffer);
+            CreateConstantBuffer<ObjectShadersParams>(device, ref _constantBuffer);
         }
 
         /// <summary>

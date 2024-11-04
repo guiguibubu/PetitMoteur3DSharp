@@ -1,16 +1,21 @@
-cbuffer param
+cbuffer frameBuffer
 {
-	float4x4 matWorldViewProj; // la matrice totale
-	float4x4 matWorld; // matrice de transformation dans le monde
 	float4 vLumiere; // la position de la source d’éclairage (Point)
 	float4 vCamera; // la position de la caméra
 	float4 vAEcl; // la valeur ambiante de l’éclairage
-	float4 vAMat; // la valeur ambiante du matériau
 	float4 vDEcl; // la valeur diffuse de l’éclairage
+}
+
+cbuffer objectBuffer
+{
+	float4x4 matWorldViewProj; // la matrice totale
+	float4x4 matWorld; // matrice de transformation dans le monde
+	float4 vAMat; // la valeur ambiante du matériau
 	float4 vDMat; // la valeur diffuse du matériau
 	bool hasTexture; // indique si a une texture
 	bool hasNormalMap; // indique si a une normal map
 }
+
 struct VS_Sortie
 {
 	float4 Pos : SV_Position;

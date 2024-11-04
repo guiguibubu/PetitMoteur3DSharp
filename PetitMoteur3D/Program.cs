@@ -178,7 +178,7 @@ namespace PetitMoteur3D
 
         private static void InitScene()
         {
-            _scene = new Scene();
+            _scene = new Scene(_deviceD3D11.Device);
 
             Bloc bloc1 = new(4.0f, 4.0f, 4.0f, _deviceD3D11, _shaderManager);
             bloc1.SetTexture(_textureManager.GetOrLoadTexture("textures\\brickwall.jpg"));

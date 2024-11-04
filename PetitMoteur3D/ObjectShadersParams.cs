@@ -5,7 +5,7 @@ using Silk.NET.Maths;
 namespace PetitMoteur3D
 {
     [StructLayout(LayoutKind.Sequential, Pack = 16)]
-    internal struct ShadersParams
+    internal struct ObjectShadersParams
     {
         /// <summary>
         /// la matrice totale
@@ -16,25 +16,9 @@ namespace PetitMoteur3D
         /// </summary>
         public Matrix4X4<float> matWorld;
         /// <summary>
-        /// la position de la source d’éclairage (Point)
-        /// </summary>
-        public Vector4D<float> lightPos;
-        /// <summary>
-        /// la position de la caméra
-        /// </summary>
-        public Vector4D<float> cameraPos;
-        /// <summary>
-        /// la valeur ambiante de l’éclairage
-        /// </summary>
-        public Vector4D<float> ambiantLightValue;
-        /// <summary>
         /// la valeur ambiante du matériau
         /// </summary>
         public Vector4D<float> ambiantMaterialValue;
-        /// <summary>
-        /// la valeur diffuse de l’éclairage
-        /// </summary>
-        public Vector4D<float> diffuseLightValue;
         /// <summary>
         /// la valeur diffuse du matériau
         /// </summary>
