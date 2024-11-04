@@ -1,14 +1,27 @@
-cbuffer param
+struct LightParams
+{
+    float3 pos; // la position de la source d’éclairage (Point)
+    float3 dir; // la direction de la source d’éclairage (Directionnelle)
+    float4 vAEcl; // la valeur ambiante de l’éclairage
+	float4 vDEcl; // la valeur diffuse de l’éclairage
+};
+
+cbuffer frameBuffer
+{
+	LightParams vLumiere; // la position de la source d’éclairage (Point)
+	float4 vCamera; // la position de la caméra
+}
+
+cbuffer objectBuffer
 {
 	float4x4 matWorldViewProj; // la matrice totale
 	float4x4 matWorld; // matrice de transformation dans le monde
-	float4 vLumiere; // la position de la source d’éclairage (Point)
-	float4 vCamera; // la position de la caméra
-	float4 vAEcl; // la valeur ambiante de l’éclairage
 	float4 vAMat; // la valeur ambiante du matériau
-	float4 vDEcl; // la valeur diffuse de l’éclairage
 	float4 vDMat; // la valeur diffuse du matériau
+	bool hasTexture; // indique si a une texture
+	bool hasNormalMap; // indique si a une normal map
 }
+
 struct VS_Sortie
 {
 	float4 Pos : SV_Position;
@@ -40,8 +53,8 @@ float4 MiniPhongPS( VS_Sortie vs ) : SV_Target0
 	vs.coordTex).rgb;
 
 	// I = A + D * N.L + (R.V)n
-	float3 couleurLumiere = vAEcl.rgb * vAMat.rgb +
-	vDEcl.rgb * vDMat.rgb * diff;
+	float3 couleurLumiere = vLumiere.vAEcl.rgb * vAMat.rgb +
+	vLumiere.vDEcl.rgb * vDMat.rgb * diff;
 	couleur = couleurTexture * couleurLumiere;
 
 	couleur += S;

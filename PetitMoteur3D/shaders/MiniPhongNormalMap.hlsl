@@ -1,9 +1,15 @@
+struct LightParams
+{
+    float3 pos; // la position de la source d’éclairage (Point)
+    float3 dir; // la direction de la source d’éclairage (Directionnelle)
+    float4 vAEcl; // la valeur ambiante de l’éclairage
+	float4 vDEcl; // la valeur diffuse de l’éclairage
+};
+
 cbuffer frameBuffer
 {
-	float4 vLumiere; // la position de la source d’éclairage (Point)
+	LightParams vLumiere; // la position de la source d’éclairage (Point)
 	float4 vCamera; // la position de la caméra
-	float4 vAEcl; // la valeur ambiante de l’éclairage
-	float4 vDEcl; // la valeur diffuse de l’éclairage
 }
 
 cbuffer objectBuffer
@@ -37,7 +43,14 @@ VS_Sortie MiniPhongNormalMapVS(float4 Pos : POSITION, float3 Normale : NORMAL, f
 	sortie.Norm = mul(float4(Normale, 0.0f), matWorld).xyz;
 	sortie.Tang = mul(float4(Tangent, 0.0f), matWorld).xyz;
 	float3 PosWorld = mul(Pos, matWorld).xyz;
-	sortie.vDirLum = vLumiere.xyz - (PosWorld + (30.0f, 0.0f, 0.0f));
+	if(vLumiere.dir.x != 0.0f || vLumiere.dir.y != 0.0f || vLumiere.dir.z != 0.0f)
+	{
+		sortie.vDirLum = -vLumiere.dir.xyz;
+	}
+	else
+	{
+		sortie.vDirLum = vLumiere.pos.xyz - PosWorld;
+	}
 	sortie.vDirCam = vCamera.xyz - PosWorld;
 
 	// Coordonnées d’application de texture
@@ -79,7 +92,7 @@ float4 MiniPhongNormalMapPS( VS_Sortie vs ) : SV_Target0
 	// R = 2 * (N.L) * N – L
 	float3 R = normalize(2 * diff.xyz * N - L);
 	// Puissance de 4 - pour l’exemple
-	float S = pow(saturate(dot(R, V)), 16);
+	float S = pow(saturate(dot(R, V)), 64);
 
 	// Échantillonner la couleur du pixel à partir de la texture
 	float3 couleurTexture;
@@ -92,10 +105,10 @@ float4 MiniPhongNormalMapPS( VS_Sortie vs ) : SV_Target0
 	}
 
 	// I = A + D * N.L + (R.V)n
-	float3 couleurLumiere = vAEcl.rgb * vAMat.rgb +
-	vDEcl.rgb * vDMat.rgb * diff;
+	float3 couleurLumiere = 0.1f * vLumiere.vAEcl.rgb * vAMat.rgb +
+	vLumiere.vDEcl.rgb * vDMat.rgb * diff;
 	couleur = couleurTexture * couleurLumiere;
 
-	couleur += S;
+	couleur += 0.1f * S;
 	return float4(couleur, 1.0f);
 }

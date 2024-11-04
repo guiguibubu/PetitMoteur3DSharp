@@ -110,6 +110,7 @@ namespace PetitMoteur3D
                     hasTexture = Convert.ToInt32(_textureD3D.Handle is not null),
                     hasNormalMap = Convert.ToInt32(_normalMap.Handle is not null),
                 };
+
                 deviceContext.UpdateSubresource(_constantBuffer, 0, ref Unsafe.NullRef<Box>(), ref shadersParams, 0, 0);
 
                 // Activer le VS

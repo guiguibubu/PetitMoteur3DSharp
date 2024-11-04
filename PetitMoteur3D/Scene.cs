@@ -58,12 +58,18 @@ namespace PetitMoteur3D
         public void Draw(ComPtr<ID3D11DeviceContext> deviceContext, Matrix4X4<float> matViewProj)
         {
             // Initialiser et sélectionner les « constantes » des shaders
+            LightShadersParams lightParams = new()
+            {
+                Position = new Vector4D<float>(0f, 0f, 0f, 1f),
+                Direction = new Vector4D<float>(1f, 0f, 1f, 1f),
+                AmbiantColor = new Vector4D<float>(0.2f, 0.2f, 0.2f, 1.0f),
+                DiffuseColor = new Vector4D<float>(1.0f, 1.0f, 1.0f, 1.0f),
+            };
+
             SceneShadersParams shadersParams = new()
             {
-                lightPos = new Vector4D<float>(0f, 0f, 0f, 1f),
-                cameraPos = new Vector4D<float>(0.0f, 0.0f, -10.0f, 1.0f),
-                ambiantLightValue = new Vector4D<float>(0.2f, 0.2f, 0.2f, 1.0f),
-                diffuseLightValue = new Vector4D<float>(1.0f, 1.0f, 1.0f, 1.0f),
+                LightParams = lightParams,
+                CameraPos = new Vector4D<float>(0.0f, 0.0f, -10.0f, 1.0f),
             };
             deviceContext.UpdateSubresource(_constantBuffer, 0, ref Unsafe.NullRef<Box>(), ref shadersParams, 0, 0);
             deviceContext.VSSetConstantBuffers(0, 1, ref _constantBuffer);

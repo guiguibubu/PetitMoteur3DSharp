@@ -7,20 +7,12 @@ namespace PetitMoteur3D
     internal struct SceneShadersParams
     {
         /// <summary>
-        /// la position de la source d’éclairage (Point)
+        /// les infos de la lumiere
         /// </summary>
-        public Vector4D<float> lightPos;
+        public LightShadersParams LightParams;
         /// <summary>
         /// la position de la caméra
         /// </summary>
-        public Vector4D<float> cameraPos;
-        /// <summary>
-        /// la valeur ambiante de l’éclairage
-        /// </summary>
-        public Vector4D<float> ambiantLightValue;
-        /// <summary>
-        /// la valeur diffuse de l’éclairage
-        /// </summary>
-        public Vector4D<float> diffuseLightValue;
+        public Vector4D<float> CameraPos;
     }
 }
