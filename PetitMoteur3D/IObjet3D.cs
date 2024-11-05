@@ -1,39 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Silk.NET.Core.Native;
+﻿using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
 using Silk.NET.Maths;
 
 namespace PetitMoteur3D
 {
-    internal interface IObjet3D
+    internal interface IObjet3D : ISceneObjet, IMovableObjet, IRotationObjet
     {
-        /// <summary>
-        /// Position
-        /// </summary>
-        Vector3D<float> Position { get; }
-        /// <summary>
-        /// Rotation
-        /// </summary>
-        Vector3D<float> Rotation { get; }
-
-        /// <summary>
-        /// Move the object
-        /// </summary>
-        /// <param name="move"></param>
-        /// <returns></returns>
-        Vector3D<float> Move(Vector3D<float> move);
-
-        /// <summary>
-        /// Rotate the object
-        /// </summary>
-        /// <param name="rotation"></param>
-        /// <returns></returns>
-        Vector3D<float> Rotate(Vector3D<float> rotation);
-
         /// <summary>
         /// Anime l'objet
         /// </summary>

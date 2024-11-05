@@ -13,7 +13,9 @@ namespace PetitMoteur3D
     {
         /// <inheritdoc/>
         public Vector3D<float> Position { get { return _position; } }
-        /// <inheritdoc/>
+        /// <summary>
+        /// Rotation de l'objet
+        /// </summary>
         public Vector3D<float> Rotation { get { return _rotation; } }
 
         private ComPtr<ID3D11Buffer> _vertexBuffer = default;

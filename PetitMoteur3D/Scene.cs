@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using PetitMoteur3D.Camera;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
 using Silk.NET.Maths;
@@ -11,28 +12,25 @@ namespace PetitMoteur3D
 {
     internal class Scene
     {
-        private readonly List<IObjet3D> _objects;
+        private readonly List<ISceneObjet> _objects;
+        private readonly List<IObjet3D> _objects3D;
+        private ICamera _camera;
 
         private ComPtr<ID3D11Buffer> _constantBuffer = default;
 
         /// <summary>
         /// Constructeur par défaut
         /// </summary>
-        public Scene(ComPtr<ID3D11Device> device) : this(device, Array.Empty<IObjet3D>()) { }
+        public Scene(ComPtr<ID3D11Device> device) : this(device, new FixedCamera(Vector3D<float>.Zero))
+        { }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="obj"></param>
-        public Scene(ComPtr<ID3D11Device> device, params IObjet3D[] obj) : this(device, obj.AsEnumerable()) { }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="objets"></param>
-        public Scene(ComPtr<ID3D11Device> device, IEnumerable<IObjet3D> objets)
+        public Scene(ComPtr<ID3D11Device> device, ICamera camera)
         {
-            _objects = new List<IObjet3D>(objets);
+            _objects = new List<ISceneObjet>();
+            _objects3D = new List<IObjet3D>();
+            _camera = camera;
+            _objects.Add(camera);
+
             // Create our constant buffer.
             CreateConstantBuffer<SceneShadersParams>(device, ref _constantBuffer);
         }
@@ -45,11 +43,12 @@ namespace PetitMoteur3D
         public void AddObjet(IObjet3D obj)
         {
             _objects.Add(obj);
+            _objects3D.Add(obj);
         }
 
         public void Anime(float elapsedTime)
         {
-            foreach (IObjet3D obj in _objects)
+            foreach (IObjet3D obj in _objects3D)
             {
                 obj.Anime(elapsedTime);
             }
@@ -69,12 +68,12 @@ namespace PetitMoteur3D
             SceneShadersParams shadersParams = new()
             {
                 LightParams = lightParams,
-                CameraPos = new Vector4D<float>(0.0f, 0.0f, -10.0f, 1.0f),
+                CameraPos = new Vector4D<float>(_camera.Position, 1.0f),
             };
             deviceContext.UpdateSubresource(_constantBuffer, 0, ref Unsafe.NullRef<Box>(), ref shadersParams, 0, 0);
             deviceContext.VSSetConstantBuffers(0, 1, ref _constantBuffer);
             deviceContext.PSSetConstantBuffers(0, 1, ref _constantBuffer);
-            foreach (IObjet3D obj in _objects)
+            foreach (IObjet3D obj in _objects3D)
             {
                 obj.Draw(deviceContext, matViewProj);
             }

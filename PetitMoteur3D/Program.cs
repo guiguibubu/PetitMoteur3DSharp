@@ -6,6 +6,7 @@ using Silk.NET.Input;
 using System;
 using System.Diagnostics;
 using System.Collections.Generic;
+using PetitMoteur3D.Camera;
 
 namespace PetitMoteur3D
 {
@@ -19,6 +20,7 @@ namespace PetitMoteur3D
         private static TextureManager _textureManager = default!;
         private static MeshLoader _meshLoader = default!;
         private static Scene _scene = default!;
+        private static ICamera _camera = default!;
         private static Matrix4X4<float> _matView = default;
         private static Matrix4X4<float> _matProj = default;
 
@@ -37,7 +39,6 @@ namespace PetitMoteur3D
         {
             try
             {
-
                 _window = WindowManager.Create();
 
                 // Assign events.
@@ -178,7 +179,10 @@ namespace PetitMoteur3D
 
         private static void InitScene()
         {
-            _scene = new Scene(_deviceD3D11.Device);
+            _camera = new FixedCamera(Vector3D<float>.Zero);
+            _camera.Move(-10 * Vector3D<float>.UnitZ);
+
+            _scene = new Scene(_deviceD3D11.Device, _camera);
 
             Bloc bloc1 = new(4.0f, 4.0f, 4.0f, _deviceD3D11, _shaderManager);
             bloc1.SetTexture(_textureManager.GetOrLoadTexture("textures\\brickwall.jpg"));
@@ -209,18 +213,14 @@ namespace PetitMoteur3D
 
             // Initialisation des matrices View et Proj
             // Dans notre cas, ces matrices sont fixes
-            _matView = CreateLookAtLH(
-                new Vector3D<float>(0.0f, 0.0f, -10.0f),
-                new Vector3D<float>(0.0f, 0.0f, 0.0f),
-                new Vector3D<float>(0.0f, 1.0f, 0.0f));
-            float champDeVision = (float)(Math.PI / 4); // 45 degrés
+            _matView = _camera.GetViewMatrix();
             float largeurEcran = Monitor.GetMainMonitor(_window).Bounds.Size.X;
             float hauteurEcran = Monitor.GetMainMonitor(_window).Bounds.Size.Y;
             float aspectRatio = largeurEcran / hauteurEcran;
             float planRapproche = 2.0f;
             float planEloigne = 100.0f;
             _matProj = CreatePerspectiveFieldOfViewLH(
-            champDeVision,
+            _camera.ChampVision,
             aspectRatio,
             planRapproche,
             planEloigne);
@@ -272,34 +272,6 @@ namespace PetitMoteur3D
                 Matrix4X4<float> matViewProj = _matView * _matProj;
                 _scene.Draw(_deviceD3D11.DeviceContext, matViewProj);
             }
-        }
-
-        private static Matrix4X4<T> CreateLookAtLH<T>(Vector3D<T> cameraPosition, Vector3D<T> cameraTarget, Vector3D<T> cameraUpVector)
-           where T : unmanaged, IFormattable, IEquatable<T>, IComparable<T>
-        {
-            Vector3D<T> zaxis = Vector3D.Normalize(cameraTarget - cameraPosition);
-            Vector3D<T> xaxis = Vector3D.Normalize(Vector3D.Cross(cameraUpVector, zaxis));
-            Vector3D<T> yaxis = Vector3D.Cross(zaxis, xaxis);
-
-            Matrix4X4<T> result = Matrix4X4<T>.Identity;
-
-            result.M11 = xaxis.X;
-            result.M12 = yaxis.X;
-            result.M13 = zaxis.X;
-
-            result.M21 = xaxis.Y;
-            result.M22 = yaxis.Y;
-            result.M23 = zaxis.Y;
-
-            result.M31 = xaxis.Z;
-            result.M32 = yaxis.Z;
-            result.M33 = zaxis.Z;
-
-            result.M41 = Scalar.Negate(Vector3D.Dot(xaxis, cameraPosition));
-            result.M42 = Scalar.Negate(Vector3D.Dot(yaxis, cameraPosition));
-            result.M43 = Scalar.Negate(Vector3D.Dot(zaxis, cameraPosition));
-
-            return result;
         }
 
         public static Matrix4X4<T> CreatePerspectiveFieldOfViewLH<T>(T fieldOfView, T aspectRatio, T nearPlaneDistance, T farPlaneDistance)
