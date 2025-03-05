@@ -399,3 +399,6 @@ FodyWeavers.xsd
 
 # Dear ImGui
 **/imgui.ini
+
+# OBJ Models
+!PetitMoteur3D/models/**/*.obj
