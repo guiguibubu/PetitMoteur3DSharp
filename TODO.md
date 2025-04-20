@@ -7,7 +7,7 @@
 - [x] support for texture
 - [x] render a mesh from gltF scene
 - [x] render a mesh from OBJ file
-- [ ] Support normal mapping
+- [x] Support normal mapping
 - [ ] Support PBR 
 
 ## Engine
