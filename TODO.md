@@ -14,7 +14,7 @@
 - [x] Add basic debug tool (ImGui)
 - [x] Toggle wireframe view in debug
 - [x] Toggle change background color in debug tool
-- [ ] Add support for directional light
+- [x] Add support for directional light
 - [ ] Change light color in debug tool
 
 ## Inputs
