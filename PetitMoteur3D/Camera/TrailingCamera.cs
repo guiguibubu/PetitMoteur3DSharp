@@ -3,6 +3,9 @@ using Silk.NET.Maths;
 
 namespace PetitMoteur3D.Camera
 {
+    /// <summary>
+    /// Implemmentation for a camera fixed on a target object
+    /// </summary>
     internal struct TrailingCamera : ICamera
     {
         /// <summary>

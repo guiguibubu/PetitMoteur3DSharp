@@ -210,7 +210,7 @@ namespace PetitMoteur3D
 
             _scene.AddObjet(bloc1);
             _scene.AddObjet(bloc2);
-            //_scene.AddObjet(objetMesh);
+            _scene.AddObjet(objetMesh);
 
             // Initialisation des matrices View et Proj
             // Dans notre cas, ces matrices sont fixes
@@ -221,10 +221,11 @@ namespace PetitMoteur3D
             float planRapproche = 2.0f;
             float planEloigne = 100.0f;
             _matProj = CreatePerspectiveFieldOfViewLH(
-            _camera.ChampVision,
-            aspectRatio,
-            planRapproche,
-            planEloigne);
+                _camera.ChampVision,
+                aspectRatio,
+                planRapproche,
+                planEloigne
+            );
         }
 
         private static void InitAnimation()
@@ -238,21 +239,33 @@ namespace PetitMoteur3D
         private static void InitInput()
         {
             _inputContext = _window.CreateInput();
-            _inputContext.Keyboards[0].KeyDown += (keyboard, key, i) =>
+            IKeyboard keyboard = _inputContext.Keyboards[0];
+            keyboard.KeyDown += (_, key, i) =>
             {
                 if (key == Key.F12 && !_debugToolKeyPressed)
                 {
                     _debugToolKeyPressed = true;
                 }
             };
-            _inputContext.Keyboards[0].KeyUp += (keyboard, key, i) =>
+            keyboard.KeyUp += (_, key, i) =>
+            {
+                if (key == Key.F12 && _debugToolKeyPressed)
                 {
-                    if (key == Key.F12 && _debugToolKeyPressed)
-                    {
-                        _showDebugTool = !_showDebugTool;
-                        _debugToolKeyPressed = false;
-                    }
-                };
+                    _showDebugTool = !_showDebugTool;
+                    _debugToolKeyPressed = false;
+                }
+            };
+            keyboard.KeyChar += (_, c) =>
+            {
+                if (c == 'd')
+                {
+                    _camera.Move(Vector3D<float>.UnitX);
+                }
+                else if (c == 'q')
+                {
+                    _camera.Move(-Vector3D<float>.UnitX);
+                }
+            };
         }
 
         private static void InitDebugTools()
@@ -270,6 +283,7 @@ namespace PetitMoteur3D
             BeginRender();
             if (_initAnimationFinished)
             {
+                _matView = _camera.GetViewMatrix();
                 Matrix4X4<float> matViewProj = _matView * _matProj;
                 _scene.Draw(_deviceD3D11.DeviceContext, matViewProj);
             }

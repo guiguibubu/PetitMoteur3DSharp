@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Silk.NET.Assimp;
 using Silk.NET.Maths;
@@ -14,7 +15,7 @@ namespace PetitMoteur3D
             _importer = Assimp.GetApi();
         }
 
-        public unsafe IReadOnlyList<SceneMesh>? Load(string filePath)
+        public unsafe IReadOnlyList<SceneMesh> Load(string filePath)
         {
             byte[] fileData = System.IO.File.ReadAllBytes(filePath);
             uint postProcessFlags = (uint)PostProcessSteps.Triangulate
@@ -30,7 +31,7 @@ namespace PetitMoteur3D
             {
                 if (scenePtr is null)
                 {
-                    return null;
+                    throw new MeshLoaderException("Failed to import : {FilePath}", filePath);
                 }
                 Silk.NET.Assimp.Scene scene = *scenePtr;
 
@@ -205,6 +206,7 @@ namespace PetitMoteur3D
         public class MeshLoaderException : ApplicationException
         {
             public MeshLoaderException(string text) : base(text) { }
+            public MeshLoaderException([StringSyntax(StringSyntaxAttribute.CompositeFormat)] string format, params object?[] args) : this(string.Format(format, args)) { }
         }
     }
 }

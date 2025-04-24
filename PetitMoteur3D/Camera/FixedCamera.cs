@@ -3,6 +3,9 @@ using Silk.NET.Maths;
 
 namespace PetitMoteur3D.Camera
 {
+    /// <summary>
+    /// Implemmentation for a camera fixed on a target position
+    /// </summary>
     internal struct FixedCamera : ICamera
     {
         /// <summary>
