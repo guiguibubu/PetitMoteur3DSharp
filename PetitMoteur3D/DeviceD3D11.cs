@@ -28,9 +28,16 @@ namespace PetitMoteur3D
         private ComPtr<ID3D11RenderTargetView> _renderTargetView;
         private ComPtr<ID3D11DepthStencilView> _depthStencilView;
         private ComPtr<ID3D11Texture2D> _depthTexture;
-        public ComPtr<ID3D11RasterizerState> _solidCullBackRS;
-        public ComPtr<ID3D11RasterizerState> _wireFrameCullBackRS;
+        private ComPtr<ID3D11RasterizerState> _solidCullBackRS;
+        private ComPtr<ID3D11RasterizerState> _wireFrameCullBackRS;
+
         private readonly D3DCompiler _compiler;
+        private readonly D3D11 _d3d11Api;
+
+        private static readonly D3DFeatureLevel[] FEATURES_LEVELS = {
+            D3DFeatureLevel.Level111,
+            D3DFeatureLevel.Level110
+        };
 
         private readonly Silk.NET.Windowing.IWindow _window;
 
@@ -47,9 +54,12 @@ namespace PetitMoteur3D
 
             _compiler = D3DCompiler.GetApi();
 
-            InitDevice(forceDxvk);
+            // Create our D3D11 logical device.
+            _d3d11Api = D3D11.GetApi(_window, forceDxvk);
+            
+            InitDevice(_d3d11Api);
 
-            // Initialisatio de la swapchain
+            // Initialisation de la swapchain
             InitSwapChain(window, forceDxvk);
 
             // Create « render target view » 
@@ -109,6 +119,7 @@ namespace PetitMoteur3D
             _swapchain.Dispose();
             _device.Dispose();
             _compiler.Dispose();
+            _d3d11Api.Dispose();
         }
 
         public unsafe void BeforePresent()
@@ -191,29 +202,21 @@ namespace PetitMoteur3D
             _deviceContext.RSSetState(rsState);
         }
 
-        private unsafe void InitDevice(bool forceDxvk)
+        private unsafe void InitDevice(D3D11 d3d11Api)
         {
             uint createDeviceFlags = 0;
 #if DEBUG
             createDeviceFlags |= (uint)CreateDeviceFlag.Debug;
 #endif
-
-            // Create our D3D11 logical device.
-            D3D11 d3d11 = D3D11.GetApi(_window, forceDxvk);
-
-            D3DFeatureLevel[] featureLevels = {
-                D3DFeatureLevel.Level111,
-                D3DFeatureLevel.Level110
-            };
             SilkMarshal.ThrowHResult
             (
-                d3d11.CreateDevice
+                d3d11Api.CreateDevice
                 (
                     default(ComPtr<IDXGIAdapter>),
                     D3DDriverType.Hardware,
-                    default,
+                    0,
                     createDeviceFlags,
-                    in featureLevels[0],
+                    in FEATURES_LEVELS[0],
                     2,
                     D3D11.SdkVersion,
                     ref _device,
@@ -221,7 +224,6 @@ namespace PetitMoteur3D
                     ref _deviceContext
                 )
             );
-            d3d11.Dispose();
 
 #if DEBUG
             //This is not supported under DXVK 
