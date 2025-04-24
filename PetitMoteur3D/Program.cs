@@ -128,7 +128,8 @@ namespace PetitMoteur3D
                     ImGui.SliderFloat("float", ref f, 0.0f, 1.0f);
                     ImGui.Text(string.Format("Application average {0} ms/frame ({1} FPS)", (1000.0f / io.Framerate).ToString("F3", System.Globalization.CultureInfo.InvariantCulture), io.Framerate.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)));
                     bool colorChanged = ImGui.ColorEdit4("Background Color", ref _backgroundColour);     // Edit 4 floats representing a color
-                    bool wireFrameChanged = ImGui.Checkbox("WireFrame", ref _showWireFrame);     // Edit 4 floats representing a color
+                    bool wireFrameChanged = ImGui.Checkbox("WireFrame", ref _showWireFrame);     // Edit bool
+                    ImGui.Checkbox("Show Demo", ref _imGuiShowDemo);     // Edit bool
                     ImGui.End();
 
                     // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
