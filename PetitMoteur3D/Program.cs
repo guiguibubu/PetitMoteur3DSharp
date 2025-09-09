@@ -28,6 +28,7 @@ namespace PetitMoteur3D
         private static bool _debugToolKeyPressed = false;
         private static bool _showDebugTool = false;
         private static bool _showWireFrame = false;
+        private static bool _showScene = true;
         private static System.Numerics.Vector4 _backgroundColour = default!;
 
         private static Stopwatch _horloge = new Stopwatch();
@@ -111,13 +112,20 @@ namespace PetitMoteur3D
                 _horloge.Restart();
                 // On prépare la prochaine image
                 AnimeScene((float)tempsEcoule);
-                // On rend l’image sur la surface de travail
-                // (tampon d’arrière plan)
-                RenderScene();
+                if (_showScene)
+                {
+                    // On rend l’image sur la surface de travail
+                    // (tampon d’arrière plan)
+                    RenderScene();
+                }
+                else
+                {
+                    BeginRender();
+                }
 
                 if (_showDebugTool)
                 {
-                    _imGuiController.Update((float)tempsEcoule);
+                    _imGuiController.Update((float)tempsEcoule / 1000.0f);
                     _imGuiController.NewFrame();
 
                     ImGuiIOPtr io = ImGui.GetIO();
@@ -126,10 +134,11 @@ namespace PetitMoteur3D
                     ImGui.Begin("Title : Hello, world!");
                     ImGui.Text("Hello, world!");
                     ImGui.SliderFloat("float", ref f, 0.0f, 1.0f);
-                    ImGui.Text(string.Format("Application average {0} ms/frame ({1} FPS)", (1000.0f / io.Framerate).ToString("F3", System.Globalization.CultureInfo.InvariantCulture), io.Framerate.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)));
+                    ImGui.Text(string.Format("Application average {0} ms/frame ({1} FPS)", (1000.0f * io.DeltaTime).ToString("F3", System.Globalization.CultureInfo.InvariantCulture), io.Framerate.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)));
                     bool colorChanged = ImGui.ColorEdit4("Background Color", ref _backgroundColour);     // Edit 4 floats representing a color
                     bool wireFrameChanged = ImGui.Checkbox("WireFrame", ref _showWireFrame);     // Edit bool
                     ImGui.Checkbox("Show Demo", ref _imGuiShowDemo);     // Edit bool
+                    ImGui.Checkbox("Show Scene", ref _showScene);     // Edit bool
                     ImGui.End();
 
                     // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
