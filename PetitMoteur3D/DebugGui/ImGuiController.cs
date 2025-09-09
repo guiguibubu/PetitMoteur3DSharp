@@ -3,9 +3,11 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.Metrics;
 using System.Drawing;
 using System.Numerics;
 using ImGuiNET;
+using OpenTelemetry.Metrics;
 using Silk.NET.Input;
 using Silk.NET.Maths;
 using Silk.NET.Windowing;
@@ -31,6 +33,18 @@ namespace PetitMoteur3D.DebugGui
         private int _windowHeight;
 
         public IntPtr Context;
+
+        #region Telemetry
+        // Define a meter
+        private static readonly Meter MyMeter = new("PetitMoteur3D.DebugGui.ImGuiController", "1.0");
+
+        // Create a counter instrument
+        private static readonly Gauge<long> CmdListsCounter = MyMeter.CreateGauge<long>("CmdListsCounter", "cmd list count", "Command list count");
+        private static readonly Gauge<long> TotalIdxCounter = MyMeter.CreateGauge<long>("TotalIdxCounter", "index count", "Index count");
+        private static readonly Gauge<long> TotalVtxCounter = MyMeter.CreateGauge<long>("TotalVtxCounter", "vertex count", "Vertex count");
+
+        private MeterProvider _meterProvider;
+        #endregion
 
         /// <summary>
         /// Constructs a new ImGuiController.
@@ -69,8 +83,13 @@ namespace PetitMoteur3D.DebugGui
             _keyboard = _input.Keyboards[0];
             InitCallbacks();
 
-
             _backendRenderer.Init(io);
+
+            // Configure the OpenTelemetry MeterProvider
+            _meterProvider = OpenTelemetry.Sdk.CreateMeterProviderBuilder()
+                .AddMeter("PetitMoteur3D.DebugGui.ImGuiController")
+                .AddConsoleExporter()
+                .Build();
         }
 
         ~ImGuiController()
@@ -165,7 +184,15 @@ namespace PetitMoteur3D.DebugGui
 
             _frameBegun = false;
             ImGuiNET.ImGui.Render();
-            RenderImDrawData(ImGuiNET.ImGui.GetDrawData());
+            ImDrawDataPtr drawDataPtr = ImGuiNET.ImGui.GetDrawData();
+            RenderImDrawData(drawDataPtr);
+
+            // Not used yet, but ready for telemetry
+            /*
+            CmdListsCounter.Record(drawDataPtr.CmdListsCount);
+            TotalIdxCounter.Record(drawDataPtr.TotalIdxCount);
+            TotalVtxCounter.Record(drawDataPtr.TotalVtxCount);
+            */
 
             if (oldCtx != Context)
             {
@@ -426,6 +453,7 @@ namespace PetitMoteur3D.DebugGui
                 {
                     // Dispose managed resources.
                     _backendRenderer.Dispose();
+                    _meterProvider.Dispose();
                 }
 
                 // Call the appropriate methods to clean up
