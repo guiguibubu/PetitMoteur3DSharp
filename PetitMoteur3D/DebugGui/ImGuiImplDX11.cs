@@ -146,7 +146,7 @@ namespace PetitMoteur3D.DebugGui
             {
                 if (_backendRendererUserData.IndexBuffer.Handle is not null) { _backendRendererUserData.IndexBuffer.Dispose(); _backendRendererUserData.IndexBuffer = null; }
                 _backendRendererUserData.IndexBufferSize = drawData.TotalIdxCount + 10000;
-                CreateIndexBuffer(_backendRendererUserData.D3dDevice, (uint)(_backendRendererUserData.IndexBufferSize * sizeof(ushort)), ref _backendRendererUserData.IndexBuffer);
+                CreateIndexBuffer(_backendRendererUserData.D3dDevice, (uint)(_backendRendererUserData.IndexBufferSize * sizeof(ImDrawIdx)), ref _backendRendererUserData.IndexBuffer);
             }
 
 #if DEBUG && DEBUG_BUFFERS
@@ -155,7 +155,7 @@ namespace PetitMoteur3D.DebugGui
             // Only to debug if data is correctly set for next step (same action but into GPU buffers this time)
             {
                 int vertexBufferSize = _backendRendererUserData.VertexBufferSize * sizeof(ImDrawVert);
-                int indexBufferSize = _backendRendererUserData.IndexBufferSize * sizeof(ushort);
+                int indexBufferSize = _backendRendererUserData.IndexBufferSize * sizeof(ImDrawIdx);
                 System.Console.WriteLine("vertexBufferSize = " + vertexBufferSize);
                 System.Console.WriteLine("indexBufferSize = " + indexBufferSize);
                 int remainingVertexBufferSpace = _backendRendererUserData.VertexBufferSize;
@@ -164,10 +164,10 @@ namespace PetitMoteur3D.DebugGui
                 byte[] debugBufferIndex = new byte[indexBufferSize];
 
                 System.Collections.Generic.List<ImDrawVert> cmdListVertex = new();
-                System.Collections.Generic.List<ushort> cmdListIndex = new();
+                System.Collections.Generic.List<ImDrawIdx> cmdListIndex = new();
 
                 System.Collections.Generic.List<ImDrawVert> serializedVertex = new();
-                System.Collections.Generic.List<ushort> serializedIndex = new();
+                System.Collections.Generic.List<ImDrawIdx> serializedIndex = new();
 
                 int totalVertex = 0;
                 int totalIndex = 0;
@@ -175,7 +175,7 @@ namespace PetitMoteur3D.DebugGui
                 fixed (byte* debugBufferIndexPtr = debugBufferIndex)
                 {
                     ImDrawVert* vertexDest = (ImDrawVert*)(debugBufferVertexPtr);
-                    ushort* indexDest = (ushort*)(debugBufferIndexPtr);
+                    ImDrawIdx* indexDest = (ImDrawIdx*)(debugBufferIndexPtr);
 
                     for (int n = 0; n < drawData.CmdListsCount; n++)
                     {
@@ -189,12 +189,12 @@ namespace PetitMoteur3D.DebugGui
                         cmdListIndex.EnsureCapacity(cmdList.IdxBuffer.Size);
                         for (int i = 0; i < cmdList.IdxBuffer.Size; i++)
                         {
-                            cmdListIndex.Add(((ushort*)cmdList.IdxBuffer.Data)[i]);
+                            cmdListIndex.Add(((ImDrawIdx*)cmdList.IdxBuffer.Data)[i]);
                         }
 
                         //MemoryCopy (void* source, void* destination, long destinationSizeInBytes, long sourceBytesToCopy)
                         System.Buffer.MemoryCopy((void*)cmdList.VtxBuffer.Data, vertexDest, remainingVertexBufferSpace * sizeof(ImDrawVert), cmdList.VtxBuffer.Size * sizeof(ImDrawVert));
-                        System.Buffer.MemoryCopy((void*)cmdList.IdxBuffer.Data, indexDest, remainingIndexBufferSpace * sizeof(ushort), cmdList.IdxBuffer.Size * sizeof(ushort));
+                        System.Buffer.MemoryCopy((void*)cmdList.IdxBuffer.Data, indexDest, remainingIndexBufferSpace * sizeof(ImDrawIdx), cmdList.IdxBuffer.Size * sizeof(ImDrawIdx));
 
                         remainingVertexBufferSpace -= cmdList.VtxBuffer.Size;
                         remainingIndexBufferSpace -= cmdList.IdxBuffer.Size;
@@ -214,7 +214,7 @@ namespace PetitMoteur3D.DebugGui
                     serializedIndex.EnsureCapacity(totalIndex);
                     for (int i = 0; i < totalIndex; i++)
                     {
-                        serializedIndex.Add(((ushort*)debugBufferIndexPtr)[i]);
+                        serializedIndex.Add(((ImDrawIdx*)debugBufferIndexPtr)[i]);
                     }
                 }
 
@@ -233,8 +233,8 @@ namespace PetitMoteur3D.DebugGui
 
                 for (int i = 0; i < totalIndex; i++)
                 {
-                    ushort indexCmd = cmdListIndex[i];
-                    ushort indexSerialized = serializedIndex[i];
+                    ImDrawIdx indexCmd = cmdListIndex[i];
+                    ImDrawIdx indexSerialized = serializedIndex[i];
                     System.Diagnostics.Debug.Assert(indexCmd == indexSerialized, $"Fail serialization index {i}");
                 }
             }
@@ -252,7 +252,7 @@ namespace PetitMoteur3D.DebugGui
                     deviceContext.Map(_backendRendererUserData.IndexBuffer, 0, Map.WriteDiscard, 0, ref indexResource)
                 );
                 ImDrawVert* vertexDest = (ImDrawVert*)(vertexResource.PData);
-                ushort* indexDest = (ushort*)(indexResource.PData);
+                ImDrawIdx* indexDest = (ImDrawIdx*)(indexResource.PData);
                 int remainingVertexBufferSpace = _backendRendererUserData.VertexBufferSize;
                 int remainingIndexBufferSpace = _backendRendererUserData.IndexBufferSize;
 
@@ -261,7 +261,7 @@ namespace PetitMoteur3D.DebugGui
                     ImDrawListPtr cmdList = drawData.CmdLists[n];
                     //MemoryCopy (void* source, void* destination, long destinationSizeInBytes, long sourceBytesToCopy)
                     System.Buffer.MemoryCopy((void*)cmdList.VtxBuffer.Data, vertexDest, remainingVertexBufferSpace * sizeof(ImDrawVert), cmdList.VtxBuffer.Size * sizeof(ImDrawVert));
-                    System.Buffer.MemoryCopy((void*)cmdList.IdxBuffer.Data, indexDest, remainingIndexBufferSpace * sizeof(ushort), cmdList.IdxBuffer.Size * sizeof(ushort));
+                    System.Buffer.MemoryCopy((void*)cmdList.IdxBuffer.Data, indexDest, remainingIndexBufferSpace * sizeof(ImDrawIdx), cmdList.IdxBuffer.Size * sizeof(ImDrawIdx));
                     remainingVertexBufferSpace -= cmdList.VtxBuffer.Size;
                     remainingIndexBufferSpace -= cmdList.IdxBuffer.Size;
                     vertexDest += cmdList.VtxBuffer.Size;
@@ -853,7 +853,7 @@ namespace PetitMoteur3D.DebugGui
             uint offset = 0;
             deviceContext.IASetInputLayout(_backendRendererUserData.InputLayout);
             deviceContext.IASetVertexBuffers(0, 1, ref _backendRendererUserData.VertexBuffer, ref stride, ref offset);
-            deviceContext.IASetIndexBuffer(_backendRendererUserData.IndexBuffer, sizeof(ushort) == 2 ? Format.FormatR16Uint : Format.FormatR32Uint, 0);
+            deviceContext.IASetIndexBuffer(_backendRendererUserData.IndexBuffer, sizeof(ImDrawIdx) == 2 ? Format.FormatR16Uint : Format.FormatR32Uint, 0);
             deviceContext.IASetPrimitiveTopology(D3DPrimitiveTopology.D3D11PrimitiveTopologyTrianglelist);
             deviceContext.VSSetShader(_backendRendererUserData.VertexShader, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
             deviceContext.VSSetConstantBuffers(0, 1, ref _backendRendererUserData.VertexConstantBuffer);
