@@ -617,9 +617,9 @@ namespace PetitMoteur3D.DebugGui
             }
 
             // Créer l’organisation des sommets
-            fixed (byte* semanticNamePosition = SilkMarshal.StringToMemory("POSITION"))
-            fixed (byte* semanticNameTexCoord = SilkMarshal.StringToMemory("TEXCOORD"))
-            fixed (byte* semanticNameColor = SilkMarshal.StringToMemory("COLOR"))
+            fixed (byte* semanticNamePosition = SilkMarshal.StringToMemory("POSITION", NativeStringEncoding.Ansi))
+            fixed (byte* semanticNameTexCoord = SilkMarshal.StringToMemory("TEXCOORD", NativeStringEncoding.Ansi))
+            fixed (byte* semanticNameColor = SilkMarshal.StringToMemory("COLOR", NativeStringEncoding.Ansi))
             {
                 InputElementDesc[] inputElements = new[]
                 {
