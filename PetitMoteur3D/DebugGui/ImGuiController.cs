@@ -1,5 +1,5 @@
-// Licensed to the .NET Foundation under one or more agreements.
-// The .NET Foundation licenses this file to you under the MIT license.
+// Uncomment to have add a log of draw commands
+//#define DEBUG_LOG_DRAW_COMMANDS
 
 using System;
 using System.Collections.Generic;
@@ -22,7 +22,7 @@ namespace PetitMoteur3D.DebugGui
     /// </remarks>
     internal class ImGuiController : IDisposable
     {
-        private readonly ImGuiImplDX11 _backendRenderer;
+        private readonly IImGuiBackendRenderer _backendRenderer;
         private readonly IView _view;
         private readonly IInputContext _input;
         private bool _frameBegun;
@@ -49,16 +49,23 @@ namespace PetitMoteur3D.DebugGui
         /// <summary>
         /// Constructs a new ImGuiController.
         /// </summary>
-        public ImGuiController(DeviceD3D11 renderDevice, IView view, IInputContext input) : this(renderDevice, view, input, null)
+        public ImGuiController(IImGuiBackendRenderer backendRenderer, IView view, IInputContext input) : this(backendRenderer, view, input, null)
+        {
+        }
+
+        /// <summary>
+        /// Constructs a new ImGuiController.
+        /// </summary>
+        public ImGuiController(DeviceD3D11 renderDevice, IView view, IInputContext input) : this(new ImGuiImplDX11(renderDevice), view, input, null)
         {
         }
 
         /// <summary>
         /// Constructs a new ImGuiController with font configuration and onConfigure Action.
         /// </summary>
-        public ImGuiController(DeviceD3D11 renderDevice, IView view, IInputContext input, Action? onConfigureIO)
+        public ImGuiController(IImGuiBackendRenderer backendRenderer, IView view, IInputContext input, Action? onConfigureIO)
         {
-            _backendRenderer = new ImGuiImplDX11(renderDevice);
+            _backendRenderer = backendRenderer;
             _view = view;
             _input = input;
             _windowWidth = view.Size.X;
@@ -121,6 +128,14 @@ namespace PetitMoteur3D.DebugGui
         }
 
         /// <summary>
+        /// Close current frame. Call <see cref="Render"/> to render it.
+        /// </summary>
+        public void CloseFrame()
+        {
+            _frameBegun = false;
+        }
+
+        /// <summary>
         /// Delegate to receive keyboard key down events.
         /// </summary>
         /// <param name="keyboard">The keyboard context generating the event.</param>
@@ -164,11 +179,14 @@ namespace PetitMoteur3D.DebugGui
             _windowHeight = size.Y;
         }
 
+#if DEBUG && DEBUG_LOG_DRAW_COMMANDS
+        private uint totalIndexToDraw = 0;
+#endif
         /// <summary>
         /// Renders the ImGui draw list data.
         /// Nothing happen if no frame is open. Use <see cref="NewFrame"/> to do it.
         /// </summary>
-        public void Render()
+        public void Render(bool autoCloseFrame = true)
         {
             if (!_frameBegun)
             {
@@ -182,10 +200,37 @@ namespace PetitMoteur3D.DebugGui
                 ImGuiNET.ImGui.SetCurrentContext(Context);
             }
 
-            _frameBegun = false;
+            if (autoCloseFrame)
+            {
+                CloseFrame();
+            }
+
             ImGuiNET.ImGui.Render();
             ImDrawDataPtr drawDataPtr = ImGuiNET.ImGui.GetDrawData();
             RenderImDrawData(drawDataPtr);
+
+#if DEBUG && DEBUG_LOG_DRAW_COMMANDS
+            uint totalIndexToDrawTemp = 0;
+            System.Console.WriteLine("drawDataPtr.CmdListsCount = " + drawDataPtr.CmdListsCount);
+            for (int i = 0; i < drawDataPtr.CmdListsCount; i++)
+            {
+                ImDrawListPtr cmdList = drawDataPtr.CmdLists[i];
+                System.Console.WriteLine("cmdList.CmdBuffer.Size = " + cmdList.CmdBuffer.Size);
+                for (int j = 0; j < cmdList.CmdBuffer.Size; j++)
+                {
+                    ImDrawCmdPtr cmd = cmdList.CmdBuffer[j];
+                    uint nbIndexToDraw = cmd.ElemCount;
+                    System.Console.WriteLine("cmd.ElemCount = " + cmd.ElemCount);
+                    totalIndexToDrawTemp += nbIndexToDraw;
+                }
+            }
+
+            if (totalIndexToDrawTemp != totalIndexToDraw)
+            {
+                totalIndexToDraw = totalIndexToDrawTemp;
+                System.Console.WriteLine("totalIndexToDraw = " + totalIndexToDraw);
+            }
+#endif
 
             // Not used yet, but ready for telemetry
             /*

@@ -1,9 +1,10 @@
+// Uncomment to add a (heavy) check of buffer content (vertex and index buffer only for the moment)
+//#define DEBUG_BUFFERS 
 using System;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using ImGuiNET;
-using Silk.NET.Core;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D.Compilers;
 using Silk.NET.Direct3D11;
@@ -18,7 +19,7 @@ namespace PetitMoteur3D.DebugGui
     /// <remarks>
     /// Adapted from official ImGui code (https://github.com/ocornut/imgui/blob/master/backends/imgui_impl_dx11.cpp)
     /// </remarks>
-    internal class ImGuiImplDX11 : IDisposable
+    internal class ImGuiImplDX11 : IImGuiBackendRenderer
     {
         /// <summary>
         /// Singleton
@@ -26,6 +27,13 @@ namespace PetitMoteur3D.DebugGui
         private unsafe readonly nint _backendRendererName;
         private ImGuiImplDX11Data _backendRendererUserData;
         private bool _backendInitialized = false;
+
+        /// <summary>
+        /// GUID DebugObjectName
+        /// </summary>
+        /// <unmanaged>WKPDID_D3DDebugObjectName</unmanaged>
+        /// <unmanaged-short>WKPDID_D3DDebugObjectName</unmanaged-short>
+        public static readonly System.Guid DebugObjectName = new(0x429B8C22, 0x9188, 0x4B0C, 0x87, 0x42, 0xAC, 0xB0, 0xBF, 0x85, 0xC2, 0x00);
 
         private readonly DeviceD3D11 _renderDevice;
 
@@ -57,6 +65,8 @@ namespace PetitMoteur3D.DebugGui
             // io.BackendRendererUserData = (nint)_backendRendererUserDataPtr.GetAddressOf();
             io.NativePtr->BackendRendererName = (byte*)_backendRendererName;
             io.BackendFlags |= ImGuiBackendFlags.RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
+
+            io.Fonts.Flags |= ImFontAtlasFlags.NoBakedLines;
 
             // Get factory from device
             ComPtr<IDXGIDevice> dxgiDevice;
@@ -139,6 +149,98 @@ namespace PetitMoteur3D.DebugGui
                 CreateIndexBuffer(_backendRendererUserData.D3dDevice, (uint)(_backendRendererUserData.IndexBufferSize * sizeof(ushort)), ref _backendRendererUserData.IndexBuffer);
             }
 
+#if DEBUG && DEBUG_BUFFERS
+            #region Debugging buffer
+            // Upload vertex/index data into a single contiguous CPU buffer
+            // Only to debug if data is correctly set for next step (same action but into GPU buffers this time)
+            {
+                int vertexBufferSize = _backendRendererUserData.VertexBufferSize * sizeof(ImDrawVert);
+                int indexBufferSize = _backendRendererUserData.IndexBufferSize * sizeof(ushort);
+                System.Console.WriteLine("vertexBufferSize = " + vertexBufferSize);
+                System.Console.WriteLine("indexBufferSize = " + indexBufferSize);
+                int remainingVertexBufferSpace = _backendRendererUserData.VertexBufferSize;
+                int remainingIndexBufferSpace = _backendRendererUserData.IndexBufferSize;
+                byte[] debugBufferVertex = new byte[vertexBufferSize];
+                byte[] debugBufferIndex = new byte[indexBufferSize];
+
+                System.Collections.Generic.List<ImDrawVert> cmdListVertex = new();
+                System.Collections.Generic.List<ushort> cmdListIndex = new();
+
+                System.Collections.Generic.List<ImDrawVert> serializedVertex = new();
+                System.Collections.Generic.List<ushort> serializedIndex = new();
+
+                int totalVertex = 0;
+                int totalIndex = 0;
+                fixed (byte* debugBufferVertexPtr = debugBufferVertex)
+                fixed (byte* debugBufferIndexPtr = debugBufferIndex)
+                {
+                    ImDrawVert* vertexDest = (ImDrawVert*)(debugBufferVertexPtr);
+                    ushort* indexDest = (ushort*)(debugBufferIndexPtr);
+
+                    for (int n = 0; n < drawData.CmdListsCount; n++)
+                    {
+                        ImDrawListPtr cmdList = drawData.CmdLists[n];
+
+                        cmdListVertex.EnsureCapacity(cmdList.VtxBuffer.Size);
+                        for (int i = 0; i < cmdList.VtxBuffer.Size; i++)
+                        {
+                            cmdListVertex.Add(((ImDrawVert*)cmdList.VtxBuffer.Data)[i]);
+                        }
+                        cmdListIndex.EnsureCapacity(cmdList.IdxBuffer.Size);
+                        for (int i = 0; i < cmdList.IdxBuffer.Size; i++)
+                        {
+                            cmdListIndex.Add(((ushort*)cmdList.IdxBuffer.Data)[i]);
+                        }
+
+                        //MemoryCopy (void* source, void* destination, long destinationSizeInBytes, long sourceBytesToCopy)
+                        System.Buffer.MemoryCopy((void*)cmdList.VtxBuffer.Data, vertexDest, remainingVertexBufferSpace * sizeof(ImDrawVert), cmdList.VtxBuffer.Size * sizeof(ImDrawVert));
+                        System.Buffer.MemoryCopy((void*)cmdList.IdxBuffer.Data, indexDest, remainingIndexBufferSpace * sizeof(ushort), cmdList.IdxBuffer.Size * sizeof(ushort));
+
+                        remainingVertexBufferSpace -= cmdList.VtxBuffer.Size;
+                        remainingIndexBufferSpace -= cmdList.IdxBuffer.Size;
+                        vertexDest += cmdList.VtxBuffer.Size;
+                        indexDest += cmdList.IdxBuffer.Size;
+
+                        totalVertex += cmdList.VtxBuffer.Size;
+                        totalIndex += cmdList.IdxBuffer.Size;
+                    }
+
+                    serializedVertex.EnsureCapacity(totalVertex);
+                    for (int i = 0; i < totalVertex; i++)
+                    {
+                        serializedVertex.Add(((ImDrawVert*)debugBufferVertexPtr)[i]);
+                    }
+
+                    serializedIndex.EnsureCapacity(totalIndex);
+                    for (int i = 0; i < totalIndex; i++)
+                    {
+                        serializedIndex.Add(((ushort*)debugBufferIndexPtr)[i]);
+                    }
+                }
+
+                System.Console.WriteLine("totalVertex = " + totalVertex);
+                System.Console.WriteLine("totalIndex = " + totalIndex);
+                System.Diagnostics.Debug.Assert(cmdListVertex.Count == serializedVertex.Count);
+                System.Diagnostics.Debug.Assert(cmdListIndex.Count == serializedIndex.Count);
+                for (int i = 0; i < totalVertex; i++)
+                {
+                    ImDrawVert vertexCmd = cmdListVertex[i];
+                    ImDrawVert vertexSerialized = serializedVertex[i];
+                    System.Diagnostics.Debug.Assert(vertexCmd.pos.X == vertexSerialized.pos.X && vertexCmd.pos.Y == vertexSerialized.pos.Y, $"Fail serialization vertex {i} (Position)");
+                    System.Diagnostics.Debug.Assert(vertexCmd.uv.X == vertexSerialized.uv.X && vertexCmd.uv.Y == vertexSerialized.uv.Y, $"Fail serialization vertex {i} (Texture)");
+                    System.Diagnostics.Debug.Assert(vertexCmd.col == vertexSerialized.col, $"Fail serialization vertex {i} (Color)");
+                }
+
+                for (int i = 0; i < totalIndex; i++)
+                {
+                    ushort indexCmd = cmdListIndex[i];
+                    ushort indexSerialized = serializedIndex[i];
+                    System.Diagnostics.Debug.Assert(indexCmd == indexSerialized, $"Fail serialization index {i}");
+                }
+            }
+            #endregion
+#endif
+
             // Upload vertex/index data into a single contiguous GPU buffer
             {
                 MappedSubresource vertexResource = default;
@@ -150,9 +252,10 @@ namespace PetitMoteur3D.DebugGui
                     deviceContext.Map(_backendRendererUserData.IndexBuffer, 0, Map.WriteDiscard, 0, ref indexResource)
                 );
                 ImDrawVert* vertexDest = (ImDrawVert*)(vertexResource.PData);
-                uint* indexDest = (uint*)(indexResource.PData);
+                ushort* indexDest = (ushort*)(indexResource.PData);
                 int remainingVertexBufferSpace = _backendRendererUserData.VertexBufferSize;
                 int remainingIndexBufferSpace = _backendRendererUserData.IndexBufferSize;
+
                 for (int n = 0; n < drawData.CmdListsCount; n++)
                 {
                     ImDrawListPtr cmdList = drawData.CmdLists[n];
@@ -164,6 +267,7 @@ namespace PetitMoteur3D.DebugGui
                     vertexDest += cmdList.VtxBuffer.Size;
                     indexDest += cmdList.IdxBuffer.Size;
                 }
+
                 deviceContext.Unmap(_backendRendererUserData.VertexBuffer, 0);
                 deviceContext.Unmap(_backendRendererUserData.IndexBuffer, 0);
             }
@@ -352,7 +456,7 @@ namespace PetitMoteur3D.DebugGui
         {
             // Build texture atlas
             ImGuiIOPtr io = ImGui.GetIO();
-            byte* pixels;
+            IntPtr pixels;
             int width, height, bytesPerPixel;
             io.Fonts.GetTexDataAsRGBA32(out pixels, out width, out height, out bytesPerPixel);
 
@@ -374,7 +478,7 @@ namespace PetitMoteur3D.DebugGui
                 ComPtr<ID3D11Texture2D> texture = default;
                 SubresourceData subResource = new()
                 {
-                    PSysMem = pixels,
+                    PSysMem = (void*)pixels,
                     SysMemPitch = (uint)(width * bytesPerPixel),
                     SysMemSlicePitch = 0
                 };
@@ -382,11 +486,20 @@ namespace PetitMoteur3D.DebugGui
                     _backendRendererUserData.D3dDevice.CreateTexture2D(in desc, in subResource, ref texture)
                 );
 
+                // Set Debug Name
+                const string fontTextureDebugName = "FontTexture";
+                IntPtr namePtr2 = Marshal.StringToHGlobalAnsi(fontTextureDebugName);
+                fixed (Guid* guidPtr = &DebugObjectName)
+                {
+                    texture.SetPrivateData(guidPtr, (uint)fontTextureDebugName.Length, (void*)namePtr2);
+                }
+                Marshal.FreeHGlobal(namePtr2);
+
                 // Create texture view
                 ShaderResourceViewDesc srvDesc = new()
                 {
                     Format = Format.FormatR8G8B8A8Unorm,
-                    ViewDimension = D3DSrvDimension.D3DSrvDimensionTexture2D,
+                    ViewDimension = D3DSrvDimension.D3D11SrvDimensionTexture2D,
                     Texture2D = new Tex2DSrv()
                     {
                         MipLevels = desc.MipLevels,
@@ -396,9 +509,19 @@ namespace PetitMoteur3D.DebugGui
 
                 _backendRendererUserData.D3dDevice.CreateShaderResourceView(texture, ref srvDesc, ref _backendRendererUserData.FontTextureView);
                 texture.Dispose();
+
+                // Set Debug Name
+                const string fontTextureViewDebugName = "FontTextureView";
+                IntPtr namePtr = Marshal.StringToHGlobalAnsi(fontTextureViewDebugName);
+                fixed (Guid* guidPtr = &DebugObjectName)
+                {
+                    _backendRendererUserData.FontTextureView.SetPrivateData(guidPtr, (uint)fontTextureViewDebugName.Length, (void*)namePtr);
+                }
+                Marshal.FreeHGlobal(namePtr);
             }
 
             // Store our identifier
+            io.Fonts.ClearTexData();
             io.Fonts.SetTexID((nint)_backendRendererUserData.FontTextureView.Handle);
 
             // Create texture sampler
@@ -406,17 +529,26 @@ namespace PetitMoteur3D.DebugGui
             {
                 SamplerDesc desc = new()
                 {
-                    Filter = Filter.MinMagMipLinear,
+                    Filter = Filter.MinMagMipPoint,
                     AddressU = TextureAddressMode.Wrap,
                     AddressV = TextureAddressMode.Wrap,
                     AddressW = TextureAddressMode.Wrap,
                     MipLODBias = 0f,
-                    ComparisonFunc = ComparisonFunc.Always,
+                    ComparisonFunc = ComparisonFunc.Never,
                     MinLOD = 0f,
                     MaxLOD = 0f
                 };
 
                 _backendRendererUserData.D3dDevice.CreateSamplerState(ref desc, ref _backendRendererUserData.FontSampler);
+
+                // Set Debug Name
+                const string fontSamplerDebugName = "FontSampler";
+                IntPtr namePtr = Marshal.StringToHGlobalAnsi(fontSamplerDebugName);
+                fixed (Guid* guidPtr = &DebugObjectName)
+                {
+                    _backendRendererUserData.FontSampler.SetPrivateData(guidPtr, (uint)fontSamplerDebugName.Length, (void*)namePtr);
+                }
+                Marshal.FreeHGlobal(namePtr);
             }
         }
 
@@ -492,13 +624,13 @@ namespace PetitMoteur3D.DebugGui
                 InputElementDesc[] inputElements = new[]
                 {
                     new InputElementDesc(
-                        semanticNamePosition, 0, Silk.NET.DXGI.Format.FormatR32G32Float, 0, 0, InputClassification.PerVertexData, 0
+                        semanticNamePosition, 0, Silk.NET.DXGI.Format.FormatR32G32Float, 0, Convert.ToUInt32(Marshal.OffsetOf<ImDrawVert>(nameof(ImDrawVert.pos))), InputClassification.PerVertexData, 0
                     ),
                     new InputElementDesc(
-                        semanticNameTexCoord, 0, Silk.NET.DXGI.Format.FormatR32G32Float, 0, (uint)sizeof(System.Numerics.Vector2), InputClassification.PerVertexData, 0
+                        semanticNameTexCoord, 0, Silk.NET.DXGI.Format.FormatR32G32Float, 0, Convert.ToUInt32(Marshal.OffsetOf<ImDrawVert>(nameof(ImDrawVert.uv))), InputClassification.PerVertexData, 0
                     ),
                     new InputElementDesc(
-                        semanticNameColor, 0, Silk.NET.DXGI.Format.FormatR8G8B8A8Unorm, 0, (uint)(2 * sizeof(System.Numerics.Vector2)), InputClassification.PerVertexData, 0
+                        semanticNameColor, 0, Silk.NET.DXGI.Format.FormatR8G8B8A8Unorm, 0, Convert.ToUInt32(Marshal.OffsetOf<ImDrawVert>(nameof(ImDrawVert.col))), InputClassification.PerVertexData, 0
                     ),
                 };
 
@@ -601,7 +733,7 @@ namespace PetitMoteur3D.DebugGui
                 SrcBlend = Blend.SrcAlpha,
                 DestBlend = Blend.InvSrcAlpha,
                 BlendOp = BlendOp.Add,
-                SrcBlendAlpha = Blend.One,
+                SrcBlendAlpha = Blend.SrcAlpha,
                 DestBlendAlpha = Blend.InvSrcAlpha,
                 BlendOpAlpha = BlendOp.Add,
                 RenderTargetWriteMask = (byte)ColorWriteEnable.All
@@ -629,7 +761,7 @@ namespace PetitMoteur3D.DebugGui
                 FillMode = FillMode.Solid,
                 CullMode = CullMode.None,
                 ScissorEnable = true,
-                DepthClipEnable = true
+                DepthClipEnable = false
             };
             device.CreateRasterizerState(in desc, ref _backendRendererUserData.RasterizerState);
             return true;
@@ -642,17 +774,19 @@ namespace PetitMoteur3D.DebugGui
                 StencilFailOp = StencilOp.Keep,
                 StencilDepthFailOp = StencilOp.Keep,
                 StencilPassOp = StencilOp.Keep,
-                StencilFunc = ComparisonFunc.Always
+                StencilFunc = ComparisonFunc.Never
             };
 
             DepthStencilDesc desc = new()
             {
                 DepthEnable = false,
-                DepthWriteMask = DepthWriteMask.All,
+                DepthWriteMask = DepthWriteMask.Zero,
                 DepthFunc = ComparisonFunc.Always,
                 StencilEnable = false,
                 FrontFace = frontFace,
-                BackFace = frontFace
+                BackFace = frontFace,
+                StencilReadMask = 0,
+                StencilWriteMask = 0
             };
             device.CreateDepthStencilState(in desc, ref _backendRendererUserData.DepthStencilState);
             return true;

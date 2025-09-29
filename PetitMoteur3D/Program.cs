@@ -25,15 +25,23 @@ namespace PetitMoteur3D
         private static Matrix4X4<float> _matProj = default;
 
         private static bool _imGuiShowDemo = false;
+        private static bool _imGuiShowDebugLogs = false;
+        private static bool _imGuiShowMetrics = false;
         private static bool _debugToolKeyPressed = false;
         private static bool _showDebugTool = false;
         private static bool _showWireFrame = false;
         private static bool _showScene = true;
         private static System.Numerics.Vector4 _backgroundColour = default!;
 
-        private static Stopwatch _horloge = new Stopwatch();
-        private const int IMAGESPARSECONDE = 60;
-        private const double ECART_TEMPS = (1.0 / (double)IMAGESPARSECONDE) * 1000.0;
+        private static Stopwatch _horlogeEngine = new Stopwatch();
+        private static Stopwatch _horlogeScene = new Stopwatch();
+        private static Stopwatch _horlogeDebugTool = new Stopwatch();
+        private const int IMAGESPARSECONDE_ENGINE = 60;
+        private const int IMAGESPARSECONDE_SCENE = 60;
+        private const int IMAGESPARSECONDE_DEBUGTOOL = 30;
+        private const double ECART_TEMPS_ENGINE = (1.0 / (double)IMAGESPARSECONDE_ENGINE) * 1000.0;
+        private const double ECART_TEMPS_SCENE = (1.0 / (double)IMAGESPARSECONDE_SCENE) * 1000.0;
+        private const double ECART_TEMPS_DEBUGTOOL = (1.0 / (double)IMAGESPARSECONDE_DEBUGTOOL) * 1000.0;
 
         private static bool _initAnimationFinished = false;
         static void Main(string[] args)
@@ -102,21 +110,27 @@ namespace PetitMoteur3D
 
         private static unsafe void OnRender(double elapsedTime)
         {
-            double tempsEcoule = _horloge.ElapsedMilliseconds;
+            double tempsEcouleEngine = _horlogeEngine.ElapsedMilliseconds;
+
             // Est-il temps de rendre l’image ?
-            if (tempsEcoule > ECART_TEMPS)
+            if (tempsEcouleEngine > ECART_TEMPS_ENGINE)
             {
                 // Affichage optimisé
                 _deviceD3D11.Present();
                 // On relance l'horloge pour être certain de garder la fréquence d'affichage
-                _horloge.Restart();
+                _horlogeEngine.Restart();
                 // On prépare la prochaine image
-                AnimeScene((float)tempsEcoule);
+                AnimeScene((float)tempsEcouleEngine);
                 if (_showScene)
                 {
-                    // On rend l’image sur la surface de travail
-                    // (tampon d’arrière plan)
-                    RenderScene();
+                    double tempsEcouleScene = _horlogeScene.ElapsedMilliseconds;
+                    if (tempsEcouleScene > ECART_TEMPS_SCENE)
+                    {
+                        _horlogeScene.Restart();
+                        // On rend l’image sur la surface de travail
+                        // (tampon d’arrière plan)
+                        RenderScene();
+                    }
                 }
                 else
                 {
@@ -125,43 +139,64 @@ namespace PetitMoteur3D
 
                 if (_showDebugTool)
                 {
-                    _imGuiController.Update((float)tempsEcoule / 1000.0f);
-                    _imGuiController.NewFrame();
-
-                    ImGuiIOPtr io = ImGui.GetIO();
-
-                    float f = 0.0f;
-                    ImGui.Begin("Title : Hello, world!");
-                    ImGui.Text("Hello, world!");
-                    ImGui.SliderFloat("float", ref f, 0.0f, 1.0f);
-                    ImGui.Text(string.Format("Application average {0} ms/frame ({1} FPS)", (1000.0f * io.DeltaTime).ToString("F3", System.Globalization.CultureInfo.InvariantCulture), io.Framerate.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)));
-                    bool colorChanged = ImGui.ColorEdit4("Background Color", ref _backgroundColour);     // Edit 4 floats representing a color
-                    bool wireFrameChanged = ImGui.Checkbox("WireFrame", ref _showWireFrame);     // Edit bool
-                    ImGui.Checkbox("Show Demo", ref _imGuiShowDemo);     // Edit bool
-                    ImGui.Checkbox("Show Scene", ref _showScene);     // Edit bool
-                    ImGui.End();
-
-                    // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
-                    if (_imGuiShowDemo)
-                        ImGui.ShowDemoWindow(ref _imGuiShowDemo);
-
-                    _imGuiController.Render();
-
-                    if (colorChanged)
+                    double tempsEcouleDebugTool = _horlogeDebugTool.ElapsedMilliseconds;
+                    // We create a new frame or reuse the last one
+                    if (tempsEcouleDebugTool > ECART_TEMPS_DEBUGTOOL)
                     {
-                        _deviceD3D11.SetBackgroundColour(_backgroundColour.X / _backgroundColour.W, _backgroundColour.Y / _backgroundColour.W, _backgroundColour.Z / _backgroundColour.W, _backgroundColour.W);
+                        _imGuiController.CloseFrame();
+                        _imGuiController.Update((float)tempsEcouleEngine / 1000.0f);
+                        _imGuiController.NewFrame();
+
+                        // On relance l'horloge pour être certain de garder la fréquence d'affichage
+                        _horlogeDebugTool.Restart();
+
+                        ImGuiIOPtr io = ImGui.GetIO();
+
+                        float f = 0.0f;
+                        ImGui.Begin("Title : Hello, world!");
+                        ImGui.Text("Hello, world!");
+                        ImGui.SliderFloat("float", ref f, 0.0f, 1.0f);
+                        ImGui.Text(string.Format("Application average {0} ms/frame ({1} FPS)", (1000.0f * io.Framerate).ToString("F3", System.Globalization.CultureInfo.InvariantCulture), io.Framerate.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)));
+                        bool colorChanged = ImGui.ColorEdit4("Background Color", ref _backgroundColour);     // Edit 4 floats representing a color
+                        bool wireFrameChanged = ImGui.Checkbox("WireFrame", ref _showWireFrame);     // Edit bool
+                        ImGui.Checkbox("Show Demo", ref _imGuiShowDemo);     // Edit bool
+                        ImGui.Checkbox("Show Debug Logs", ref _imGuiShowDebugLogs);     // Edit bool
+                        ImGui.Checkbox("Show Metrics", ref _imGuiShowMetrics);     // Edit bool
+                        ImGui.Checkbox("Show Scene", ref _showScene);     // Edit bool
+                        ImGui.End();
+
+                        // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
+                        if (_imGuiShowDemo)
+                            ImGui.ShowDemoWindow(ref _imGuiShowDemo);
+
+                        if (_imGuiShowDebugLogs)
+                            ImGui.ShowDebugLogWindow();
+
+                        if (_imGuiShowMetrics)
+                            ImGui.ShowMetricsWindow();
+
+                        _imGuiController.Render(false);
+
+                        if (colorChanged)
+                        {
+                            _deviceD3D11.SetBackgroundColour(_backgroundColour.X / _backgroundColour.W, _backgroundColour.Y / _backgroundColour.W, _backgroundColour.Z / _backgroundColour.W, _backgroundColour.W);
+                        }
+
+                        if (wireFrameChanged)
+                        {
+                            if (_showWireFrame && _deviceD3D11.GetRasterizerState().Handle != _deviceD3D11.WireFrameCullBackRS.Handle)
+                            {
+                                _deviceD3D11.SetRasterizerState(_deviceD3D11.WireFrameCullBackRS);
+                            }
+                            if (!_showWireFrame && _deviceD3D11.GetRasterizerState().Handle != _deviceD3D11.SolidCullBackRS.Handle)
+                            {
+                                _deviceD3D11.SetRasterizerState(_deviceD3D11.SolidCullBackRS);
+                            }
+                        }
                     }
-
-                    if (wireFrameChanged)
+                    else
                     {
-                        if (_showWireFrame && _deviceD3D11.GetRasterizerState().Handle != _deviceD3D11.WireFrameCullBackRS.Handle)
-                        {
-                            _deviceD3D11.SetRasterizerState(_deviceD3D11.WireFrameCullBackRS);
-                        }
-                        if (!_showWireFrame && _deviceD3D11.GetRasterizerState().Handle != _deviceD3D11.SolidCullBackRS.Handle)
-                        {
-                            _deviceD3D11.SetRasterizerState(_deviceD3D11.SolidCullBackRS);
-                        }
+                        _imGuiController.Render(false);
                     }
                 }
             }
@@ -239,7 +274,9 @@ namespace PetitMoteur3D
 
         private static void InitAnimation()
         {
-            _horloge.Start();
+            _horlogeEngine.Start();
+            _horlogeScene.Start();
+            _horlogeDebugTool.Start();
             // première Image
             RenderScene();
             _initAnimationFinished = true;
@@ -251,14 +288,14 @@ namespace PetitMoteur3D
             IKeyboard keyboard = _inputContext.Keyboards[0];
             keyboard.KeyDown += (_, key, i) =>
             {
-                if (key == Key.F12 && !_debugToolKeyPressed)
+                if (key == Key.F11 && !_debugToolKeyPressed)
                 {
                     _debugToolKeyPressed = true;
                 }
             };
             keyboard.KeyUp += (_, key, i) =>
             {
-                if (key == Key.F12 && _debugToolKeyPressed)
+                if (key == Key.F11 && _debugToolKeyPressed)
                 {
                     _showDebugTool = !_showDebugTool;
                     _debugToolKeyPressed = false;
@@ -280,6 +317,7 @@ namespace PetitMoteur3D
         private static void InitDebugTools()
         {
             _imGuiController = new ImGuiController(_deviceD3D11, _window, _inputContext);
+            //_imGuiController = new ImGuiController(new NoOpImGuiBackendRenderer(), _window, _inputContext);
         }
 
         private static void AnimeScene(float tempsEcoule)
