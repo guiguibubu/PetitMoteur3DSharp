@@ -16,9 +16,9 @@ namespace PetitMoteur3D
         private static IInputContext _inputContext = default!;
         private static ImGuiController _imGuiController = default!;
         private static DeviceD3D11 _deviceD3D11 = default!;
-        private static ShaderManager _shaderManager = default!;
-        private static TextureManager _textureManager = default!;
-        private static GraphicBufferFactory _bufferFactory = default!;
+        private static GraphicDeviceRessourceFactory _graphicDeviceRessourceFactory = default!;
+        private static GraphicPipelineFactory _graphicPipelineFactory = default!;
+
         private static MeshLoader _meshLoader = default!;
         private static Scene _scene = default!;
         private static ICamera _camera = default!;
@@ -45,6 +45,7 @@ namespace PetitMoteur3D
         private const double ECART_TEMPS_DEBUGTOOL = (1.0 / (double)IMAGESPARSECONDE_DEBUGTOOL) * 1000.0;
 
         private static bool _initAnimationFinished = false;
+
         static void Main(string[] args)
         {
             try
@@ -218,9 +219,8 @@ namespace PetitMoteur3D
         {
             _deviceD3D11 = new(_window);
             _backgroundColour = _deviceD3D11.GetBackgroundColour().ToSystem();
-            _textureManager = new TextureManager(_deviceD3D11.Device);
-            _shaderManager = new ShaderManager(_deviceD3D11.Device, _deviceD3D11.ShaderCompiler);
-            _bufferFactory = new GraphicBufferFactory(_deviceD3D11.Device);
+            _graphicDeviceRessourceFactory = new GraphicDeviceRessourceFactory(_deviceD3D11.Device, _deviceD3D11.ShaderCompiler);
+            _graphicPipelineFactory = new GraphicPipelineFactory(_deviceD3D11.Device);
             _meshLoader = new MeshLoader();
         }
 
@@ -229,19 +229,19 @@ namespace PetitMoteur3D
             _camera = new FixedCamera(Vector3D<float>.Zero);
             _camera.Move(-10 * Vector3D<float>.UnitZ);
 
-            _scene = new Scene(_bufferFactory, _camera);
+            _scene = new Scene(_graphicDeviceRessourceFactory.BufferFactory, _camera);
 
-            Bloc bloc1 = new(4.0f, 4.0f, 4.0f, _deviceD3D11, _bufferFactory, _shaderManager, _textureManager);
-            bloc1.SetTexture(_textureManager.GetOrLoadTexture("textures\\brickwall.jpg"));
-            bloc1.SetNormalMapTexture(_textureManager.GetOrLoadTexture("textures\\brickwall_normal.jpg"));
+            Bloc bloc1 = new(4.0f, 4.0f, 4.0f, _graphicDeviceRessourceFactory);
+            bloc1.SetTexture(_graphicDeviceRessourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall.jpg"));
+            bloc1.SetNormalMapTexture(_graphicDeviceRessourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall_normal.jpg"));
             bloc1.Move(new Vector3D<float>(-4f, 0f, 0f));
 
-            Bloc bloc2 = new(4.0f, 4.0f, 4.0f, _deviceD3D11, _bufferFactory, _shaderManager, _textureManager);
-            bloc2.SetTexture(_textureManager.GetOrLoadTexture("textures\\brickwall.jpg"));
+            Bloc bloc2 = new(4.0f, 4.0f, 4.0f, _graphicDeviceRessourceFactory);
+            bloc2.SetTexture(_graphicDeviceRessourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall.jpg"));
             bloc2.Move(new Vector3D<float>(4f, 0f, 0f));
 
             IReadOnlyList<SceneMesh>? meshes = _meshLoader.Load("models\\teapot.obj");
-            ObjetMesh objetMesh = new(meshes[0], _deviceD3D11, _bufferFactory, _shaderManager, _textureManager);
+            ObjetMesh objetMesh = new(meshes[0], _graphicDeviceRessourceFactory);
             BoundingBox boundingBox = objetMesh.Mesh.GetBoundingBox();
             float centerX = (boundingBox.Min.X + boundingBox.Max.X) / 2f;
             float centerY = (boundingBox.Min.Y + boundingBox.Max.Y) / 2f;
@@ -318,7 +318,7 @@ namespace PetitMoteur3D
 
         private static void InitDebugTools()
         {
-            _imGuiController = new ImGuiController(_deviceD3D11, _shaderManager, _textureManager, _bufferFactory, _window, _inputContext);
+            _imGuiController = new ImGuiController(_deviceD3D11, _graphicDeviceRessourceFactory, _graphicPipelineFactory, _window, _inputContext);
             //_imGuiController = new ImGuiController(new NoOpImGuiBackendRenderer(), _window, _inputContext);
         }
 

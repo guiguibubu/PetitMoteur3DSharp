@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 
 namespace PetitMoteur3D
 {
@@ -38,12 +37,11 @@ namespace PetitMoteur3D
         private Sommet[] _sommets;
         private ushort[] _indices;
 
-        private readonly DeviceD3D11 _renderDevice;
         private readonly GraphicBufferFactory _bufferFactory;
         private readonly ShaderManager _shaderManager;
         private readonly TextureManager _textureManager;
 
-        protected unsafe BaseObjet3D(DeviceD3D11 renderDevice, GraphicBufferFactory bufferFactory, ShaderManager shaderManager, TextureManager textureManager)
+        protected BaseObjet3D(GraphicDeviceRessourceFactory graphicDeviceRessourceFactory)
         {
             _position = Vector3D<float>.Zero;
             _rotation = Vector3D<float>.Zero;
@@ -52,10 +50,9 @@ namespace PetitMoteur3D
             _sommets = Array.Empty<Sommet>();
             _indices = Array.Empty<ushort>();
 
-            _renderDevice = renderDevice;
-            _bufferFactory = bufferFactory;
-            _shaderManager = shaderManager;
-            _textureManager = textureManager;
+            _bufferFactory = graphicDeviceRessourceFactory.BufferFactory;
+            _shaderManager = graphicDeviceRessourceFactory.ShaderManager;
+            _textureManager = graphicDeviceRessourceFactory.TextureManager;
         }
 
         ~BaseObjet3D()

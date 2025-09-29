@@ -24,23 +24,23 @@ namespace PetitMoteur3D.DebugGui
         /// <summary>
         /// Singleton
         /// </summary>
-        private unsafe readonly nint _backendRendererName;
+        private readonly nint _backendRendererName;
         private ImGuiImplDX11Data _backendRendererUserData;
         private bool _backendInitialized = false;
 
         private readonly DeviceD3D11 _renderDevice;
+        private readonly GraphicDeviceRessourceFactory _graphicDeviceRessourceFactory;
         private readonly ShaderManager _shaderManager;
         private readonly TextureManager _textureManager;
-        private readonly GraphicBufferFactory _bufferFactory;
+        private readonly GraphicPipelineFactory _pipelineFactory;
 
-        public unsafe ImGuiImplDX11(DeviceD3D11 renderDevice, ShaderManager shaderManager, TextureManager textureManager, GraphicBufferFactory bufferFactory)
+        public ImGuiImplDX11(DeviceD3D11 renderDevice, GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, GraphicPipelineFactory pipelineFactory)
         {
             _renderDevice = renderDevice;
             _backendRendererName = Marshal.StringToHGlobalAuto("imgui_impl_dx11");
             _backendRendererUserData = new();
-            _shaderManager = shaderManager;
-            _textureManager = textureManager;
-            _bufferFactory = bufferFactory;
+            _graphicDeviceRessourceFactory = graphicDeviceRessourceFactory;
+            _pipelineFactory = pipelineFactory;
         }
 
         ~ImGuiImplDX11()
@@ -48,7 +48,7 @@ namespace PetitMoteur3D.DebugGui
             Dispose(disposing: false);
         }
 
-        public unsafe bool Init(ImGuiIOPtr io)
+        public bool Init(ImGuiIOPtr io)
         {
             return InitImpl(io, _renderDevice.Device, _renderDevice.DeviceContext);
         }
@@ -123,7 +123,7 @@ namespace PetitMoteur3D.DebugGui
             }
 
             if (_backendRendererUserData.FontSampler.Handle is null)
-                CreateDeviceObjects(_shaderManager, _bufferFactory);
+                CreateDeviceObjects(_graphicDeviceRessourceFactory, _pipelineFactory);
         }
 
         public unsafe void RenderDrawData(ImDrawDataPtr drawData)
@@ -139,13 +139,13 @@ namespace PetitMoteur3D.DebugGui
             {
                 if (_backendRendererUserData.VertexBuffer.Handle is not null) { _backendRendererUserData.VertexBuffer.Dispose(); _backendRendererUserData.VertexBuffer = null; }
                 _backendRendererUserData.VertexBufferSize = drawData.TotalVtxCount + 5000;
-                _backendRendererUserData.VertexBuffer = _bufferFactory.CreateVertexBuffer<ImDrawVert>((uint)_backendRendererUserData.VertexBufferSize, Usage.Dynamic, CpuAccessFlag.Write);
+                _backendRendererUserData.VertexBuffer = _graphicDeviceRessourceFactory.BufferFactory.CreateVertexBuffer<ImDrawVert>((uint)_backendRendererUserData.VertexBufferSize, Usage.Dynamic, CpuAccessFlag.Write);
             }
             if (_backendRendererUserData.IndexBuffer.Handle is null || _backendRendererUserData.IndexBufferSize < drawData.TotalIdxCount)
             {
                 if (_backendRendererUserData.IndexBuffer.Handle is not null) { _backendRendererUserData.IndexBuffer.Dispose(); _backendRendererUserData.IndexBuffer = null; }
                 _backendRendererUserData.IndexBufferSize = drawData.TotalIdxCount + 10000;
-                _backendRendererUserData.IndexBuffer = _bufferFactory.CreateIndexBuffer<ImDrawIdx>((uint)_backendRendererUserData.IndexBufferSize, Usage.Dynamic, CpuAccessFlag.Write);
+                _backendRendererUserData.IndexBuffer = _graphicDeviceRessourceFactory.BufferFactory.CreateIndexBuffer<ImDrawIdx>((uint)_backendRendererUserData.IndexBufferSize, Usage.Dynamic, CpuAccessFlag.Write);
             }
 
 #if DEBUG && DEBUG_BUFFERS
@@ -412,7 +412,7 @@ namespace PetitMoteur3D.DebugGui
             deviceContext.IASetInputLayout(old.InputLayout); old.InputLayout.Dispose();
         }
 
-        private unsafe bool CreateDeviceObjects(ShaderManager shaderManager, GraphicBufferFactory bufferFactory)
+        private unsafe bool CreateDeviceObjects(GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, GraphicPipelineFactory pipelineFactory)
         {
             if (_backendRendererUserData.D3dDevice.Handle is null)
                 return false;
@@ -420,27 +420,27 @@ namespace PetitMoteur3D.DebugGui
                 InvalidateDeviceObjects();
 
             // Create the vertex shader
-            if (!InitVertexShader(shaderManager, bufferFactory))
+            if (!InitVertexShader(graphicDeviceRessourceFactory.ShaderManager, graphicDeviceRessourceFactory.BufferFactory))
             {
                 return false;
             }
 
             // Create the pixel shader
-            if (!InitPixelShader(shaderManager))
+            if (!InitPixelShader(graphicDeviceRessourceFactory.ShaderManager))
             {
                 return false;
             }
 
             // Create the blending setup
-            InitBlendingState(_backendRendererUserData.D3dDevice);
+            InitBlendingState(pipelineFactory);
 
             // Create the rasterizer state
-            InitRasterizerState(_backendRendererUserData.D3dDevice);
+            InitRasterizerState(pipelineFactory);
 
             // Create depth-stencil State
-            InitDepthStencil(_backendRendererUserData.D3dDevice);
+            InitDepthStencil(pipelineFactory);
 
-            CreateFontsTexture(_textureManager);
+            CreateFontsTexture(graphicDeviceRessourceFactory.TextureManager);
 
             return true;
         }
@@ -489,7 +489,7 @@ namespace PetitMoteur3D.DebugGui
         /// Compilation et chargement du vertex shader
         /// </summary>
         /// <param name="shaderManager"></param>
-        private unsafe bool InitVertexShader(ShaderManager shaderManager, GraphicBufferFactory bufferFactory)
+        private bool InitVertexShader(ShaderManager shaderManager, GraphicBufferFactory bufferFactory)
         {
             // Compilation et chargement du vertex shader
             string filePath = "shaders\\vs_imgui.hlsl";
@@ -526,7 +526,7 @@ namespace PetitMoteur3D.DebugGui
         /// Compilation et chargement du pixel shader
         /// </summary>
         /// <param name="shaderManager"></param>
-        private unsafe bool InitPixelShader(ShaderManager shaderManager)
+        private bool InitPixelShader(ShaderManager shaderManager)
         {
             string filePath = "shaders\\ps_imgui.hlsl";
             string entryPoint = "main";
@@ -555,7 +555,7 @@ namespace PetitMoteur3D.DebugGui
             return true;
         }
 
-        private unsafe bool InitBlendingState(ComPtr<ID3D11Device> device)
+        private bool InitBlendingState(GraphicPipelineFactory graphicPipelineFactory)
         {
             RenderTargetBlendDesc renderTargetBlendDesc = new()
             {
@@ -580,11 +580,11 @@ namespace PetitMoteur3D.DebugGui
                 AlphaToCoverageEnable = false,
                 RenderTarget = renderTargetBuffer
             };
-            device.CreateBlendState(in desc, ref _backendRendererUserData.BlendState);
+            _backendRendererUserData.BlendState = graphicPipelineFactory.CreateBlendState(desc, name: "ImGuiBlendState");
             return true;
         }
 
-        private unsafe bool InitRasterizerState(ComPtr<ID3D11Device> device)
+        private bool InitRasterizerState(GraphicPipelineFactory graphicPipelineFactory)
         {
             RasterizerDesc desc = new()
             {
@@ -593,11 +593,11 @@ namespace PetitMoteur3D.DebugGui
                 ScissorEnable = true,
                 DepthClipEnable = false
             };
-            device.CreateRasterizerState(in desc, ref _backendRendererUserData.RasterizerState);
+            _backendRendererUserData.RasterizerState = graphicPipelineFactory.CreateRasterizerState(desc, name: "ImGuiRasterizerState");
             return true;
         }
 
-        private unsafe bool InitDepthStencil(ComPtr<ID3D11Device> device)
+        private bool InitDepthStencil(GraphicPipelineFactory graphicPipelineFactory)
         {
             DepthStencilopDesc frontFace = new()
             {
@@ -618,7 +618,7 @@ namespace PetitMoteur3D.DebugGui
                 StencilReadMask = 0,
                 StencilWriteMask = 0
             };
-            device.CreateDepthStencilState(in desc, ref _backendRendererUserData.DepthStencilState);
+            _backendRendererUserData.DepthStencilState = graphicPipelineFactory.CreateDepthStencilState(desc, name: "ImGuiDepthStencilState");
             return true;
         }
 
