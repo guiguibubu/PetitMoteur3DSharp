@@ -28,22 +28,17 @@ namespace PetitMoteur3D.DebugGui
         private ImGuiImplDX11Data _backendRendererUserData;
         private bool _backendInitialized = false;
 
-        /// <summary>
-        /// GUID DebugObjectName
-        /// </summary>
-        /// <unmanaged>WKPDID_D3DDebugObjectName</unmanaged>
-        /// <unmanaged-short>WKPDID_D3DDebugObjectName</unmanaged-short>
-        public static readonly System.Guid DebugObjectName = new(0x429B8C22, 0x9188, 0x4B0C, 0x87, 0x42, 0xAC, 0xB0, 0xBF, 0x85, 0xC2, 0x00);
-
         private readonly DeviceD3D11 _renderDevice;
         private readonly ShaderManager _shaderManager;
+        private readonly TextureManager _textureManager;
 
-        public unsafe ImGuiImplDX11(DeviceD3D11 renderDevice, ShaderManager shaderManager)
+        public unsafe ImGuiImplDX11(DeviceD3D11 renderDevice, ShaderManager shaderManager, TextureManager textureManager)
         {
             _renderDevice = renderDevice;
             _backendRendererName = Marshal.StringToHGlobalAuto("imgui_impl_dx11");
             _backendRendererUserData = new();
             _shaderManager = shaderManager;
+            _textureManager = textureManager;
         }
 
         ~ImGuiImplDX11()
@@ -443,12 +438,12 @@ namespace PetitMoteur3D.DebugGui
             // Create depth-stencil State
             InitDepthStencil(_backendRendererUserData.D3dDevice);
 
-            CreateFontsTexture();
+            CreateFontsTexture(_textureManager);
 
             return true;
         }
 
-        private unsafe void CreateFontsTexture()
+        private unsafe void CreateFontsTexture(TextureManager textureManager)
         {
             // Build texture atlas
             ImGuiIOPtr io = ImGui.GetIO();
@@ -458,51 +453,15 @@ namespace PetitMoteur3D.DebugGui
 
             // Upload texture to graphics system
             {
-                Texture2DDesc desc = new()
-                {
-                    Width = (uint)width,
-                    Height = (uint)height,
-                    MipLevels = 1,
-                    ArraySize = 1,
-                    Format = Format.FormatR8G8B8A8Unorm,
-                    SampleDesc = new SampleDesc(1, 0),
-                    Usage = Usage.Default,
-                    BindFlags = (uint)BindFlag.ShaderResource,
-                    CPUAccessFlags = 0
-                };
-
-                ComPtr<ID3D11Texture2D> texture = default;
-                SubresourceData subResource = new()
-                {
-                    PSysMem = (void*)pixels,
-                    SysMemPitch = (uint)(width * bytesPerPixel),
-                    SysMemSlicePitch = 0
-                };
-                SilkMarshal.ThrowHResult(
-                    _backendRendererUserData.D3dDevice.CreateTexture2D(in desc, in subResource, ref texture)
-                );
-
-                // Create texture view
-                ShaderResourceViewDesc srvDesc = new()
-                {
-                    Format = Format.FormatR8G8B8A8Unorm,
-                    ViewDimension = D3DSrvDimension.D3DSrvDimensionTexture2D,
-                    Texture2D = new Tex2DSrv()
-                    {
-                        MipLevels = desc.MipLevels,
-                        MostDetailedMip = 0
-                    }
-                };
-
-                _backendRendererUserData.D3dDevice.CreateShaderResourceView(texture, ref srvDesc, ref _backendRendererUserData.FontTextureView);
-                texture.Dispose();
+                Texture texture = textureManager.GetOrCreateTexture("FontTextureView", pixels, width, height, bytesPerPixel);
+                _backendRendererUserData.FontTextureView = texture.TextureView;
 
                 // Set Debug Name
                 const string fontTextureViewDebugName = "FontTextureView";
                 using (GlobalMemory unmanagedName = SilkMarshal.StringToMemory(fontTextureViewDebugName, NativeStringEncoding.Ansi))
                 {
                     IntPtr namePtr = unmanagedName.Handle;
-                    fixed (Guid* guidPtr = &DebugObjectName)
+                    fixed (Guid* guidPtr = &D3DCommonGuids.DebugObjectName)
                     {
                         _backendRendererUserData.FontTextureView.SetPrivateData(guidPtr, (uint)fontTextureViewDebugName.Length, (void*)namePtr);
                     }
@@ -535,7 +494,7 @@ namespace PetitMoteur3D.DebugGui
                 using (GlobalMemory unmanagedName = SilkMarshal.StringToMemory(fontSamplerDebugName, NativeStringEncoding.Ansi))
                 {
                     IntPtr namePtr = unmanagedName.Handle;
-                    fixed (Guid* guidPtr = &DebugObjectName)
+                    fixed (Guid* guidPtr = &D3DCommonGuids.DebugObjectName)
                     {
                         _backendRendererUserData.FontSampler.SetPrivateData(guidPtr, (uint)fontSamplerDebugName.Length, (void*)namePtr);
                     }

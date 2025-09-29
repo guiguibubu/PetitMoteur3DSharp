@@ -316,7 +316,7 @@ namespace PetitMoteur3D
 
         private static void InitDebugTools()
         {
-            _imGuiController = new ImGuiController(_deviceD3D11, _shaderManager, _window, _inputContext);
+            _imGuiController = new ImGuiController(_deviceD3D11, _shaderManager, _textureManager, _window, _inputContext);
             //_imGuiController = new ImGuiController(new NoOpImGuiBackendRenderer(), _window, _inputContext);
         }
 

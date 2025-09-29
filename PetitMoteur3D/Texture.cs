@@ -8,89 +8,35 @@ namespace PetitMoteur3D
 {
     internal class Texture : IDisposable
     {
-        public string FileName { get; private set; }
+        public string Name { get; private set; }
+        public int Width { get; private set; }
+        public int Height { get; private set; }
         public ComPtr<ID3D11ShaderResourceView> TextureView { get { return _textureView; } }
         private readonly ComPtr<ID3D11ShaderResourceView> _textureView;
 
-        public unsafe Texture(string fileName, ComPtr<ID3D11Device> device)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="width"></param>
+        /// <param name="heigth"></param>
+        /// <param name="textureView">Released when Texture is disposed</param>
+        public unsafe Texture(string name, int width, int heigth, ComPtr<ID3D11ShaderResourceView> textureView)
         {
-            FileName = fileName;
-            // Load the image using any applicable library.
-            SixLabors.ImageSharp.Formats.DecoderOptions decoderOptions = new();
-            SixLabors.ImageSharp.Configuration customConfig = decoderOptions.Configuration;
-            customConfig.PreferContiguousImageBuffers = true;
-            using SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Bgra32> imgBmp = SixLabors.ImageSharp.Image.Load<SixLabors.ImageSharp.PixelFormats.Bgra32>(
-                decoderOptions, fileName);
+            Name = name;
+            Width = width;
+            Height = heigth;
+            _textureView = textureView;
 
-            Texture2DDesc textureDesc = new()
+            // Set Debug Name
+            using (GlobalMemory unmanagedName = SilkMarshal.StringToMemory(name, NativeStringEncoding.Ansi))
             {
-                Width = (uint)imgBmp.Width,
-                Height = (uint)imgBmp.Height,
-                Format = Format.FormatB8G8R8A8Unorm,
-                MipLevels = 1,
-                BindFlags = (uint)BindFlag.ShaderResource,
-                Usage = Usage.Default,
-                CPUAccessFlags = 0,
-                MiscFlags = (uint)ResourceMiscFlag.None,
-                SampleDesc = new SampleDesc(1, 0),
-                ArraySize = 1
-            };
-
-            if (!imgBmp.DangerousTryGetSinglePixelMemory(out Memory<SixLabors.ImageSharp.PixelFormats.Bgra32> bmpData))
-            {
-                // Copy pixel data row-by-row, as a contiguous block is not available.
-                int size = imgBmp.Width * imgBmp.Height;
-                SixLabors.ImageSharp.PixelFormats.Bgra32[] colDat = new SixLabors.ImageSharp.PixelFormats.Bgra32[size * 4];
-                imgBmp.CopyPixelDataTo(colDat.AsSpan());
-                bmpData = new Memory<SixLabors.ImageSharp.PixelFormats.Bgra32>(colDat);
-            }
-
-            ComPtr<ID3D11Texture2D> texture = default;
-
-            using (MemoryHandle bitmapData = bmpData.Pin())
-            {
-                SubresourceData subresourceData = new()
+                IntPtr namePtr = unmanagedName.Handle;
+                fixed (Guid* guidPtr = &D3DCommonGuids.DebugObjectName)
                 {
-                    PSysMem = bitmapData.Pointer,
-                    SysMemPitch = (uint)imgBmp.Width * sizeof(int),
-                    SysMemSlicePitch = (uint)(imgBmp.Width * sizeof(int) * imgBmp.Height)
-                };
-
-                SilkMarshal.ThrowHResult
-                (
-                    device.CreateTexture2D
-                    (
-                        in textureDesc,
-                        in subresourceData,
-                        ref texture
-                    )
-                );
-            }
-
-            // Create a view of the texture for the shader.
-            ShaderResourceViewDesc srvDesc = new()
-            {
-                Format = textureDesc.Format,
-                ViewDimension = D3DSrvDimension.D3DSrvDimensionTexture2D,
-                Anonymous = new ShaderResourceViewDescUnion
-                {
-                    Texture2D =
-            {
-                MostDetailedMip = 0,
-                MipLevels = 1
-            }
+                    _textureView.SetPrivateData(guidPtr, (uint)name.Length, (void*)namePtr);
                 }
-            };
-
-            SilkMarshal.ThrowHResult
-            (
-                device.CreateShaderResourceView
-                (
-                    texture,
-                    in srvDesc,
-                    ref _textureView
-                )
-            );
+            }
         }
 
         ~Texture()

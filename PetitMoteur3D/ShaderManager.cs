@@ -15,6 +15,7 @@ namespace PetitMoteur3D
         private readonly Dictionary<ShaderDesc, ComPtr<ID3D11VertexShader>> _vertexShadersCache = new();
         private readonly Dictionary<InputLayoutDesc, ComPtr<ID3D11InputLayout>> _vertexLayoutsCache = new();
         private readonly Dictionary<ShaderDesc, ComPtr<ID3D11PixelShader>> _pixelShadersCache = new();
+        
         public ShaderManager(ComPtr<ID3D11Device> device, D3DCompiler compiler)
         {
             _device = device;
