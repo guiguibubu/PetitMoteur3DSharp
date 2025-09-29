@@ -486,7 +486,7 @@ namespace PetitMoteur3D.DebugGui
                 ShaderResourceViewDesc srvDesc = new()
                 {
                     Format = Format.FormatR8G8B8A8Unorm,
-                    ViewDimension = D3DSrvDimension.D3D11SrvDimensionTexture2D,
+                    ViewDimension = D3DSrvDimension.D3DSrvDimensionTexture2D,
                     Texture2D = new Tex2DSrv()
                     {
                         MipLevels = desc.MipLevels,
