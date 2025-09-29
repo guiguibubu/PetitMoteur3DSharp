@@ -231,17 +231,17 @@ namespace PetitMoteur3D
 
             _scene = new Scene(_bufferFactory, _camera);
 
-            Bloc bloc1 = new(4.0f, 4.0f, 4.0f, _deviceD3D11, _bufferFactory, _shaderManager);
+            Bloc bloc1 = new(4.0f, 4.0f, 4.0f, _deviceD3D11, _bufferFactory, _shaderManager, _textureManager);
             bloc1.SetTexture(_textureManager.GetOrLoadTexture("textures\\brickwall.jpg"));
             bloc1.SetNormalMapTexture(_textureManager.GetOrLoadTexture("textures\\brickwall_normal.jpg"));
             bloc1.Move(new Vector3D<float>(-4f, 0f, 0f));
 
-            Bloc bloc2 = new(4.0f, 4.0f, 4.0f, _deviceD3D11, _bufferFactory, _shaderManager);
+            Bloc bloc2 = new(4.0f, 4.0f, 4.0f, _deviceD3D11, _bufferFactory, _shaderManager, _textureManager);
             bloc2.SetTexture(_textureManager.GetOrLoadTexture("textures\\brickwall.jpg"));
             bloc2.Move(new Vector3D<float>(4f, 0f, 0f));
 
             IReadOnlyList<SceneMesh>? meshes = _meshLoader.Load("models\\teapot.obj");
-            ObjetMesh objetMesh = new(meshes[0], _deviceD3D11, _bufferFactory, _shaderManager);
+            ObjetMesh objetMesh = new(meshes[0], _deviceD3D11, _bufferFactory, _shaderManager, _textureManager);
             BoundingBox boundingBox = objetMesh.Mesh.GetBoundingBox();
             float centerX = (boundingBox.Min.X + boundingBox.Max.X) / 2f;
             float centerY = (boundingBox.Min.Y + boundingBox.Max.Y) / 2f;

@@ -120,5 +120,23 @@ namespace PetitMoteur3D
 
             return new Texture(name, width, height, textureView);
         }
+
+        public unsafe ComPtr<ID3D11SamplerState> CreateSampler(SamplerDesc desc, string? name = null)
+        {
+            ComPtr<ID3D11SamplerState> sampler = default;
+            SilkMarshal.ThrowHResult(_device.CreateSamplerState(ref desc, ref sampler));
+            if (!string.IsNullOrEmpty(name))
+            {
+                using (GlobalMemory unmanagedName = SilkMarshal.StringToMemory(name, NativeStringEncoding.Ansi))
+                {
+                    IntPtr namePtr = unmanagedName.Handle;
+                    fixed (Guid* guidPtr = &D3DCommonGuids.DebugObjectName)
+                    {
+                        sampler.SetPrivateData(guidPtr, (uint)name.Length, (void*)namePtr);
+                    }
+                }
+            }
+            return sampler;
+        }
     }
 }

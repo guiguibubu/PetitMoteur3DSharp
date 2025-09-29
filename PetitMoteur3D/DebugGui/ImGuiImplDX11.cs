@@ -479,28 +479,19 @@ namespace PetitMoteur3D.DebugGui
             {
                 SamplerDesc desc = new()
                 {
-                    Filter = Filter.MinMagMipPoint,
+                    Filter = Filter.MinMagMipLinear,
                     AddressU = TextureAddressMode.Wrap,
                     AddressV = TextureAddressMode.Wrap,
                     AddressW = TextureAddressMode.Wrap,
                     MipLODBias = 0f,
-                    ComparisonFunc = ComparisonFunc.Never,
+                    MaxAnisotropy = 1,
+                    ComparisonFunc = ComparisonFunc.Always,
                     MinLOD = 0f,
-                    MaxLOD = 0f
+                    MaxLOD = float.MaxValue,
                 };
 
-                _backendRendererUserData.D3dDevice.CreateSamplerState(ref desc, ref _backendRendererUserData.FontSampler);
-
-                // Set Debug Name
                 const string fontSamplerDebugName = "FontSampler";
-                using (GlobalMemory unmanagedName = SilkMarshal.StringToMemory(fontSamplerDebugName, NativeStringEncoding.Ansi))
-                {
-                    IntPtr namePtr = unmanagedName.Handle;
-                    fixed (Guid* guidPtr = &D3DCommonGuids.DebugObjectName)
-                    {
-                        _backendRendererUserData.FontSampler.SetPrivateData(guidPtr, (uint)fontSamplerDebugName.Length, (void*)namePtr);
-                    }
-                }
+                _backendRendererUserData.FontSampler = textureManager.Factory.CreateSampler(desc, fontSamplerDebugName);
             }
         }
 

@@ -13,7 +13,8 @@ namespace PetitMoteur3D
 
         private Matrix4X4<float> _transformation;
 
-        public unsafe Bloc(float dx, float dy, float dz, DeviceD3D11 renderDevice, GraphicBufferFactory bufferFactory, ShaderManager shaderManager) : base(renderDevice, bufferFactory, shaderManager)
+        public unsafe Bloc(float dx, float dy, float dz, DeviceD3D11 renderDevice, GraphicBufferFactory bufferFactory, ShaderManager shaderManager, TextureManager textureManager) 
+            : base(renderDevice, bufferFactory, shaderManager, textureManager)
         {
             _vertices = new Vector3D<float>[]
             {

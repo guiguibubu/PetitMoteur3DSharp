@@ -41,8 +41,9 @@ namespace PetitMoteur3D
         private readonly DeviceD3D11 _renderDevice;
         private readonly GraphicBufferFactory _bufferFactory;
         private readonly ShaderManager _shaderManager;
+        private readonly TextureManager _textureManager;
 
-        protected unsafe BaseObjet3D(DeviceD3D11 renderDevice, GraphicBufferFactory bufferFactory, ShaderManager shaderManager)
+        protected unsafe BaseObjet3D(DeviceD3D11 renderDevice, GraphicBufferFactory bufferFactory, ShaderManager shaderManager, TextureManager textureManager)
         {
             _position = Vector3D<float>.Zero;
             _rotation = Vector3D<float>.Zero;
@@ -54,6 +55,7 @@ namespace PetitMoteur3D
             _renderDevice = renderDevice;
             _bufferFactory = bufferFactory;
             _shaderManager = shaderManager;
+            _textureManager = textureManager;
         }
 
         ~BaseObjet3D()
@@ -158,7 +160,7 @@ namespace PetitMoteur3D
 
             InitBuffers(_bufferFactory, _sommets, _indices);
             InitShaders(_shaderManager);
-            InitTexture(_renderDevice.Device);
+            InitTexture(_textureManager);
         }
 
         /// <summary>
@@ -185,7 +187,7 @@ namespace PetitMoteur3D
             InitPixelShader(shaderManager);
         }
 
-        private unsafe void InitTexture(ComPtr<ID3D11Device> device)
+        private unsafe void InitTexture(TextureManager textureManager)
         {
             // Initialisation des paramètres de sampling de la texture
             SamplerDesc samplerDesc = new()
@@ -206,10 +208,7 @@ namespace PetitMoteur3D
             samplerDesc.BorderColor[3] = 0f;
 
             // Création de l’état de sampling
-            SilkMarshal.ThrowHResult
-            (
-                device.CreateSamplerState(ref samplerDesc, ref _sampleState)
-            );
+            _sampleState = textureManager.Factory.CreateSampler(samplerDesc);
         }
 
         private unsafe void InitBuffers<TVertex, TIndice>(GraphicBufferFactory bufferFactory, TVertex[] sommets, TIndice[] indices)

@@ -7,6 +7,8 @@ namespace PetitMoteur3D
 {
     internal class TextureManager
     {
+        public TextureFactory Factory => _textureFactory;
+
         private TextureFactory _textureFactory;
         private readonly Dictionary<string, Texture> _textures = new();
 
