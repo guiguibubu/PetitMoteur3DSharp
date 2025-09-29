@@ -37,11 +37,13 @@ namespace PetitMoteur3D
         private Sommet[] _sommets;
         private ushort[] _indices;
 
+        private string _name;
+
         private readonly GraphicBufferFactory _bufferFactory;
         private readonly ShaderManager _shaderManager;
         private readonly TextureManager _textureManager;
 
-        protected BaseObjet3D(GraphicDeviceRessourceFactory graphicDeviceRessourceFactory)
+        protected BaseObjet3D(GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, string name = "")
         {
             _position = Vector3D<float>.Zero;
             _rotation = Vector3D<float>.Zero;
@@ -49,6 +51,15 @@ namespace PetitMoteur3D
 
             _sommets = Array.Empty<Sommet>();
             _indices = Array.Empty<ushort>();
+
+            if (string.IsNullOrEmpty(name))
+            {
+                _name = this.GetType().Name + Guid.NewGuid().ToString();
+            }
+            else
+            {
+                _name = name;
+            }
 
             _bufferFactory = graphicDeviceRessourceFactory.BufferFactory;
             _shaderManager = graphicDeviceRessourceFactory.ShaderManager;
@@ -205,7 +216,7 @@ namespace PetitMoteur3D
             samplerDesc.BorderColor[3] = 0f;
 
             // Création de l’état de sampling
-            _sampleState = textureManager.Factory.CreateSampler(samplerDesc);
+            _sampleState = textureManager.Factory.CreateSampler(samplerDesc, $"{_name}_SamplerState");
         }
 
         private unsafe void InitBuffers<TVertex, TIndice>(GraphicBufferFactory bufferFactory, TVertex[] sommets, TIndice[] indices)
@@ -213,13 +224,13 @@ namespace PetitMoteur3D
             where TIndice : unmanaged
         {
             // Create our vertex buffer.
-            _vertexBuffer = bufferFactory.CreateVertexBuffer<TVertex>(sommets, Usage.Immutable, CpuAccessFlag.None);
+            _vertexBuffer = bufferFactory.CreateVertexBuffer<TVertex>(sommets, Usage.Immutable, CpuAccessFlag.None, $"{_name}_VertexBuffer");
 
             // Create our index buffer.
-            _indexBuffer = bufferFactory.CreateIndexBuffer<TIndice>(indices, Usage.Immutable, CpuAccessFlag.None);
+            _indexBuffer = bufferFactory.CreateIndexBuffer<TIndice>(indices, Usage.Immutable, CpuAccessFlag.None, $"{_name}_IndexBuffer");
 
             // Create our constant buffer.
-            _constantBuffer = bufferFactory.CreateConstantBuffer<ObjectShadersParams>(Usage.Default, CpuAccessFlag.None);
+            _constantBuffer = bufferFactory.CreateConstantBuffer<ObjectShadersParams>(Usage.Default, CpuAccessFlag.None, $"{_name}_IndexBuffer");
         }
 
         /// <summary>

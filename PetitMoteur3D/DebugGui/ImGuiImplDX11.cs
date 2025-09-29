@@ -139,13 +139,13 @@ namespace PetitMoteur3D.DebugGui
             {
                 if (_backendRendererUserData.VertexBuffer.Handle is not null) { _backendRendererUserData.VertexBuffer.Dispose(); _backendRendererUserData.VertexBuffer = null; }
                 _backendRendererUserData.VertexBufferSize = drawData.TotalVtxCount + 5000;
-                _backendRendererUserData.VertexBuffer = _graphicDeviceRessourceFactory.BufferFactory.CreateVertexBuffer<ImDrawVert>((uint)_backendRendererUserData.VertexBufferSize, Usage.Dynamic, CpuAccessFlag.Write);
+                _backendRendererUserData.VertexBuffer = _graphicDeviceRessourceFactory.BufferFactory.CreateVertexBuffer<ImDrawVert>((uint)_backendRendererUserData.VertexBufferSize, Usage.Dynamic, CpuAccessFlag.Write, name: "ImGuiVertexBuffer");
             }
             if (_backendRendererUserData.IndexBuffer.Handle is null || _backendRendererUserData.IndexBufferSize < drawData.TotalIdxCount)
             {
                 if (_backendRendererUserData.IndexBuffer.Handle is not null) { _backendRendererUserData.IndexBuffer.Dispose(); _backendRendererUserData.IndexBuffer = null; }
                 _backendRendererUserData.IndexBufferSize = drawData.TotalIdxCount + 10000;
-                _backendRendererUserData.IndexBuffer = _graphicDeviceRessourceFactory.BufferFactory.CreateIndexBuffer<ImDrawIdx>((uint)_backendRendererUserData.IndexBufferSize, Usage.Dynamic, CpuAccessFlag.Write);
+                _backendRendererUserData.IndexBuffer = _graphicDeviceRessourceFactory.BufferFactory.CreateIndexBuffer<ImDrawIdx>((uint)_backendRendererUserData.IndexBufferSize, Usage.Dynamic, CpuAccessFlag.Write, "ImGuiIndexBuffer");
             }
 
 #if DEBUG && DEBUG_BUFFERS
@@ -455,8 +455,7 @@ namespace PetitMoteur3D.DebugGui
 
             // Upload texture to graphics system
             {
-                const string fontTextureViewDebugName = "FontTextureView";
-                Texture texture = textureManager.GetOrCreateTexture(fontTextureViewDebugName, pixels, width, height, bytesPerPixel);
+                Texture texture = textureManager.GetOrCreateTexture("ImGuiFontTextureView", pixels, width, height, bytesPerPixel);
                 _backendRendererUserData.FontTextureView = texture.TextureView;
             }
 
@@ -480,8 +479,7 @@ namespace PetitMoteur3D.DebugGui
                     MaxLOD = float.MaxValue,
                 };
 
-                const string fontSamplerDebugName = "FontSampler";
-                _backendRendererUserData.FontSampler = textureManager.Factory.CreateSampler(desc, fontSamplerDebugName);
+                _backendRendererUserData.FontSampler = textureManager.Factory.CreateSampler(desc, "ImGuiFontSampler");
             }
         }
 
@@ -518,7 +516,7 @@ namespace PetitMoteur3D.DebugGui
             );
             shaderManager.GetOrLoadVertexShaderAndLayout(shaderFile, ImDrawVertInputLayout.InputLayoutDesc, ref _backendRendererUserData.VertexShader, ref _backendRendererUserData.InputLayout);
 
-            _backendRendererUserData.VertexConstantBuffer = bufferFactory.CreateConstantBuffer<Matrix4X4<float>>(Usage.Dynamic, CpuAccessFlag.Write);
+            _backendRendererUserData.VertexConstantBuffer = bufferFactory.CreateConstantBuffer<Matrix4X4<float>>(Usage.Dynamic, CpuAccessFlag.Write, name: "ImGuiVertexConstantBuffer");
             return true;
         }
 

@@ -1,10 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
 
@@ -19,7 +15,7 @@ namespace PetitMoteur3D
             _device = device;
         }
 
-        public unsafe ComPtr<ID3D11Buffer> CreateVertexBuffer<T>(T[] data, Usage usage = Usage.Default, CpuAccessFlag cpuAcccassFlags = CpuAccessFlag.None) where T : unmanaged
+        public unsafe ComPtr<ID3D11Buffer> CreateVertexBuffer<T>(T[] data, Usage usage = Usage.Default, CpuAccessFlag cpuAcccassFlags = CpuAccessFlag.None, string name = "") where T : unmanaged
         {
             BufferDesc bufferDesc = new()
             {
@@ -30,10 +26,10 @@ namespace PetitMoteur3D
                 MiscFlags = 0
             };
 
-            return CreateBuffer(bufferDesc, data);
+            return CreateBuffer(bufferDesc, data, name);
         }
 
-        public unsafe ComPtr<ID3D11Buffer> CreateVertexBuffer<T>(uint nbElements, Usage usage = Usage.Default, CpuAccessFlag cpuAcccassFlags = CpuAccessFlag.None) where T : unmanaged
+        public unsafe ComPtr<ID3D11Buffer> CreateVertexBuffer<T>(uint nbElements, Usage usage = Usage.Default, CpuAccessFlag cpuAcccassFlags = CpuAccessFlag.None, string name = "") where T : unmanaged
         {
             BufferDesc bufferDesc = new()
             {
@@ -44,10 +40,10 @@ namespace PetitMoteur3D
                 MiscFlags = 0
             };
 
-            return CreateBuffer(bufferDesc);
+            return CreateBuffer(bufferDesc, name);
         }
 
-        public unsafe ComPtr<ID3D11Buffer> CreateIndexBuffer<T>(T[] data, Usage usage = Usage.Default, CpuAccessFlag cpuAcccassFlags = CpuAccessFlag.None) where T : unmanaged
+        public unsafe ComPtr<ID3D11Buffer> CreateIndexBuffer<T>(T[] data, Usage usage = Usage.Default, CpuAccessFlag cpuAcccassFlags = CpuAccessFlag.None, string name = "") where T : unmanaged
         {
             BufferDesc bufferDesc = new()
             {
@@ -57,10 +53,10 @@ namespace PetitMoteur3D
                 CPUAccessFlags = (uint)cpuAcccassFlags,
                 StructureByteStride = (uint)(Marshal.SizeOf<T>())
             };
-            return CreateBuffer(bufferDesc, data);
+            return CreateBuffer(bufferDesc, data, name);
         }
 
-        public unsafe ComPtr<ID3D11Buffer> CreateIndexBuffer<T>(uint nbElements, Usage usage = Usage.Default, CpuAccessFlag cpuAcccassFlags = CpuAccessFlag.None) where T : unmanaged
+        public unsafe ComPtr<ID3D11Buffer> CreateIndexBuffer<T>(uint nbElements, Usage usage = Usage.Default, CpuAccessFlag cpuAcccassFlags = CpuAccessFlag.None, string name = "") where T : unmanaged
         {
             BufferDesc bufferDesc = new()
             {
@@ -70,10 +66,10 @@ namespace PetitMoteur3D
                 CPUAccessFlags = (uint)cpuAcccassFlags,
                 StructureByteStride = (uint)(Marshal.SizeOf<T>())
             };
-            return CreateBuffer(bufferDesc);
+            return CreateBuffer(bufferDesc, name);
         }
 
-        public unsafe ComPtr<ID3D11Buffer> CreateConstantBuffer<T>(Usage usage = Usage.Default, CpuAccessFlag cpuAcccessFlags = CpuAccessFlag.None) where T : unmanaged
+        public unsafe ComPtr<ID3D11Buffer> CreateConstantBuffer<T>(Usage usage = Usage.Default, CpuAccessFlag cpuAcccessFlags = CpuAccessFlag.None, string name = "") where T : unmanaged
         {
             BufferDesc bufferDesc = new()
             {
@@ -84,11 +80,11 @@ namespace PetitMoteur3D
                 MiscFlags = 0
             };
 
-            return CreateBuffer(bufferDesc);
+            return CreateBuffer(bufferDesc, name);
         }
 
-        private unsafe ComPtr<ID3D11Buffer> CreateBuffer(BufferDesc bufferDesc) => CreateBuffer<byte>(bufferDesc, null);
-        private unsafe ComPtr<ID3D11Buffer> CreateBuffer<T>(BufferDesc bufferDesc, T[]? data) where T : unmanaged
+        private unsafe ComPtr<ID3D11Buffer> CreateBuffer(BufferDesc bufferDesc, string name = "") => CreateBuffer<byte>(bufferDesc, null, name);
+        private unsafe ComPtr<ID3D11Buffer> CreateBuffer<T>(BufferDesc bufferDesc, T[]? data, string name = "") where T : unmanaged
         {
             ComPtr<ID3D11Buffer> buffer = default;
             if (data is null)
@@ -105,6 +101,18 @@ namespace PetitMoteur3D
                     };
 
                     SilkMarshal.ThrowHResult(_device.CreateBuffer(in bufferDesc, in subresourceData, ref buffer));
+                }
+            }
+            if (!string.IsNullOrEmpty(name))
+            {
+                // Set Debug Name
+                using (GlobalMemory unmanagedName = SilkMarshal.StringToMemory(name, NativeStringEncoding.Ansi))
+                {
+                    IntPtr namePtr = unmanagedName.Handle;
+                    fixed (Guid* guidPtr = &D3DCommonGuids.DebugObjectName)
+                    {
+                        buffer.SetPrivateData(guidPtr, (uint)name.Length, (void*)namePtr);
+                    }
                 }
             }
             return buffer;

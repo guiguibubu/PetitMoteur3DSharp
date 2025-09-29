@@ -32,7 +32,7 @@ namespace PetitMoteur3D
             _objects.Add(camera);
 
             // Create our constant buffer.
-            _constantBuffer = bufferFactory.CreateConstantBuffer<SceneShadersParams>(Usage.Default, CpuAccessFlag.None);
+            _constantBuffer = bufferFactory.CreateConstantBuffer<SceneShadersParams>(Usage.Default, CpuAccessFlag.None, name: "SceneConstantBuffer");
         }
 
         ~Scene()
