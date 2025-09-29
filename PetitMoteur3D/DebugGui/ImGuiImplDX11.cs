@@ -455,19 +455,9 @@ namespace PetitMoteur3D.DebugGui
 
             // Upload texture to graphics system
             {
-                Texture texture = textureManager.GetOrCreateTexture("FontTextureView", pixels, width, height, bytesPerPixel);
-                _backendRendererUserData.FontTextureView = texture.TextureView;
-
-                // Set Debug Name
                 const string fontTextureViewDebugName = "FontTextureView";
-                using (GlobalMemory unmanagedName = SilkMarshal.StringToMemory(fontTextureViewDebugName, NativeStringEncoding.Ansi))
-                {
-                    IntPtr namePtr = unmanagedName.Handle;
-                    fixed (Guid* guidPtr = &D3DCommonGuids.DebugObjectName)
-                    {
-                        _backendRendererUserData.FontTextureView.SetPrivateData(guidPtr, (uint)fontTextureViewDebugName.Length, (void*)namePtr);
-                    }
-                }
+                Texture texture = textureManager.GetOrCreateTexture(fontTextureViewDebugName, pixels, width, height, bytesPerPixel);
+                _backendRendererUserData.FontTextureView = texture.TextureView;
             }
 
             // Store our identifier
@@ -518,14 +508,15 @@ namespace PetitMoteur3D.DebugGui
 #endif
 
             uint compilationFlags = flagStrictness | flagDebug | flagSkipOptimization;
-            ShaderManager.ShaderDesc shaderDesc = new()
-            {
-                FilePath = filePath,
-                EntryPoint = entryPoint,
-                Target = target,
-                CompilationFlags = compilationFlags
-            };
-            shaderManager.GetOrLoadVertexShaderAndLayout(shaderDesc, ImDrawVertInputLayout.InputLayoutDesc, ref _backendRendererUserData.VertexShader, ref _backendRendererUserData.InputLayout);
+            ShaderCodeFile shaderFile = new
+            (
+                filePath,
+                entryPoint,
+                target,
+                compilationFlags,
+                name: "ImGuiVertexShader"
+            );
+            shaderManager.GetOrLoadVertexShaderAndLayout(shaderFile, ImDrawVertInputLayout.InputLayoutDesc, ref _backendRendererUserData.VertexShader, ref _backendRendererUserData.InputLayout);
 
             _backendRendererUserData.VertexConstantBuffer = bufferFactory.CreateConstantBuffer<Matrix4X4<float>>(Usage.Dynamic, CpuAccessFlag.Write);
             return true;
@@ -552,14 +543,15 @@ namespace PetitMoteur3D.DebugGui
             uint flagSkipOptimization = 0;
 #endif
             uint compilationFlags = flagStrictness | flagDebug | flagSkipOptimization;
-            ShaderManager.ShaderDesc shaderDesc = new()
-            {
-                FilePath = filePath,
-                EntryPoint = entryPoint,
-                Target = target,
-                CompilationFlags = compilationFlags
-            };
-            _backendRendererUserData.PixelShader = shaderManager.GetOrLoadPixelShader(shaderDesc);
+            ShaderCodeFile shaderFile = new
+            (
+                filePath,
+                entryPoint,
+                target,
+                compilationFlags,
+                name: "ImGuiPixelShader"
+            );
+            _backendRendererUserData.PixelShader = shaderManager.GetOrLoadPixelShader(shaderFile);
             return true;
         }
 

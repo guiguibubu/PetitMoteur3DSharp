@@ -28,13 +28,16 @@ namespace PetitMoteur3D
             Height = heigth;
             _textureView = textureView;
 
-            // Set Debug Name
-            using (GlobalMemory unmanagedName = SilkMarshal.StringToMemory(name, NativeStringEncoding.Ansi))
+            if (!string.IsNullOrEmpty(Name))
             {
-                IntPtr namePtr = unmanagedName.Handle;
-                fixed (Guid* guidPtr = &D3DCommonGuids.DebugObjectName)
+                // Set Debug Name
+                using (GlobalMemory unmanagedName = SilkMarshal.StringToMemory(name, NativeStringEncoding.Ansi))
                 {
-                    _textureView.SetPrivateData(guidPtr, (uint)name.Length, (void*)namePtr);
+                    IntPtr namePtr = unmanagedName.Handle;
+                    fixed (Guid* guidPtr = &D3DCommonGuids.DebugObjectName)
+                    {
+                        _textureView.SetPrivateData(guidPtr, (uint)name.Length, (void*)namePtr);
+                    }
                 }
             }
         }

@@ -248,14 +248,14 @@ namespace PetitMoteur3D
             uint flagSkipOptimization = 0;
 #endif
             uint compilationFlags = flagStrictness | flagDebug | flagSkipOptimization;
-            ShaderManager.ShaderDesc shaderDesc = new()
-            {
-                FilePath = filePath,
-                EntryPoint = entryPoint,
-                Target = target,
-                CompilationFlags = compilationFlags
-            };
-            shaderManager.GetOrLoadVertexShaderAndLayout(shaderDesc, Sommet.InputLayoutDesc, ref _vertexShader, ref _vertexLayout);
+            ShaderCodeFile shaderFile = new(
+                filePath,
+                entryPoint,
+                target,
+                compilationFlags,
+                name: "MiniPhongNormalMap_VertexShader"
+            );
+            shaderManager.GetOrLoadVertexShaderAndLayout(shaderFile, Sommet.InputLayoutDesc, ref _vertexShader, ref _vertexLayout);
         }
 
         /// <summary>
@@ -280,14 +280,15 @@ namespace PetitMoteur3D
             uint flagSkipOptimization = 0;
 #endif
             uint compilationFlags = flagStrictness | flagDebug | flagSkipOptimization;
-            ShaderManager.ShaderDesc shaderDesc = new()
-            {
-                FilePath = filePath,
-                EntryPoint = entryPoint,
-                Target = target,
-                CompilationFlags = compilationFlags
-            };
-            _pixelShader = shaderManager.GetOrLoadPixelShader(shaderDesc);
+            ShaderCodeFile shaderFile = new
+            (
+                filePath,
+                entryPoint,
+                target,
+                compilationFlags,
+                name: "MiniPhongNormalMap_PixelShader"
+            );
+            _pixelShader = shaderManager.GetOrLoadPixelShader(shaderFile);
         }
 
         public struct SubObjet3D

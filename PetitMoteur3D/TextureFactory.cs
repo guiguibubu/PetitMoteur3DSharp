@@ -127,6 +127,7 @@ namespace PetitMoteur3D
             SilkMarshal.ThrowHResult(_device.CreateSamplerState(ref desc, ref sampler));
             if (!string.IsNullOrEmpty(name))
             {
+                // Set Debug Name
                 using (GlobalMemory unmanagedName = SilkMarshal.StringToMemory(name, NativeStringEncoding.Ansi))
                 {
                     IntPtr namePtr = unmanagedName.Handle;
