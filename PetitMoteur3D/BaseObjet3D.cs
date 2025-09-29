@@ -39,9 +39,10 @@ namespace PetitMoteur3D
         private ushort[] _indices;
 
         private readonly DeviceD3D11 _renderDevice;
+        private readonly GraphicBufferFactory _bufferFactory;
         private readonly ShaderManager _shaderManager;
 
-        protected unsafe BaseObjet3D(DeviceD3D11 renderDevice, ShaderManager shaderManager)
+        protected unsafe BaseObjet3D(DeviceD3D11 renderDevice, GraphicBufferFactory bufferFactory, ShaderManager shaderManager)
         {
             _position = Vector3D<float>.Zero;
             _rotation = Vector3D<float>.Zero;
@@ -51,6 +52,7 @@ namespace PetitMoteur3D
             _indices = Array.Empty<ushort>();
 
             _renderDevice = renderDevice;
+            _bufferFactory = bufferFactory;
             _shaderManager = shaderManager;
         }
 
@@ -154,7 +156,7 @@ namespace PetitMoteur3D
             _sommets = InitVertex().ToArray();
             _indices = InitIndex().ToArray();
 
-            InitBuffers(_renderDevice.Device, _sommets, _indices);
+            InitBuffers(_bufferFactory, _sommets, _indices);
             InitShaders(_shaderManager);
             InitTexture(_renderDevice.Device);
         }
@@ -210,18 +212,18 @@ namespace PetitMoteur3D
             );
         }
 
-        private unsafe void InitBuffers<TVertex, TIndice>(ComPtr<ID3D11Device> device, TVertex[] sommets, TIndice[] indices)
+        private unsafe void InitBuffers<TVertex, TIndice>(GraphicBufferFactory bufferFactory, TVertex[] sommets, TIndice[] indices)
             where TVertex : unmanaged
             where TIndice : unmanaged
         {
             // Create our vertex buffer.
-            CreateVertexBuffer(device, sommets, ref _vertexBuffer);
+            _vertexBuffer = bufferFactory.CreateVertexBuffer<TVertex>(sommets, Usage.Immutable, CpuAccessFlag.None);
 
             // Create our index buffer.
-            CreateIndexBuffer(device, indices, ref _indexBuffer);
+            _indexBuffer = bufferFactory.CreateIndexBuffer<TIndice>(indices, Usage.Immutable, CpuAccessFlag.None);
 
             // Create our constant buffer.
-            CreateConstantBuffer<ObjectShadersParams>(device, ref _constantBuffer);
+            _constantBuffer = bufferFactory.CreateConstantBuffer<ObjectShadersParams>(Usage.Default, CpuAccessFlag.None);
         }
 
         /// <summary>
@@ -287,62 +289,6 @@ namespace PetitMoteur3D
                 CompilationFlags = compilationFlags
             };
             _pixelShader = shaderManager.GetOrLoadPixelShader(shaderDesc);
-        }
-
-        private static unsafe void CreateVertexBuffer<T>(ComPtr<ID3D11Device> device, T[] sommets, ref ComPtr<ID3D11Buffer> buffer) where T : unmanaged
-        {
-            BufferDesc bufferDesc = new()
-            {
-                ByteWidth = (uint)(sommets.Length * sizeof(T)),
-                Usage = Usage.Immutable,
-                BindFlags = (uint)BindFlag.VertexBuffer,
-                CPUAccessFlags = 0
-            };
-
-            fixed (T* vertexData = sommets)
-            {
-                SubresourceData subresourceData = new()
-                {
-                    PSysMem = vertexData
-                };
-
-                SilkMarshal.ThrowHResult(device.CreateBuffer(in bufferDesc, in subresourceData, ref buffer));
-            }
-        }
-
-        private static unsafe void CreateIndexBuffer<T>(ComPtr<ID3D11Device> device, T[] indices, ref ComPtr<ID3D11Buffer> buffer) where T : unmanaged
-        {
-            BufferDesc bufferDesc = new()
-            {
-                ByteWidth = (uint)(indices.Length * sizeof(T)),
-                Usage = Usage.Immutable,
-                BindFlags = (uint)BindFlag.IndexBuffer,
-                CPUAccessFlags = 0,
-                StructureByteStride = (uint)sizeof(T)
-            };
-
-            fixed (T* indexData = indices)
-            {
-                SubresourceData subresourceData = new()
-                {
-                    PSysMem = indexData
-                };
-
-                SilkMarshal.ThrowHResult(device.CreateBuffer(in bufferDesc, in subresourceData, ref buffer));
-            }
-        }
-
-        private static unsafe void CreateConstantBuffer<T>(ComPtr<ID3D11Device> device, ref ComPtr<ID3D11Buffer> buffer) where T : unmanaged
-        {
-            BufferDesc bufferDesc = new()
-            {
-                ByteWidth = (uint)(Marshal.SizeOf<T>()),
-                Usage = Usage.Default,
-                BindFlags = (uint)BindFlag.ConstantBuffer,
-                CPUAccessFlags = 0
-            };
-
-            SilkMarshal.ThrowHResult(device.CreateBuffer(in bufferDesc, in Unsafe.NullRef<SubresourceData>(), ref buffer));
         }
 
         public struct SubObjet3D

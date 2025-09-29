@@ -15,7 +15,7 @@ namespace PetitMoteur3D
         private readonly Dictionary<ShaderDesc, ComPtr<ID3D11VertexShader>> _vertexShadersCache = new();
         private readonly Dictionary<InputLayoutDesc, ComPtr<ID3D11InputLayout>> _vertexLayoutsCache = new();
         private readonly Dictionary<ShaderDesc, ComPtr<ID3D11PixelShader>> _pixelShadersCache = new();
-        
+
         public ShaderManager(ComPtr<ID3D11Device> device, D3DCompiler compiler)
         {
             _device = device;
@@ -53,19 +53,16 @@ namespace PetitMoteur3D
             vertexLayout = vertexLayoutTmp;
         }
 
-        public unsafe ComPtr<ID3D11VertexShader> GetOrLoadVertexShader(ShaderDesc shaderDesc)
+        public unsafe ComPtr<ID3D11VertexShader> GetOrLoadVertexShader(string filePath)
         {
+            ShaderDesc shaderDesc = new() { FilePath = filePath };
             bool vertexShaderFound = _vertexShadersCache.TryGetValue(shaderDesc, out ComPtr<ID3D11VertexShader> vertexShader);
             if (!vertexShaderFound)
             {
-                // Compilation et chargement du vertex shader
-                using (ComPtr<ID3D10Blob> compilationBlob = Compile(shaderDesc))
-                {
-                    // Create vertex shader.
-                    vertexShader = CreateVertexShader(compilationBlob);
-                    _vertexShadersCache.Add(shaderDesc, vertexShader);
-
-                }
+                byte[] shaderByteCode = File.ReadAllBytes(filePath);
+                // Create vertex shader.
+                vertexShader = CreateVertexShader(shaderByteCode);
+                _vertexShadersCache.Add(shaderDesc, vertexShader);
             }
 
             return vertexShader;
@@ -130,18 +127,34 @@ namespace PetitMoteur3D
 
         private unsafe ComPtr<ID3D11VertexShader> CreateVertexShader(ComPtr<ID3D10Blob> compilationBlob)
         {
+            return CreateVertexShader(compilationBlob.GetBufferPointer(), compilationBlob.GetBufferSize());
+        }
+
+        private unsafe ComPtr<ID3D11VertexShader> CreateVertexShader(byte[] byteCode)
+        {
+            ComPtr<ID3D11VertexShader> shader;
+            fixed (byte* byteCodePtr = byteCode)
+            {
+                shader = CreateVertexShader(byteCodePtr, (nuint)byteCode.Length);
+            }
+            return shader;
+        }
+
+        private unsafe ComPtr<ID3D11VertexShader> CreateVertexShader(void* byteCode, nuint byteCCodeLength)
+        {
             ComPtr<ID3D11VertexShader> vertexShader = default;
 
             SilkMarshal.ThrowHResult
             (
                 _device.CreateVertexShader
                 (
-                    compilationBlob.GetBufferPointer(),
-                    compilationBlob.GetBufferSize(),
+                    byteCode,
+                    byteCCodeLength,
                     ref Unsafe.NullRef<ID3D11ClassLinkage>(),
                     ref vertexShader
                 )
             );
+
             return vertexShader;
         }
 

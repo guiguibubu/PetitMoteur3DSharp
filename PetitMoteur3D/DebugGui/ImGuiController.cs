@@ -56,7 +56,7 @@ namespace PetitMoteur3D.DebugGui
         /// <summary>
         /// Constructs a new ImGuiController.
         /// </summary>
-        public ImGuiController(DeviceD3D11 renderDevice, ShaderManager shaderManager, TextureManager textureManager, IView view, IInputContext input) : this(new ImGuiImplDX11(renderDevice, shaderManager, textureManager), view, input, null)
+        public ImGuiController(DeviceD3D11 renderDevice, ShaderManager shaderManager, TextureManager textureManager, GraphicBufferFactory bufferFactory, IView view, IInputContext input) : this(new ImGuiImplDX11(renderDevice, shaderManager, textureManager, bufferFactory), view, input, null)
         {
         }
 

@@ -21,10 +21,10 @@ namespace PetitMoteur3D
         /// <summary>
         /// Constructeur par défaut
         /// </summary>
-        public Scene(ComPtr<ID3D11Device> device) : this(device, new FixedCamera(Vector3D<float>.Zero))
+        public Scene(GraphicBufferFactory bufferFactory) : this(bufferFactory, new FixedCamera(Vector3D<float>.Zero))
         { }
 
-        public Scene(ComPtr<ID3D11Device> device, ICamera camera)
+        public Scene(GraphicBufferFactory bufferFactory, ICamera camera)
         {
             _objects = new List<ISceneObjet>();
             _objects3D = new List<IObjet3D>();
@@ -32,7 +32,7 @@ namespace PetitMoteur3D
             _objects.Add(camera);
 
             // Create our constant buffer.
-            CreateConstantBuffer<SceneShadersParams>(device, ref _constantBuffer);
+            _constantBuffer = bufferFactory.CreateConstantBuffer<SceneShadersParams>(Usage.Default, CpuAccessFlag.None);
         }
 
         ~Scene()
@@ -77,19 +77,6 @@ namespace PetitMoteur3D
             {
                 obj.Draw(deviceContext, matViewProj);
             }
-        }
-
-        private static unsafe void CreateConstantBuffer<T>(ComPtr<ID3D11Device> device, ref ComPtr<ID3D11Buffer> buffer) where T : unmanaged
-        {
-            BufferDesc bufferDesc = new()
-            {
-                ByteWidth = (uint)(Marshal.SizeOf<T>()),
-                Usage = Usage.Default,
-                BindFlags = (uint)BindFlag.ConstantBuffer,
-                CPUAccessFlags = 0
-            };
-
-            SilkMarshal.ThrowHResult(device.CreateBuffer(in bufferDesc, in Unsafe.NullRef<SubresourceData>(), ref buffer));
         }
     }
 }

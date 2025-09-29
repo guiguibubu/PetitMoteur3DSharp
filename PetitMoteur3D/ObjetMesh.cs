@@ -7,7 +7,7 @@ namespace PetitMoteur3D
     {
         public SceneMesh Mesh => _sceneMesh;
         private readonly SceneMesh _sceneMesh;
-        public ObjetMesh(SceneMesh sceneMesh, DeviceD3D11 renderDevice, ShaderManager shaderManager) : base(renderDevice, shaderManager)
+        public ObjetMesh(SceneMesh sceneMesh, DeviceD3D11 renderDevice, GraphicBufferFactory bufferFactory, ShaderManager shaderManager) : base(renderDevice, bufferFactory, shaderManager)
         {
             _sceneMesh = sceneMesh;
 

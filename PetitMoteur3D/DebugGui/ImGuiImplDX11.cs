@@ -31,14 +31,16 @@ namespace PetitMoteur3D.DebugGui
         private readonly DeviceD3D11 _renderDevice;
         private readonly ShaderManager _shaderManager;
         private readonly TextureManager _textureManager;
+        private readonly GraphicBufferFactory _bufferFactory;
 
-        public unsafe ImGuiImplDX11(DeviceD3D11 renderDevice, ShaderManager shaderManager, TextureManager textureManager)
+        public unsafe ImGuiImplDX11(DeviceD3D11 renderDevice, ShaderManager shaderManager, TextureManager textureManager, GraphicBufferFactory bufferFactory)
         {
             _renderDevice = renderDevice;
             _backendRendererName = Marshal.StringToHGlobalAuto("imgui_impl_dx11");
             _backendRendererUserData = new();
             _shaderManager = shaderManager;
             _textureManager = textureManager;
+            _bufferFactory = bufferFactory;
         }
 
         ~ImGuiImplDX11()
@@ -121,7 +123,7 @@ namespace PetitMoteur3D.DebugGui
             }
 
             if (_backendRendererUserData.FontSampler.Handle is null)
-                CreateDeviceObjects(_shaderManager);
+                CreateDeviceObjects(_shaderManager, _bufferFactory);
         }
 
         public unsafe void RenderDrawData(ImDrawDataPtr drawData)
@@ -137,13 +139,13 @@ namespace PetitMoteur3D.DebugGui
             {
                 if (_backendRendererUserData.VertexBuffer.Handle is not null) { _backendRendererUserData.VertexBuffer.Dispose(); _backendRendererUserData.VertexBuffer = null; }
                 _backendRendererUserData.VertexBufferSize = drawData.TotalVtxCount + 5000;
-                CreateVertexBuffer(_backendRendererUserData.D3dDevice, (uint)(_backendRendererUserData.VertexBufferSize * sizeof(ImDrawVert)), ref _backendRendererUserData.VertexBuffer);
+                _backendRendererUserData.VertexBuffer = _bufferFactory.CreateVertexBuffer<ImDrawVert>((uint)_backendRendererUserData.VertexBufferSize, Usage.Dynamic, CpuAccessFlag.Write);
             }
             if (_backendRendererUserData.IndexBuffer.Handle is null || _backendRendererUserData.IndexBufferSize < drawData.TotalIdxCount)
             {
                 if (_backendRendererUserData.IndexBuffer.Handle is not null) { _backendRendererUserData.IndexBuffer.Dispose(); _backendRendererUserData.IndexBuffer = null; }
                 _backendRendererUserData.IndexBufferSize = drawData.TotalIdxCount + 10000;
-                CreateIndexBuffer(_backendRendererUserData.D3dDevice, (uint)(_backendRendererUserData.IndexBufferSize * sizeof(ImDrawIdx)), ref _backendRendererUserData.IndexBuffer);
+                _backendRendererUserData.IndexBuffer = _bufferFactory.CreateIndexBuffer<ImDrawIdx>((uint)_backendRendererUserData.IndexBufferSize, Usage.Dynamic, CpuAccessFlag.Write);
             }
 
 #if DEBUG && DEBUG_BUFFERS
@@ -410,7 +412,7 @@ namespace PetitMoteur3D.DebugGui
             deviceContext.IASetInputLayout(old.InputLayout); old.InputLayout.Dispose();
         }
 
-        private unsafe bool CreateDeviceObjects(ShaderManager shaderManager)
+        private unsafe bool CreateDeviceObjects(ShaderManager shaderManager, GraphicBufferFactory bufferFactory)
         {
             if (_backendRendererUserData.D3dDevice.Handle is null)
                 return false;
@@ -418,7 +420,7 @@ namespace PetitMoteur3D.DebugGui
                 InvalidateDeviceObjects();
 
             // Create the vertex shader
-            if (!InitVertexShader(_backendRendererUserData.D3dDevice, shaderManager))
+            if (!InitVertexShader(shaderManager, bufferFactory))
             {
                 return false;
             }
@@ -505,9 +507,8 @@ namespace PetitMoteur3D.DebugGui
         /// <summary>
         /// Compilation et chargement du vertex shader
         /// </summary>
-        /// <param name="device"></param>
         /// <param name="shaderManager"></param>
-        private unsafe bool InitVertexShader(ComPtr<ID3D11Device> device, ShaderManager shaderManager)
+        private unsafe bool InitVertexShader(ShaderManager shaderManager, GraphicBufferFactory bufferFactory)
         {
             // Compilation et chargement du vertex shader
             string filePath = "shaders\\vs_imgui.hlsl";
@@ -535,11 +536,7 @@ namespace PetitMoteur3D.DebugGui
             };
             shaderManager.GetOrLoadVertexShaderAndLayout(shaderDesc, ImDrawVertInputLayout.InputLayoutDesc, ref _backendRendererUserData.VertexShader, ref _backendRendererUserData.InputLayout);
 
-            bool result = CreateConstantBuffer<Matrix4X4<float>>(device, ref _backendRendererUserData.VertexConstantBuffer);
-            if (!result)
-            {
-                return false;
-            }
+            _backendRendererUserData.VertexConstantBuffer = bufferFactory.CreateConstantBuffer<Matrix4X4<float>>(Usage.Dynamic, CpuAccessFlag.Write);
             return true;
         }
 
@@ -640,48 +637,6 @@ namespace PetitMoteur3D.DebugGui
             };
             device.CreateDepthStencilState(in desc, ref _backendRendererUserData.DepthStencilState);
             return true;
-        }
-
-        private static unsafe void CreateVertexBuffer(ComPtr<ID3D11Device> device, uint size, ref ComPtr<ID3D11Buffer> buffer)
-        {
-            BufferDesc bufferDesc = new()
-            {
-                ByteWidth = size,
-                Usage = Usage.Dynamic,
-                BindFlags = (uint)BindFlag.VertexBuffer,
-                CPUAccessFlags = (uint)CpuAccessFlag.Write,
-                MiscFlags = 0
-            };
-
-            SilkMarshal.ThrowHResult(device.CreateBuffer(in bufferDesc, ref Unsafe.NullRef<SubresourceData>(), ref buffer));
-        }
-
-        private static unsafe void CreateIndexBuffer(ComPtr<ID3D11Device> device, uint size, ref ComPtr<ID3D11Buffer> buffer)
-        {
-            BufferDesc bufferDesc = new()
-            {
-                ByteWidth = size,
-                Usage = Usage.Dynamic,
-                BindFlags = (uint)BindFlag.IndexBuffer,
-                CPUAccessFlags = (uint)CpuAccessFlag.Write
-            };
-
-            SilkMarshal.ThrowHResult(device.CreateBuffer(in bufferDesc, ref Unsafe.NullRef<SubresourceData>(), ref buffer));
-        }
-
-        private static unsafe bool CreateConstantBuffer<T>(ComPtr<ID3D11Device> device, ref ComPtr<ID3D11Buffer> buffer) where T : unmanaged
-        {
-            BufferDesc bufferDesc = new()
-            {
-                ByteWidth = (uint)(sizeof(T)),
-                Usage = Usage.Dynamic,
-                BindFlags = (uint)BindFlag.ConstantBuffer,
-                CPUAccessFlags = (uint)CpuAccessFlag.Write,
-                MiscFlags = 0
-            };
-
-            HResult hr = device.CreateBuffer(in bufferDesc, in Unsafe.NullRef<SubresourceData>(), ref buffer);
-            return !hr.IsFailure;
         }
 
         private unsafe void SetupRenderState(ImDrawDataPtr drawData, ComPtr<ID3D11DeviceContext> deviceContext)
