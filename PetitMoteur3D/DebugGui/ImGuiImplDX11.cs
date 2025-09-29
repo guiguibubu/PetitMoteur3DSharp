@@ -36,12 +36,14 @@ namespace PetitMoteur3D.DebugGui
         public static readonly System.Guid DebugObjectName = new(0x429B8C22, 0x9188, 0x4B0C, 0x87, 0x42, 0xAC, 0xB0, 0xBF, 0x85, 0xC2, 0x00);
 
         private readonly DeviceD3D11 _renderDevice;
+        private readonly ShaderManager _shaderManager;
 
-        public unsafe ImGuiImplDX11(DeviceD3D11 renderDevice)
+        public unsafe ImGuiImplDX11(DeviceD3D11 renderDevice, ShaderManager shaderManager)
         {
             _renderDevice = renderDevice;
             _backendRendererName = Marshal.StringToHGlobalAuto("imgui_impl_dx11");
             _backendRendererUserData = new();
+            _shaderManager = shaderManager;
         }
 
         ~ImGuiImplDX11()
@@ -124,7 +126,7 @@ namespace PetitMoteur3D.DebugGui
             }
 
             if (_backendRendererUserData.FontSampler.Handle is null)
-                CreateDeviceObjects(_renderDevice.ShaderCompiler);
+                CreateDeviceObjects(_shaderManager);
         }
 
         public unsafe void RenderDrawData(ImDrawDataPtr drawData)
@@ -413,27 +415,21 @@ namespace PetitMoteur3D.DebugGui
             deviceContext.IASetInputLayout(old.InputLayout); old.InputLayout.Dispose();
         }
 
-        private unsafe bool CreateDeviceObjects(D3DCompiler shaderCompiler)
+        private unsafe bool CreateDeviceObjects(ShaderManager shaderManager)
         {
             if (_backendRendererUserData.D3dDevice.Handle is null)
                 return false;
             if (_backendRendererUserData.FontSampler.Handle is not null)
                 InvalidateDeviceObjects();
 
-            // By using D3DCompile() from <d3dcompiler.h> / d3dcompiler.lib, we introduce a dependency to a given version of d3dcompiler_XX.dll (see D3DCOMPILER_DLL_A)
-            // If you would like to use this DX11 sample code but remove this dependency you can:
-            //  1) compile once, save the compiled shader blobs into a file or source code and pass them to CreateVertexShader()/CreatePixelShader() [preferred solution]
-            //  2) use code to detect any version of the DLL and grab a pointer to D3DCompile from the DLL.
-            // See https://github.com/ocornut/imgui/pull/638 for sources and details.
-
             // Create the vertex shader
-            if (!InitVertexShader(_backendRendererUserData.D3dDevice, shaderCompiler))
+            if (!InitVertexShader(_backendRendererUserData.D3dDevice, shaderManager))
             {
                 return false;
             }
 
             // Create the pixel shader
-            if (!InitPixelShader(_backendRendererUserData.D3dDevice, shaderCompiler))
+            if (!InitPixelShader(shaderManager))
             {
                 return false;
             }
@@ -486,15 +482,6 @@ namespace PetitMoteur3D.DebugGui
                     _backendRendererUserData.D3dDevice.CreateTexture2D(in desc, in subResource, ref texture)
                 );
 
-                // Set Debug Name
-                const string fontTextureDebugName = "FontTexture";
-                IntPtr namePtr2 = Marshal.StringToHGlobalAnsi(fontTextureDebugName);
-                fixed (Guid* guidPtr = &DebugObjectName)
-                {
-                    texture.SetPrivateData(guidPtr, (uint)fontTextureDebugName.Length, (void*)namePtr2);
-                }
-                Marshal.FreeHGlobal(namePtr2);
-
                 // Create texture view
                 ShaderResourceViewDesc srvDesc = new()
                 {
@@ -512,12 +499,14 @@ namespace PetitMoteur3D.DebugGui
 
                 // Set Debug Name
                 const string fontTextureViewDebugName = "FontTextureView";
-                IntPtr namePtr = Marshal.StringToHGlobalAnsi(fontTextureViewDebugName);
-                fixed (Guid* guidPtr = &DebugObjectName)
+                using (GlobalMemory unmanagedName = SilkMarshal.StringToMemory(fontTextureViewDebugName, NativeStringEncoding.Ansi))
                 {
-                    _backendRendererUserData.FontTextureView.SetPrivateData(guidPtr, (uint)fontTextureViewDebugName.Length, (void*)namePtr);
+                    IntPtr namePtr = unmanagedName.Handle;
+                    fixed (Guid* guidPtr = &DebugObjectName)
+                    {
+                        _backendRendererUserData.FontTextureView.SetPrivateData(guidPtr, (uint)fontTextureViewDebugName.Length, (void*)namePtr);
+                    }
                 }
-                Marshal.FreeHGlobal(namePtr);
             }
 
             // Store our identifier
@@ -543,12 +532,14 @@ namespace PetitMoteur3D.DebugGui
 
                 // Set Debug Name
                 const string fontSamplerDebugName = "FontSampler";
-                IntPtr namePtr = Marshal.StringToHGlobalAnsi(fontSamplerDebugName);
-                fixed (Guid* guidPtr = &DebugObjectName)
+                using (GlobalMemory unmanagedName = SilkMarshal.StringToMemory(fontSamplerDebugName, NativeStringEncoding.Ansi))
                 {
-                    _backendRendererUserData.FontSampler.SetPrivateData(guidPtr, (uint)fontSamplerDebugName.Length, (void*)namePtr);
+                    IntPtr namePtr = unmanagedName.Handle;
+                    fixed (Guid* guidPtr = &DebugObjectName)
+                    {
+                        _backendRendererUserData.FontSampler.SetPrivateData(guidPtr, (uint)fontSamplerDebugName.Length, (void*)namePtr);
+                    }
                 }
-                Marshal.FreeHGlobal(namePtr);
             }
         }
 
@@ -556,14 +547,11 @@ namespace PetitMoteur3D.DebugGui
         /// Compilation et chargement du vertex shader
         /// </summary>
         /// <param name="device"></param>
-        /// <param name="compiler"></param>
-        private unsafe bool InitVertexShader(ComPtr<ID3D11Device> device, D3DCompiler compiler)
+        /// <param name="shaderManager"></param>
+        private unsafe bool InitVertexShader(ComPtr<ID3D11Device> device, ShaderManager shaderManager)
         {
             // Compilation et chargement du vertex shader
-            ComPtr<ID3D10Blob> compilationBlob = default;
-            ComPtr<ID3D10Blob> compilationErrors = default;
             string filePath = "shaders\\vs_imgui.hlsl";
-            byte[] shaderCode = File.ReadAllBytes(filePath);
             string entryPoint = "main";
             string target = "vs_5_0";
             // #define D3DCOMPILE_ENABLE_STRICTNESS                    (1 << 11)
@@ -577,78 +565,16 @@ namespace PetitMoteur3D.DebugGui
             uint flagDebug = 0;
             uint flagSkipOptimization = 0;
 #endif
-            HResult hr = compiler.Compile
-            (
-                in shaderCode[0],
-                (nuint)shaderCode.Length,
-                filePath,
-                ref Unsafe.NullRef<D3DShaderMacro>(),
-                ref Unsafe.NullRef<ID3DInclude>(),
-                entryPoint,
-                target,
-                flagStrictness | flagDebug | flagSkipOptimization,
-                0,
-                ref compilationBlob,
-                ref compilationErrors
-            );
 
-            // Check for compilation errors.
-            if (hr.IsFailure)
+            uint compilationFlags = flagStrictness | flagDebug | flagSkipOptimization;
+            ShaderManager.ShaderDesc shaderDesc = new()
             {
-                if (compilationErrors.Handle is not null)
-                {
-                    Console.WriteLine(SilkMarshal.PtrToString((nint)compilationErrors.GetBufferPointer()));
-                }
-                return false;
-            }
-
-            // Create vertex shader.
-            hr = device.CreateVertexShader
-                (
-                    compilationBlob.GetBufferPointer(),
-                    compilationBlob.GetBufferSize(),
-                    ref Unsafe.NullRef<ID3D11ClassLinkage>(),
-                    ref _backendRendererUserData.VertexShader
-                );
-
-            if (hr.IsFailure)
-            {
-                return false;
-            }
-
-            // Créer l’organisation des sommets
-            fixed (byte* semanticNamePosition = SilkMarshal.StringToMemory("POSITION", NativeStringEncoding.Ansi))
-            fixed (byte* semanticNameTexCoord = SilkMarshal.StringToMemory("TEXCOORD", NativeStringEncoding.Ansi))
-            fixed (byte* semanticNameColor = SilkMarshal.StringToMemory("COLOR", NativeStringEncoding.Ansi))
-            {
-                InputElementDesc[] inputElements = new[]
-                {
-                    new InputElementDesc(
-                        semanticNamePosition, 0, Silk.NET.DXGI.Format.FormatR32G32Float, 0, Convert.ToUInt32(Marshal.OffsetOf<ImDrawVert>(nameof(ImDrawVert.pos))), InputClassification.PerVertexData, 0
-                    ),
-                    new InputElementDesc(
-                        semanticNameTexCoord, 0, Silk.NET.DXGI.Format.FormatR32G32Float, 0, Convert.ToUInt32(Marshal.OffsetOf<ImDrawVert>(nameof(ImDrawVert.uv))), InputClassification.PerVertexData, 0
-                    ),
-                    new InputElementDesc(
-                        semanticNameColor, 0, Silk.NET.DXGI.Format.FormatR8G8B8A8Unorm, 0, Convert.ToUInt32(Marshal.OffsetOf<ImDrawVert>(nameof(ImDrawVert.col))), InputClassification.PerVertexData, 0
-                    ),
-                };
-
-                hr = device.CreateInputLayout
-                (
-                    in inputElements[0],
-                    (uint)inputElements.Length,
-                    compilationBlob.GetBufferPointer(),
-                    compilationBlob.GetBufferSize(),
-                    ref _backendRendererUserData.InputLayout
-                );
-                compilationBlob.Dispose();
-                compilationErrors.Dispose();
-                if (hr.IsFailure)
-                {
-                    return false;
-                }
-            }
+                FilePath = filePath,
+                EntryPoint = entryPoint,
+                Target = target,
+                CompilationFlags = compilationFlags
+            };
+            shaderManager.GetOrLoadVertexShaderAndLayout(shaderDesc, ImDrawVertInputLayout.InputLayoutDesc, ref _backendRendererUserData.VertexShader, ref _backendRendererUserData.InputLayout);
 
             bool result = CreateConstantBuffer<Matrix4X4<float>>(device, ref _backendRendererUserData.VertexConstantBuffer);
             if (!result)
@@ -661,14 +587,10 @@ namespace PetitMoteur3D.DebugGui
         /// <summary>
         /// Compilation et chargement du pixel shader
         /// </summary>
-        /// <param name="device"></param>
-        /// <param name="compiler"></param>
-        private unsafe bool InitPixelShader(ComPtr<ID3D11Device> device, D3DCompiler compiler)
+        /// <param name="shaderManager"></param>
+        private unsafe bool InitPixelShader(ShaderManager shaderManager)
         {
-            ComPtr<ID3D10Blob> compilationBlob = default;
-            ComPtr<ID3D10Blob> compilationErrors = default;
             string filePath = "shaders\\ps_imgui.hlsl";
-            byte[] shaderCode = File.ReadAllBytes(filePath);
             string entryPoint = "main";
             string target = "ps_5_0";
             // #define D3DCOMPILE_ENABLE_STRICTNESS                    (1 << 11)
@@ -682,46 +604,15 @@ namespace PetitMoteur3D.DebugGui
             uint flagDebug = 0;
             uint flagSkipOptimization = 0;
 #endif
-            HResult hr = compiler.Compile
-            (
-                in shaderCode[0],
-                (nuint)shaderCode.Length,
-                filePath,
-                ref Unsafe.NullRef<D3DShaderMacro>(),
-                ref Unsafe.NullRef<ID3DInclude>(),
-                entryPoint,
-                target,
-                flagStrictness | flagDebug | flagSkipOptimization,
-                0,
-                ref compilationBlob,
-                ref compilationErrors
-            );
-
-            // Check for compilation errors.
-            if (hr.IsFailure)
+            uint compilationFlags = flagStrictness | flagDebug | flagSkipOptimization;
+            ShaderManager.ShaderDesc shaderDesc = new()
             {
-                if (compilationErrors.Handle is not null)
-                {
-                    Console.WriteLine(SilkMarshal.PtrToString((nint)compilationErrors.GetBufferPointer()));
-                }
-                return false;
-            }
-
-            // Create pixel shader.
-            hr = device.CreatePixelShader
-            (
-                compilationBlob.GetBufferPointer(),
-                compilationBlob.GetBufferSize(),
-                ref Unsafe.NullRef<ID3D11ClassLinkage>(),
-                ref _backendRendererUserData.PixelShader
-            );
-
-            compilationBlob.Dispose();
-            compilationErrors.Dispose();
-            if (hr.IsFailure)
-            {
-                return false;
-            }
+                FilePath = filePath,
+                EntryPoint = entryPoint,
+                Target = target,
+                CompilationFlags = compilationFlags
+            };
+            _backendRendererUserData.PixelShader = shaderManager.GetOrLoadPixelShader(shaderDesc);
             return true;
         }
 
