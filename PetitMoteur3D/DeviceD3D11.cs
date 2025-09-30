@@ -56,27 +56,13 @@ namespace PetitMoteur3D
 
             // Create our D3D11 logical device.
             _d3d11Api = D3D11.GetApi(_window, forceDxvk);
-            
+
             InitDevice(_d3d11Api);
 
             // Initialisation de la swapchain
             InitSwapChain(window, forceDxvk);
 
-            // Create « render target view » 
-            // Obtain the framebuffer for the swapchain's backbuffer.
-            InitRenderTargetView();
-
-            // Create de depth stenci view
-            InitDepthBuffer(window);
-
-            // Tell the output merger about our render target view.
-            _deviceContext.OMSetRenderTargets(1, ref _renderTargetView, _depthStencilView);
-            _deviceContext.ClearRenderTargetView(_renderTargetView, _backgroundColour.AsSpan());
-            _deviceContext.ClearDepthStencilView(_depthStencilView, (uint)ClearFlag.Depth, 1.0f, 0);
-
-            // Set the rasterizer state with the current viewport.
-            Viewport viewport = new(0, 0, _window.FramebufferSize.X, _window.FramebufferSize.Y, 0, 1);
-            _deviceContext.RSSetViewports(1, in viewport);
+            InitView(window);
 
             RasterizerDesc rsSolidDesc = new()
             {
@@ -137,19 +123,21 @@ namespace PetitMoteur3D
             );
         }
 
-        public void Resize(Vector2D<int> size)
+        public unsafe void Resize(Vector2D<int> size)
         {
+            if (size.X == _window.Size.X && size.Y == _window.Size.Y)
+            {
+                return;
+            }
             _deviceContext.ClearState();
+
+            _renderTargetView.Dispose();
+
             SilkMarshal.ThrowHResult(
                 _swapchain.ResizeBuffers(0, 0, 0, Format.FormatB8G8R8A8Unorm, (uint)SwapChainFlag.AllowModeSwitch)
             );
-            ModeDesc desc = new((uint)size.X, (uint)size.Y, null, Format.FormatB8G8R8A8Unorm);
-            SilkMarshal.ThrowHResult(
-                    _swapchain.ResizeTarget(ref desc)
-            );
-            // Set the rasterizer state with the current viewport.
-            Viewport viewport = new(0, 0, (uint)size.X, (uint)size.Y, 0, 1);
-            _deviceContext.RSSetViewports(1, in viewport);
+
+            InitView(size.X, size.Y);
         }
 
         public bool IsFrameCapturing()
@@ -235,14 +223,18 @@ namespace PetitMoteur3D
             }
 #endif
         }
-
         private unsafe void InitSwapChain(IWindow window, bool forceDxvk)
+        {
+            InitSwapChain(window.Size.X, window.Size.Y, window.Native!.DXHandle!.Value, forceDxvk);
+        }
+
+        private unsafe void InitSwapChain(int width, int heigth, nint windowPtr, bool forceDxvk)
         {
             // Create our swapchain description.
             SwapChainDesc1 swapChainDesc = new()
             {
-                Width = (uint)window.Size.X,
-                Height = (uint)window.Size.Y,
+                Width = (uint)width,
+                Height = (uint)heigth,
                 BufferCount = 1,
                 Format = Format.FormatB8G8R8A8Unorm,
                 BufferUsage = DXGI.UsageRenderTargetOutput,
@@ -266,7 +258,7 @@ namespace PetitMoteur3D
                 factory.CreateSwapChainForHwnd
                 (
                     _device,
-                    _window.Native!.DXHandle!.Value,
+                    windowPtr,
                     in swapChainDesc,
                     in swapChainFullscreenDesc,
                     ref Unsafe.NullRef<IDXGIOutput>(),
@@ -275,6 +267,44 @@ namespace PetitMoteur3D
             );
 
             factory.Dispose();
+        }
+
+        private unsafe void InitView(IWindow window)
+        {
+            // Create « render target view » 
+            // Obtain the framebuffer for the swapchain's backbuffer.
+            InitRenderTargetView();
+
+            // Create de depth stenci view
+            InitDepthBuffer(window);
+
+            // Tell the output merger about our render target view.
+            _deviceContext.OMSetRenderTargets(1, ref _renderTargetView, _depthStencilView);
+            _deviceContext.ClearRenderTargetView(_renderTargetView, _backgroundColour.AsSpan());
+            _deviceContext.ClearDepthStencilView(_depthStencilView, (uint)ClearFlag.Depth, 1.0f, 0);
+
+            // Set the rasterizer state with the current viewport.
+            Viewport viewport = new(0, 0, _window.Size.X, _window.Size.Y, 0, 1);
+            _deviceContext.RSSetViewports(1, in viewport);
+        }
+
+        private unsafe void InitView(int width, int height)
+        {
+            // Create « render target view » 
+            // Obtain the framebuffer for the swapchain's backbuffer.
+            InitRenderTargetView();
+
+            // Create de depth stenci view
+            InitDepthBuffer(width, height);
+
+            // Tell the output merger about our render target view.
+            _deviceContext.OMSetRenderTargets(1, ref _renderTargetView, _depthStencilView);
+            _deviceContext.ClearRenderTargetView(_renderTargetView, _backgroundColour.AsSpan());
+            _deviceContext.ClearDepthStencilView(_depthStencilView, (uint)ClearFlag.Depth, 1.0f, 0);
+
+            // Set the rasterizer state with the current viewport.
+            Viewport viewport = new(0, 0, width, height, 0, 1);
+            _deviceContext.RSSetViewports(1, in viewport);
         }
 
         private unsafe void InitRenderTargetView()
@@ -287,10 +317,15 @@ namespace PetitMoteur3D
 
         private unsafe void InitDepthBuffer(IWindow window)
         {
+            InitDepthBuffer(window.Size.X, window.Size.Y);
+        }
+
+        private unsafe void InitDepthBuffer(int width, int height)
+        {
             Texture2DDesc depthTextureDesc = new()
             {
-                Width = (uint)window.Size.X,
-                Height = (uint)window.Size.Y,
+                Width = (uint)width,
+                Height = (uint)height,
                 MipLevels = 1,
                 ArraySize = 1,
                 Format = Format.FormatD24UnormS8Uint,

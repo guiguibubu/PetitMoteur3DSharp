@@ -208,6 +208,19 @@ namespace PetitMoteur3D
         {
             // If the window resizes, we need to be sure to update the swapchain's back buffers.
             _deviceD3D11.Resize(newSize);
+
+            // Update projection matrix
+            float largeurEcran = newSize.X;
+            float hauteurEcran = newSize.Y;
+            float aspectRatio = largeurEcran / hauteurEcran;
+            float planRapproche = 2.0f;
+            float planEloigne = 100.0f;
+            _matProj = CreatePerspectiveFieldOfViewLH(
+                _camera.ChampVision,
+                aspectRatio,
+                planRapproche,
+                planEloigne
+            );
         }
 
         private static void BeginRender()
@@ -261,8 +274,8 @@ namespace PetitMoteur3D
             // Initialisation des matrices View et Proj
             // Dans notre cas, ces matrices sont fixes
             _matView = _camera.GetViewMatrix();
-            float largeurEcran = Monitor.GetMainMonitor(_window).Bounds.Size.X;
-            float hauteurEcran = Monitor.GetMainMonitor(_window).Bounds.Size.Y;
+            float largeurEcran = _window.Size.X;
+            float hauteurEcran = _window.Size.Y;
             float aspectRatio = largeurEcran / hauteurEcran;
             float planRapproche = 2.0f;
             float planEloigne = 100.0f;
