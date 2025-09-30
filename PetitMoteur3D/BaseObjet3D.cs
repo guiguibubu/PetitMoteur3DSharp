@@ -200,12 +200,12 @@ namespace PetitMoteur3D
             // Initialisation des paramètres de sampling de la texture
             SamplerDesc samplerDesc = new()
             {
-                Filter = Filter.MinMagMipLinear,
+                Filter = Filter.Anisotropic,
                 AddressU = TextureAddressMode.Wrap,
                 AddressV = TextureAddressMode.Wrap,
                 AddressW = TextureAddressMode.Wrap,
                 MipLODBias = 0f,
-                MaxAnisotropy = 1,
+                MaxAnisotropy = 4,
                 ComparisonFunc = ComparisonFunc.Always,
                 MinLOD = 0,
                 MaxLOD = float.MaxValue,
