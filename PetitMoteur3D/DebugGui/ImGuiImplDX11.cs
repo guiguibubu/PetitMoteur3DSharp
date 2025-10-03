@@ -292,24 +292,7 @@ namespace PetitMoteur3D.DebugGui
             }
 
             // Saveold DX conf
-            BackupDX11State old = new();
-            {
-                deviceContext.RSGetScissorRects(ref old.ScissorRectsCount, ref old.ScissorRects.AsSpan()[0]);
-                deviceContext.RSGetViewports(ref old.ViewportsCount, ref old.Viewports[0]);
-                deviceContext.RSGetState(ref old.RasterizerState);
-                deviceContext.OMGetBlendState(ref old.BlendState, ref old.BlendFactor[0], ref old.SampleMask);
-                deviceContext.OMGetDepthStencilState(ref old.DepthStencilState, ref old.StencilRef);
-                deviceContext.PSGetShaderResources(0, 1, ref old.PSShaderResource);
-                deviceContext.PSGetSamplers(0, 1, ref old.PSSampler);
-                deviceContext.PSGetShader(ref old.PixelShader, ref old.PSInstances, ref old.PSInstancesCount);
-                deviceContext.VSGetShader(ref old.VertexShader, ref old.VSInstances, ref old.VSInstancesCount);
-                deviceContext.VSGetConstantBuffers(0, 1, ref old.VSConstantBuffer);
-                deviceContext.GSGetShader(ref old.GeometryShader, ref old.GSInstances, ref old.GSInstancesCount);
-                deviceContext.IAGetPrimitiveTopology(ref old.PrimitiveTopology);
-                deviceContext.IAGetIndexBuffer(ref old.IndexBuffer, ref old.IndexBufferFormat, ref old.IndexBufferOffset);
-                deviceContext.IAGetVertexBuffers(0, 1, ref old.VertexBuffer, ref old.VertexBufferStride, ref old.VertexBufferOffset);
-                deviceContext.IAGetInputLayout(ref old.InputLayout);
-            }
+            BackupDX11State oldDxState = GetCurrentDX11State(deviceContext);
 
             // Setup desired DX state
             SetupRenderState(drawData, deviceContext);
@@ -367,49 +350,9 @@ namespace PetitMoteur3D.DebugGui
             }
 
             // Restore modified DX state
-            deviceContext.RSSetScissorRects(old.ScissorRectsCount, old.ScissorRects);
-            deviceContext.RSSetViewports(old.ViewportsCount, old.Viewports);
-            deviceContext.RSSetState(old.RasterizerState);
-            old.RasterizerState.Dispose();
-            deviceContext.OMSetBlendState(old.BlendState, old.BlendFactor, old.SampleMask);
-            old.BlendState.Dispose();
-            deviceContext.OMSetDepthStencilState(old.DepthStencilState, old.StencilRef);
-            old.DepthStencilState.Dispose();
-            deviceContext.PSSetShaderResources(0, 1, ref old.PSShaderResource);
-            old.PSShaderResource.Dispose();
-            deviceContext.PSSetSamplers(0, 1, ref old.PSSampler);
-            old.PSSampler.Dispose();
-            deviceContext.PSSetShader(old.PixelShader, ref old.PSInstances, old.PSInstancesCount);
-            old.PixelShader.Dispose();
-            {
-                ID3D11ClassInstance* pSInstancesPtrOrigin = old.PSInstances.Handle;
-                for (uint i = 0; i < old.PSInstancesCount; i++)
-                {
-                    ID3D11ClassInstance* pSInstancesPtr = pSInstancesPtrOrigin + i;
-                    if (pSInstancesPtr is not null)
-                    {
-                        (*pSInstancesPtr).Release();
-                    }
-                }
-            }
-            deviceContext.VSSetShader(old.VertexShader, ref old.VSInstances, old.VSInstancesCount); old.VertexShader.Dispose();
-            deviceContext.VSSetConstantBuffers(0, 1, ref old.VSConstantBuffer); old.VSConstantBuffer.Dispose();
-            deviceContext.GSSetShader(old.GeometryShader, ref old.GSInstances, old.GSInstancesCount); old.GeometryShader.Dispose();
-            {
-                ID3D11ClassInstance* vSInstancesPtrOrigin = old.VSInstances.Handle;
-                for (uint i = 0; i < old.VSInstancesCount; i++)
-                {
-                    ID3D11ClassInstance* vSInstancesPtr = vSInstancesPtrOrigin + i;
-                    if (vSInstancesPtr is not null)
-                    {
-                        (*vSInstancesPtr).Release();
-                    }
-                }
-            }
-            deviceContext.IASetPrimitiveTopology(old.PrimitiveTopology);
-            deviceContext.IASetIndexBuffer(old.IndexBuffer, old.IndexBufferFormat, old.IndexBufferOffset); old.IndexBuffer.Dispose();
-            deviceContext.IASetVertexBuffers(0, 1, ref old.VertexBuffer, ref old.VertexBufferStride, ref old.VertexBufferOffset); old.VertexBuffer.Dispose();
-            deviceContext.IASetInputLayout(old.InputLayout); old.InputLayout.Dispose();
+            SetDX11State(deviceContext, oldDxState);
+
+            oldDxState.Dispose();
         }
 
         private unsafe bool CreateDeviceObjects(GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, GraphicPipelineFactory pipelineFactory)
@@ -655,6 +598,48 @@ namespace PetitMoteur3D.DebugGui
             deviceContext.OMSetBlendState(_backendRendererUserData.BlendState, blendFactor, 0xffffffff);
             deviceContext.OMSetDepthStencilState(_backendRendererUserData.DepthStencilState, 0);
             deviceContext.RSSetState(_backendRendererUserData.RasterizerState);
+        }
+
+        private BackupDX11State GetCurrentDX11State(ComPtr<ID3D11DeviceContext> deviceContext)
+        {
+            BackupDX11State curentState = new();
+            {
+                deviceContext.RSGetScissorRects(ref curentState.ScissorRectsCount, ref curentState.ScissorRects.AsSpan()[0]);
+                deviceContext.RSGetViewports(ref curentState.ViewportsCount, ref curentState.Viewports[0]);
+                deviceContext.RSGetState(ref curentState.RasterizerState);
+                deviceContext.OMGetBlendState(ref curentState.BlendState, ref curentState.BlendFactor[0], ref curentState.SampleMask);
+                deviceContext.OMGetDepthStencilState(ref curentState.DepthStencilState, ref curentState.StencilRef);
+                deviceContext.PSGetShaderResources(0, 1, ref curentState.PSShaderResource);
+                deviceContext.PSGetSamplers(0, 1, ref curentState.PSSampler);
+                deviceContext.PSGetShader(ref curentState.PixelShader, ref curentState.PSInstances, ref curentState.PSInstancesCount);
+                deviceContext.VSGetShader(ref curentState.VertexShader, ref curentState.VSInstances, ref curentState.VSInstancesCount);
+                deviceContext.VSGetConstantBuffers(0, 1, ref curentState.VSConstantBuffer);
+                deviceContext.GSGetShader(ref curentState.GeometryShader, ref curentState.GSInstances, ref curentState.GSInstancesCount);
+                deviceContext.IAGetPrimitiveTopology(ref curentState.PrimitiveTopology);
+                deviceContext.IAGetIndexBuffer(ref curentState.IndexBuffer, ref curentState.IndexBufferFormat, ref curentState.IndexBufferOffset);
+                deviceContext.IAGetVertexBuffers(0, 1, ref curentState.VertexBuffer, ref curentState.VertexBufferStride, ref curentState.VertexBufferOffset);
+                deviceContext.IAGetInputLayout(ref curentState.InputLayout);
+            }
+            return curentState;
+        }
+
+        private unsafe void SetDX11State(ComPtr<ID3D11DeviceContext> deviceContext, BackupDX11State newDxState)
+        {
+            deviceContext.RSSetScissorRects(newDxState.ScissorRectsCount, newDxState.ScissorRects);
+            deviceContext.RSSetViewports(newDxState.ViewportsCount, newDxState.Viewports);
+            deviceContext.RSSetState(newDxState.RasterizerState);
+            deviceContext.OMSetBlendState(newDxState.BlendState, newDxState.BlendFactor, newDxState.SampleMask);
+            deviceContext.OMSetDepthStencilState(newDxState.DepthStencilState, newDxState.StencilRef);
+            deviceContext.PSSetShaderResources(0, 1, ref newDxState.PSShaderResource);
+            deviceContext.PSSetSamplers(0, 1, ref newDxState.PSSampler);
+            deviceContext.PSSetShader(newDxState.PixelShader, ref newDxState.PSInstances, newDxState.PSInstancesCount);
+            deviceContext.VSSetShader(newDxState.VertexShader, ref newDxState.VSInstances, newDxState.VSInstancesCount);
+            deviceContext.VSSetConstantBuffers(0, 1, ref newDxState.VSConstantBuffer);
+            deviceContext.GSSetShader(newDxState.GeometryShader, ref newDxState.GSInstances, newDxState.GSInstancesCount);
+            deviceContext.IASetPrimitiveTopology(newDxState.PrimitiveTopology);
+            deviceContext.IASetIndexBuffer(newDxState.IndexBuffer, newDxState.IndexBufferFormat, newDxState.IndexBufferOffset);
+            deviceContext.IASetVertexBuffers(0, 1, ref newDxState.VertexBuffer, ref newDxState.VertexBufferStride, ref newDxState.VertexBufferOffset);
+            deviceContext.IASetInputLayout(newDxState.InputLayout);
         }
 
         private unsafe void InvalidateDeviceObjects()

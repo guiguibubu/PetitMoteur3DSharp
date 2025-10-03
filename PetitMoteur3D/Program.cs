@@ -158,7 +158,7 @@ namespace PetitMoteur3D
                         ImGui.Begin("Title : Hello, world!");
                         ImGui.Text("Hello, world!");
                         ImGui.SliderFloat("float", ref f, 0.0f, 1.0f);
-                        ImGui.Text(string.Format("Application average {0} ms/frame ({1} FPS)", (1000.0f * io.Framerate).ToString("F3", System.Globalization.CultureInfo.InvariantCulture), io.Framerate.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)));
+                        ImGui.Text(string.Format("Application average {0} ms/frame ({1} FPS)", (1000.0f / io.Framerate).ToString("F3", System.Globalization.CultureInfo.InvariantCulture), io.Framerate.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)));
                         bool colorChanged = ImGui.ColorEdit4("Background Color", ref _backgroundColour);     // Edit 4 floats representing a color
                         bool wireFrameChanged = ImGui.Checkbox("WireFrame", ref _showWireFrame);     // Edit bool
                         ImGui.Checkbox("Show Demo", ref _imGuiShowDemo);     // Edit bool
