@@ -5,7 +5,7 @@ using Silk.NET.Maths;
 namespace PetitMoteur3D
 {
     [StructLayout(LayoutKind.Sequential, Pack = 16)]
-    internal struct ObjectShadersParams
+    internal struct ObjectShadersParams : IResetable
     {
         /// <summary>
         /// la matrice totale
@@ -26,11 +26,21 @@ namespace PetitMoteur3D
         /// <summary>
         /// Indique la présence d'une texture
         /// </summary>
-        public int hasTexture;
+        public Int32 hasTexture;
         /// <summary>
         /// Indique la présence d'une texture pour le "normal mapping"
         /// </summary>
-        public int hasNormalMap;
+        public Int32 hasNormalMap;
         private readonly UInt64 alignement1_1;
+
+        public void Reset()
+        {
+            matWorldViewProj = Matrix4X4<float>.Identity;
+            matWorld = Matrix4X4<float>.Identity;
+            ambiantMaterialValue = Vector4D<float>.Zero;
+            diffuseMaterialValue = Vector4D<float>.Zero;
+            hasTexture = 0;
+            hasNormalMap = 0;
+        }
     }
 }

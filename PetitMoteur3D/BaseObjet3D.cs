@@ -37,7 +37,13 @@ namespace PetitMoteur3D
         private Sommet[] _sommets;
         private ushort[] _indices;
 
+        private unsafe readonly uint _vertexStride = (uint)sizeof(Sommet);
+        private const uint _vertextOffset = 0;
+
         private string _name;
+
+        private static IObjectPool<ObjectShadersParams> _objectShadersParamsPool = ObjectPoolFactory.Create<ObjectShadersParams>();
+        private static IObjectPool<SamplerDesc> _shaderDescPool = ObjectPoolFactory.Create<SamplerDesc>(new DX11SamplerDescResetter());
 
         private readonly GraphicBufferFactory _bufferFactory;
         private readonly ShaderManager _shaderManager;
@@ -105,9 +111,8 @@ namespace PetitMoteur3D
             // Choisir la topologie des primitives
             deviceContext.IASetPrimitiveTopology(D3DPrimitiveTopology.D3D11PrimitiveTopologyTrianglelist);
             // Source des sommets
-            uint vertexStride = (uint)sizeof(Sommet);
-            uint vertextOffset = 0;
-            deviceContext.IASetVertexBuffers(0, 1, ref _vertexBuffer, in vertexStride, in vertextOffset);
+
+            deviceContext.IASetVertexBuffers(0, 1, ref _vertexBuffer, _vertexStride, _vertextOffset);
             // Source des index
             deviceContext.IASetIndexBuffer(_indexBuffer, Silk.NET.DXGI.Format.FormatR16Uint, 0);
             // input layout des sommets
@@ -115,15 +120,13 @@ namespace PetitMoteur3D
             foreach (SubObjet3D subObjet3D in GetSubObjets())
             {
                 // Initialiser et sélectionner les « constantes » des shaders
-                ObjectShadersParams shadersParams = new()
-                {
-                    matWorldViewProj = Matrix4X4.Transpose(subObjet3D.Transformation * _matWorld * matViewProj),
-                    matWorld = Matrix4X4.Transpose(subObjet3D.Transformation * _matWorld),
-                    ambiantMaterialValue = subObjet3D.Material.Ambient,
-                    diffuseMaterialValue = subObjet3D.Material.Diffuse,
-                    hasTexture = Convert.ToInt32(_textureD3D.Handle is not null),
-                    hasNormalMap = Convert.ToInt32(_normalMap.Handle is not null),
-                };
+                ObjectShadersParams shadersParams = _objectShadersParamsPool.Get();
+                shadersParams.matWorldViewProj = Matrix4X4.Transpose(subObjet3D.Transformation * _matWorld * matViewProj);
+                shadersParams.matWorld = Matrix4X4.Transpose(subObjet3D.Transformation * _matWorld);
+                shadersParams.ambiantMaterialValue = subObjet3D.Material.Ambient;
+                shadersParams.diffuseMaterialValue = subObjet3D.Material.Diffuse;
+                shadersParams.hasTexture = Convert.ToInt32(_textureD3D.Handle is not null);
+                shadersParams.hasNormalMap = Convert.ToInt32(_normalMap.Handle is not null);
 
                 deviceContext.UpdateSubresource(_constantBuffer, 0, ref Unsafe.NullRef<Box>(), ref shadersParams, 0, 0);
 
@@ -148,6 +151,8 @@ namespace PetitMoteur3D
                 deviceContext.PSSetSamplers(0, 1, ref _sampleState);
                 // **** Rendu de l’objet
                 deviceContext.DrawIndexed((uint)_indices.Length, 0, 0);
+
+                _objectShadersParamsPool.Return(shadersParams);
             }
         }
 
@@ -198,18 +203,19 @@ namespace PetitMoteur3D
         private unsafe void InitTexture(TextureManager textureManager)
         {
             // Initialisation des paramètres de sampling de la texture
-            SamplerDesc samplerDesc = new()
+            SamplerDesc samplerDesc = _shaderDescPool.Get();
             {
-                Filter = Filter.Anisotropic,
-                AddressU = TextureAddressMode.Wrap,
-                AddressV = TextureAddressMode.Wrap,
-                AddressW = TextureAddressMode.Wrap,
-                MipLODBias = 0f,
-                MaxAnisotropy = 4,
-                ComparisonFunc = ComparisonFunc.Always,
-                MinLOD = 0,
-                MaxLOD = float.MaxValue,
-            };
+                samplerDesc.Filter = Filter.Anisotropic;
+                samplerDesc.AddressU = TextureAddressMode.Wrap;
+                samplerDesc.AddressV = TextureAddressMode.Wrap;
+                samplerDesc.AddressW = TextureAddressMode.Wrap;
+                samplerDesc.MipLODBias = 0f;
+                samplerDesc.MaxAnisotropy = 4;
+                samplerDesc.ComparisonFunc = ComparisonFunc.Always;
+                samplerDesc.MinLOD = 0;
+                samplerDesc.MaxLOD = float.MaxValue;
+            }
+            ;
             samplerDesc.BorderColor[0] = 0f;
             samplerDesc.BorderColor[1] = 0f;
             samplerDesc.BorderColor[2] = 0f;
@@ -217,6 +223,8 @@ namespace PetitMoteur3D
 
             // Création de l’état de sampling
             _sampleState = textureManager.Factory.CreateSampler(samplerDesc, $"{_name}_SamplerState");
+
+            _shaderDescPool.Return(samplerDesc);
         }
 
         private unsafe void InitBuffers<TVertex, TIndice>(GraphicBufferFactory bufferFactory, TVertex[] sommets, TIndice[] indices)
@@ -256,7 +264,8 @@ namespace PetitMoteur3D
             uint flagSkipOptimization = 0;
 #endif
             uint compilationFlags = flagStrictness | flagDebug | flagSkipOptimization;
-            ShaderCodeFile shaderFile = new(
+            ShaderCodeFile shaderFile = new
+            (
                 filePath,
                 entryPoint,
                 target,

@@ -10,10 +10,11 @@ namespace PetitMoteur3D
         private readonly Vector3D<float>[] _tangentes;
         private readonly Sommet[] _sommets;
         private readonly ushort[] _indices;
+        private readonly SubObjet3D[] _subObjects;
 
         private Matrix4X4<float> _transformation;
 
-        public unsafe Bloc(float dx, float dy, float dz, GraphicDeviceRessourceFactory graphicDeviceRessourceFactory) 
+        public unsafe Bloc(float dx, float dy, float dz, GraphicDeviceRessourceFactory graphicDeviceRessourceFactory)
             : base(graphicDeviceRessourceFactory)
         {
             _vertices = new Vector3D<float>[]
@@ -98,7 +99,16 @@ namespace PetitMoteur3D
                 20,22,23 // droite
             };
 
+
             _transformation = Matrix4X4<float>.Identity;
+
+            _subObjects = new SubObjet3D[] {new ()
+                {
+                    Indices = _indices,
+                    Material = new Material(),
+                    Transformation = _transformation
+                }
+            };
 
             Initialisation();
         }
@@ -122,13 +132,7 @@ namespace PetitMoteur3D
 
         protected override IReadOnlyList<SubObjet3D> GetSubObjets()
         {
-            return new SubObjet3D[] {new SubObjet3D()
-                {
-                    Indices = _indices,
-                    Material = new Material(),
-                    Transformation = _transformation
-                }
-            };
+            return _subObjects;
         }
     }
 }

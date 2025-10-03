@@ -170,6 +170,7 @@ namespace PetitMoteur3D
                         ImGui.SliderFloat("float", ref f, 0.0f, 1.0f);
                         ImGui.Text(string.Format("Application average {0} ms/frame ({1} FPS)", (1000.0f / io.Framerate).ToString("F3", System.Globalization.CultureInfo.InvariantCulture), io.Framerate.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)));
                         ImGui.Text(string.Format("Application (managed) memory usage {0} kB", GC.GetTotalMemory(false) / 1000));
+                        bool runGc = ImGui.Button("Run GC");
                         bool colorChanged = ImGui.ColorEdit4("Background Color", ref _backgroundColour);     // Edit 4 floats representing a color
                         bool wireFrameChanged = ImGui.Checkbox("WireFrame", ref _showWireFrame);     // Edit bool
                         ImGui.Checkbox("Show Demo", ref _imGuiShowDemo);     // Edit bool
@@ -205,6 +206,11 @@ namespace PetitMoteur3D
                             {
                                 _deviceD3D11.SetRasterizerState(_deviceD3D11.SolidCullBackRS);
                             }
+                        }
+
+                        if (runGc)
+                        {
+                            GC.Collect();
                         }
                     }
                     else
