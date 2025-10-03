@@ -44,10 +44,18 @@ namespace PetitMoteur3D
         private const double ECART_TEMPS_SCENE = (1.0 / (double)IMAGESPARSECONDE_SCENE) * 1000.0;
         private const double ECART_TEMPS_DEBUGTOOL = (1.0 / (double)IMAGESPARSECONDE_DEBUGTOOL) * 1000.0;
 
+        private static readonly Int64 _memoryAtStartUp;
         private static bool _initAnimationFinished = false;
+
+        static Program()
+        {
+            _memoryAtStartUp = GC.GetTotalMemory(false);
+        }
 
         static void Main(string[] args)
         {
+            System.Console.WriteLine("Memory created at statup = {0} kB", _memoryAtStartUp / 1000);
+            System.Console.WriteLine("Memory created at Main begin = {0} kB", GC.GetTotalMemory(false) / 1000);
             try
             {
                 _window = WindowManager.Create();
@@ -90,6 +98,7 @@ namespace PetitMoteur3D
 
         private static void OnLoad()
         {
+            System.Console.WriteLine("Memory created before init = {0} kB", GC.GetTotalMemory(false) / 1000);
             System.Console.WriteLine("OnLoad");
             InitRendering();
             System.Console.WriteLine("OnLoad InitRendering Finished");
@@ -101,6 +110,7 @@ namespace PetitMoteur3D
             System.Console.WriteLine("OnLoad InitInput Finished");
             InitDebugTools();
             System.Console.WriteLine("OnLoad InitDebugTools Finished");
+            System.Console.WriteLine("Memory created after init = {0} kB", GC.GetTotalMemory(false) / 1000);
         }
 
         private static void OnClosing()
@@ -159,6 +169,7 @@ namespace PetitMoteur3D
                         ImGui.Text("Hello, world!");
                         ImGui.SliderFloat("float", ref f, 0.0f, 1.0f);
                         ImGui.Text(string.Format("Application average {0} ms/frame ({1} FPS)", (1000.0f / io.Framerate).ToString("F3", System.Globalization.CultureInfo.InvariantCulture), io.Framerate.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)));
+                        ImGui.Text(string.Format("Application (managed) memory usage {0} kB", GC.GetTotalMemory(false) / 1000));
                         bool colorChanged = ImGui.ColorEdit4("Background Color", ref _backgroundColour);     // Edit 4 floats representing a color
                         bool wireFrameChanged = ImGui.Checkbox("WireFrame", ref _showWireFrame);     // Edit bool
                         ImGui.Checkbox("Show Demo", ref _imGuiShowDemo);     // Edit bool
