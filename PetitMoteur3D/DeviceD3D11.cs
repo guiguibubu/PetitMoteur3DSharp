@@ -110,10 +110,7 @@ namespace PetitMoteur3D
 
         public unsafe void BeforePresent()
         {
-            // On efface la surface de rendu
-            _deviceContext.ClearRenderTargetView(_renderTargetView, _backgroundColour.AsSpan());
-            // On ré-initialise le tampon de profondeur
-            _deviceContext.ClearDepthStencilView(_depthStencilView, (uint)ClearFlag.Depth, 1.0f, 0);
+            ClearRenderTarget();
         }
 
         public void Present()
@@ -132,7 +129,9 @@ namespace PetitMoteur3D
             _deviceContext.ClearState();
 
             _renderTargetView.Dispose();
-
+            _depthTexture.Dispose();
+            _depthStencilView.Dispose();
+            
             SilkMarshal.ThrowHResult(
                 _swapchain.ResizeBuffers(0, 0, 0, Format.FormatB8G8R8A8Unorm, (uint)SwapChainFlag.AllowModeSwitch)
             );
@@ -223,6 +222,7 @@ namespace PetitMoteur3D
             }
 #endif
         }
+        
         private unsafe void InitSwapChain(IWindow window, bool forceDxvk)
         {
             InitSwapChain(window.Size.X, window.Size.Y, window.Native!.DXHandle!.Value, forceDxvk);
@@ -271,21 +271,7 @@ namespace PetitMoteur3D
 
         private unsafe void InitView(IWindow window)
         {
-            // Create « render target view » 
-            // Obtain the framebuffer for the swapchain's backbuffer.
-            InitRenderTargetView();
-
-            // Create de depth stenci view
-            InitDepthBuffer(window);
-
-            // Tell the output merger about our render target view.
-            _deviceContext.OMSetRenderTargets(1, ref _renderTargetView, _depthStencilView);
-            _deviceContext.ClearRenderTargetView(_renderTargetView, _backgroundColour.AsSpan());
-            _deviceContext.ClearDepthStencilView(_depthStencilView, (uint)ClearFlag.Depth, 1.0f, 0);
-
-            // Set the rasterizer state with the current viewport.
-            Viewport viewport = new(0, 0, _window.Size.X, _window.Size.Y, 0, 1);
-            _deviceContext.RSSetViewports(1, in viewport);
+            InitView(window.Size.X, window.Size.Y);
         }
 
         private unsafe void InitView(int width, int height)
@@ -297,10 +283,7 @@ namespace PetitMoteur3D
             // Create de depth stenci view
             InitDepthBuffer(width, height);
 
-            // Tell the output merger about our render target view.
-            _deviceContext.OMSetRenderTargets(1, ref _renderTargetView, _depthStencilView);
-            _deviceContext.ClearRenderTargetView(_renderTargetView, _backgroundColour.AsSpan());
-            _deviceContext.ClearDepthStencilView(_depthStencilView, (uint)ClearFlag.Depth, 1.0f, 0);
+            SetRenderTarget();
 
             // Set the rasterizer state with the current viewport.
             Viewport viewport = new(0, 0, width, height, 0, 1);
@@ -349,6 +332,24 @@ namespace PetitMoteur3D
             SilkMarshal.ThrowHResult(
                 _device.CreateDepthStencilView(_depthTexture, in descDSView, ref _depthStencilView)
             );
+        }
+
+        private unsafe void ClearRenderTarget()
+        {
+            // On efface la surface de rendu
+            _deviceContext.ClearRenderTargetView(_renderTargetView, _backgroundColour.AsSpan());
+            // On ré-initialise le tampon de profondeur
+            _deviceContext.ClearDepthStencilView(_depthStencilView, (uint)ClearFlag.Depth, 1.0f, 0);
+        }
+
+        private void SetRenderTarget(bool clear = true)
+        {
+            // Tell the output merger about our render target view.
+            _deviceContext.OMSetRenderTargets(1, ref _renderTargetView, _depthStencilView);
+            if (clear)
+            {
+                ClearRenderTarget();
+            }
         }
     }
 }
