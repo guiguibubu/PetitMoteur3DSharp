@@ -1,4 +1,3 @@
-using System;
 using Silk.NET.Maths;
 
 namespace PetitMoteur3D.Camera
@@ -14,6 +13,6 @@ namespace PetitMoteur3D.Camera
         /// Get the current view matrix
         /// </summary>
         /// <returns></returns>
-        Matrix4X4<float> GetViewMatrix();
+        void GetViewMatrix(out Matrix4X4<float> viewMatrix);
     }
 }

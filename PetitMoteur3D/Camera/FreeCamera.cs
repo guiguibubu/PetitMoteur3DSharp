@@ -3,7 +3,7 @@ using Silk.NET.Maths;
 
 namespace PetitMoteur3D.Camera
 {
-    internal struct FreeCamera : ICamera, IRotationObjet
+    internal class FreeCamera : ICamera, IRotationObjet
     {
         /// <summary>
         /// Champ vision
@@ -11,13 +11,16 @@ namespace PetitMoteur3D.Camera
         public float ChampVision { get; init; }
 
         /// <inheritdoc/>
-        public Vector3D<float> Position { get; private set; }
+        public ref readonly Vector3D<float> Position => ref _position;
 
         /// <summary>
         /// Rotation de la vue de la caméra par rapport à l'axe +Z
         /// <summary>
-        public Vector3D<float> Rotation { get; private set; }
+        public ref readonly Vector3D<float> Rotation => ref _rotation;
 
+        private Vector3D<float> _position;
+        private Vector3D<float> _rotation;
+        
         /// <summary>
         /// Constructeur par defaut
         /// </summary>
@@ -40,33 +43,37 @@ namespace PetitMoteur3D.Camera
         /// </summary>
         /// <param name="position"></param>
         /// <param name="rotation"></param>
-        public FreeCamera(float champVision, Vector3D<float> position, Vector3D<float> rotation)
+        public FreeCamera(float champVision, ref readonly Vector3D<float> position, ref readonly Vector3D<float> rotation)
         {
             ChampVision = champVision;
-            Position = position;
-            Rotation = rotation;
+            _position = position;
+            _rotation = rotation;
         }
 
         /// <inheritdoc/>
-        public Vector3D<float> Move(Vector3D<float> move)
+        public ref readonly Vector3D<float> Move(ref readonly Vector3D<float> move)
         {
-            Position += move;
-            return Position;
+            _position.X += move.X;
+            _position.Y += move.Y;
+            _position.Z += move.Z;
+            return ref _position;
         }
 
         /// <inheritdoc/>
-        public Vector3D<float> Rotate(Vector3D<float> rotation)
+        public ref readonly Vector3D<float> Rotate(ref readonly Vector3D<float> rotation)
         {
-            Rotation += rotation;
-            return Rotation;
+            _rotation.X += rotation.X;
+            _rotation.Y += rotation.Y;
+            _rotation.Z += rotation.Z;
+            return ref _rotation;
         }
 
-        public Matrix4X4<float> GetViewMatrix()
+        public void GetViewMatrix(out Matrix4X4<float> viewMatrix)
         {
-            Vector3D<float> cameraDirection = Rotation * Vector3D<float>.UnitZ;
-            Vector3D<float> cameraTarget = Position + cameraDirection;
-            Vector3D<float> cameraUpVector = Rotation * Vector3D<float>.UnitY;
-            return CameraHelper.CreateLookAtLH(Position, cameraTarget, cameraUpVector);
+            Vector3D<float> cameraDirection = _rotation * Vector3D<float>.UnitZ;
+            Vector3D<float> cameraTarget = _position + cameraDirection;
+            Vector3D<float> cameraUpVector = _rotation * Vector3D<float>.UnitY;
+            viewMatrix = CameraHelper.CreateLookAtLH(in _position, in cameraTarget, in cameraUpVector);
         }
     }
 }

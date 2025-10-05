@@ -56,7 +56,7 @@ namespace PetitMoteur3D.DebugGui
         /// <summary>
         /// Constructs a new ImGuiController.
         /// </summary>
-        public ImGuiController(DeviceD3D11 renderDevice, GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, GraphicPipelineFactory pipelineFactory, IView view, IInputContext input) 
+        public ImGuiController(DeviceD3D11 renderDevice, GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, GraphicPipelineFactory pipelineFactory, IView view, IInputContext input)
             : this(new ImGuiImplDX11(renderDevice, graphicDeviceRessourceFactory, pipelineFactory), view, input, null)
         {
         }
@@ -91,7 +91,7 @@ namespace PetitMoteur3D.DebugGui
             _keyboard = _input.Keyboards[0];
             InitCallbacks();
 
-            _backendRenderer.Init(io);
+            _backendRenderer.Init(in io);
 
             // Configure the OpenTelemetry MeterProvider
             _meterProvider = OpenTelemetry.Sdk.CreateMeterProviderBuilder()
@@ -194,7 +194,7 @@ namespace PetitMoteur3D.DebugGui
                 return;
             }
 
-            var oldCtx = ImGuiNET.ImGui.GetCurrentContext();
+            nint oldCtx = ImGuiNET.ImGui.GetCurrentContext();
 
             if (oldCtx != Context)
             {
@@ -208,7 +208,7 @@ namespace PetitMoteur3D.DebugGui
 
             ImGuiNET.ImGui.Render();
             ImDrawDataPtr drawDataPtr = ImGuiNET.ImGui.GetDrawData();
-            RenderImDrawData(drawDataPtr);
+            RenderImDrawData(in drawDataPtr);
 
 #if DEBUG && DEBUG_LOG_DRAW_COMMANDS
             uint totalIndexToDrawTemp = 0;
@@ -279,13 +279,14 @@ namespace PetitMoteur3D.DebugGui
         /// </summary>
         private void SetPerFrameImGuiData(float deltaSeconds)
         {
-            var io = ImGuiNET.ImGui.GetIO();
-            io.DisplaySize = new Vector2(_windowWidth, _windowHeight);
+            ImGuiIOPtr io = ImGuiNET.ImGui.GetIO();
+            io.DisplaySize.X = _windowWidth;
+            io.DisplaySize.Y = _windowHeight;
 
             if (_windowWidth > 0 && _windowHeight > 0)
             {
-                io.DisplayFramebufferScale = new Vector2(_view.FramebufferSize.X / _windowWidth,
-                    _view.FramebufferSize.Y / _windowHeight);
+                io.DisplayFramebufferScale.X = _view.FramebufferSize.X / _windowWidth;
+                io.DisplayFramebufferScale.Y = _view.FramebufferSize.Y / _windowHeight;
             }
 
             io.DeltaTime = deltaSeconds; // DeltaTime is in seconds.
@@ -301,8 +302,8 @@ namespace PetitMoteur3D.DebugGui
             io.MouseDown[1] = mouseState.IsButtonPressed(MouseButton.Right);
             io.MouseDown[2] = mouseState.IsButtonPressed(MouseButton.Middle);
 
-            var point = new Point((int)mouseState.Position.X, (int)mouseState.Position.Y);
-            io.MousePos = new Vector2(point.X, point.Y);
+            io.MousePos.X = (int)mouseState.Position.X;
+            io.MousePos.Y = (int)mouseState.Position.Y;
 
             ScrollWheel wheel = mouseState.ScrollWheels[0];
             io.MouseWheel = wheel.Y;
@@ -457,14 +458,16 @@ namespace PetitMoteur3D.DebugGui
             };
         }
 
-        private unsafe void RenderImDrawData(ImDrawDataPtr drawDataPtr)
+        private unsafe void RenderImDrawData(ref readonly ImDrawDataPtr drawDataPtr)
         {
-            int framebufferWidth = (int)(drawDataPtr.DisplaySize.X * drawDataPtr.FramebufferScale.X);
-            int framebufferHeight = (int)(drawDataPtr.DisplaySize.Y * drawDataPtr.FramebufferScale.Y);
+            ref Vector2 displaySize = ref drawDataPtr.DisplaySize;
+            ref Vector2 framebufferScale = ref drawDataPtr.FramebufferScale;
+            int framebufferWidth = (int)(displaySize.X * framebufferScale.X);
+            int framebufferHeight = (int)(displaySize.Y * framebufferScale.Y);
             if (framebufferWidth <= 0 || framebufferHeight <= 0)
                 return;
 
-            _backendRenderer.RenderDrawData(drawDataPtr);
+            _backendRenderer.RenderDrawData(in drawDataPtr);
         }
 
         private bool _disposed = false;

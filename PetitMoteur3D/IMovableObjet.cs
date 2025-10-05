@@ -12,6 +12,6 @@ namespace PetitMoteur3D
         /// </summary>
         /// <param name="move"></param>
         /// <returns>The new position</returns>
-        Vector3D<float> Move(Vector3D<float> move);
+        ref readonly Vector3D<float> Move(ref readonly Vector3D<float> move);
     }
 }

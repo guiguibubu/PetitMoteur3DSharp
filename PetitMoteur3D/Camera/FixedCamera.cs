@@ -6,7 +6,7 @@ namespace PetitMoteur3D.Camera
     /// <summary>
     /// Implemmentation for a camera fixed on a target position
     /// </summary>
-    internal struct FixedCamera : ICamera
+    internal class FixedCamera : ICamera
     {
         /// <summary>
         /// Champ vision
@@ -14,7 +14,9 @@ namespace PetitMoteur3D.Camera
         public float ChampVision { get; init; }
 
         /// <inheritdoc/>
-        public Vector3D<float> Position { get; private set; }
+        public ref readonly Vector3D<float> Position => ref _position;
+
+        private Vector3D<float> _position;
 
         /// <summary>
         /// The target of the camera.
@@ -25,7 +27,7 @@ namespace PetitMoteur3D.Camera
         /// Constructeur par defaut
         /// </summary>
         /// <param name="target"></param>
-        public FixedCamera(Vector3D<float> target) : this(target, (float)(Math.PI / 4))
+        public FixedCamera(ref readonly Vector3D<float> target) : this(in target, (float)(Math.PI / 4))
         {
 
         }
@@ -35,7 +37,7 @@ namespace PetitMoteur3D.Camera
         /// </summary>
         /// <param name="target"></param>
         /// <param name="champVision"></param>
-        public FixedCamera(Vector3D<float> target, float champVision) : this(target, champVision, Vector3D<float>.Zero)
+        public FixedCamera(ref readonly Vector3D<float> target, float champVision) : this(in target, champVision, Vector3D<float>.Zero)
         {
 
         }
@@ -46,25 +48,27 @@ namespace PetitMoteur3D.Camera
         /// <param name="target"></param>
         /// <param name="champVision"></param>
         /// <param name="position"></param>
-        public FixedCamera(Vector3D<float> target, float champVision, Vector3D<float> position)
+        public FixedCamera(ref readonly Vector3D<float> target, float champVision, ref readonly Vector3D<float> position)
         {
             _target = target;
             ChampVision = champVision;
-            Position = position;
+            _position = position;
         }
 
         /// <inheritdoc/>
-        public Vector3D<float> Move(Vector3D<float> move)
+        public ref readonly Vector3D<float> Move(ref readonly Vector3D<float> move)
         {
-            Position += move;
-            return Position;
+            _position.X += move.X;
+            _position.Y += move.Y;
+            _position.Z += move.Z;
+            return ref _position;
         }
 
-        public Matrix4X4<float> GetViewMatrix()
+        public void GetViewMatrix(out Matrix4X4<float> viewMatrix)
         {
-            Vector3D<float> cameraTarget = _target;
+            ref readonly Vector3D<float> cameraTarget = ref _target;
             Vector3D<float> cameraUpVector = Vector3D<float>.UnitY;
-            return CameraHelper.CreateLookAtLH(Position, cameraTarget, cameraUpVector);
+            viewMatrix = CameraHelper.CreateLookAtLH(in _position, in cameraTarget, in cameraUpVector);
         }
     }
 }

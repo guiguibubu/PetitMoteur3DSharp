@@ -7,6 +7,8 @@ using System;
 using System.Diagnostics;
 using System.Collections.Generic;
 using PetitMoteur3D.Camera;
+using Silk.NET.Core.Native;
+using Silk.NET.Direct3D11;
 
 namespace PetitMoteur3D
 {
@@ -198,13 +200,21 @@ namespace PetitMoteur3D
 
                         if (wireFrameChanged)
                         {
-                            if (_showWireFrame && _deviceD3D11.GetRasterizerState().Handle != _deviceD3D11.WireFrameCullBackRS.Handle)
+                            if (_showWireFrame)
                             {
-                                _deviceD3D11.SetRasterizerState(_deviceD3D11.WireFrameCullBackRS);
+                                _deviceD3D11.GetRasterizerState(out ComPtr<ID3D11RasterizerState> rasterizerState);
+                                if (rasterizerState.Handle != _deviceD3D11.WireFrameCullBackRS.Handle)
+                                {
+                                    _deviceD3D11.SetRasterizerState(in _deviceD3D11.WireFrameCullBackRS);
+                                }
                             }
-                            if (!_showWireFrame && _deviceD3D11.GetRasterizerState().Handle != _deviceD3D11.SolidCullBackRS.Handle)
+                            if (!_showWireFrame)
                             {
-                                _deviceD3D11.SetRasterizerState(_deviceD3D11.SolidCullBackRS);
+                                _deviceD3D11.GetRasterizerState(out ComPtr<ID3D11RasterizerState> rasterizerState);
+                                if (rasterizerState.Handle != _deviceD3D11.SolidCullBackRS.Handle)
+                                {
+                                    _deviceD3D11.SetRasterizerState(in _deviceD3D11.SolidCullBackRS);
+                                }
                             }
                         }
 
@@ -224,7 +234,7 @@ namespace PetitMoteur3D
         private static void OnFramebufferResize(Vector2D<int> newSize)
         {
             // If the window resizes, we need to be sure to update the swapchain's back buffers.
-            _deviceD3D11.Resize(newSize);
+            _deviceD3D11.Resize(in newSize);
 
             // Update projection matrix
             float largeurEcran = newSize.X;
@@ -248,7 +258,8 @@ namespace PetitMoteur3D
         private static void InitRendering()
         {
             _deviceD3D11 = new(_window);
-            _backgroundColour = _deviceD3D11.GetBackgroundColour().ToSystem();
+            _deviceD3D11.GetBackgroundColour(out Vector4D<float> backgroundCoclor);
+            _backgroundColour = backgroundCoclor.ToSystem();
             _graphicDeviceRessourceFactory = new GraphicDeviceRessourceFactory(_deviceD3D11.Device, _deviceD3D11.ShaderCompiler);
             _graphicPipelineFactory = new GraphicPipelineFactory(_deviceD3D11.Device);
             _meshLoader = new MeshLoader();
@@ -290,7 +301,7 @@ namespace PetitMoteur3D
 
             // Initialisation des matrices View et Proj
             // Dans notre cas, ces matrices sont fixes
-            _matView = _camera.GetViewMatrix();
+            _camera.GetViewMatrix(out _matView);
             float largeurEcran = _window.Size.X;
             float hauteurEcran = _window.Size.Y;
             float aspectRatio = largeurEcran / hauteurEcran;
@@ -362,9 +373,9 @@ namespace PetitMoteur3D
             BeginRender();
             if (_initAnimationFinished)
             {
-                _matView = _camera.GetViewMatrix();
+                _camera.GetViewMatrix(out _matView);
                 Matrix4X4<float> matViewProj = _matView * _matProj;
-                _scene.Draw(_deviceD3D11.DeviceContext, matViewProj);
+                _scene.Draw(in _deviceD3D11.DeviceContext, in matViewProj);
             }
         }
 

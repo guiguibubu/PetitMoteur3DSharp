@@ -12,6 +12,6 @@ namespace PetitMoteur3D
         /// </summary>
         /// <param name="rotation"></param>
         /// <returns>The new rotation</returns>
-        Vector3D<float> Rotate(Vector3D<float> rotation);
+        ref readonly Vector3D<float> Rotate(ref readonly Vector3D<float> rotation);
     }
 }

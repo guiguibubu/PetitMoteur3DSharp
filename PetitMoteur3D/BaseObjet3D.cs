@@ -11,11 +11,11 @@ namespace PetitMoteur3D
     internal abstract class BaseObjet3D : IObjet3D
     {
         /// <inheritdoc/>
-        public Vector3D<float> Position { get { return _position; } }
+        public ref readonly Vector3D<float> Position { get { return ref _position; } }
         /// <summary>
         /// Rotation de l'objet
         /// </summary>
-        public Vector3D<float> Rotation { get { return _rotation; } }
+        public ref readonly Vector3D<float> Rotation { get { return ref _rotation; } }
 
         private ComPtr<ID3D11Buffer> _vertexBuffer = default;
         private ComPtr<ID3D11Buffer> _indexBuffer = default;
@@ -84,17 +84,21 @@ namespace PetitMoteur3D
         }
 
         /// <inheritdoc/>
-        public Vector3D<float> Move(Vector3D<float> move)
+        public ref readonly Vector3D<float> Move(ref readonly Vector3D<float> move)
         {
-            _position += move;
-            return _position;
+            _position.X += move.X;
+            _position.Y += move.Y;
+            _position.Z += move.Z;
+            return ref _position;
         }
 
         /// <inheritdoc/>
-        public Vector3D<float> Rotate(Vector3D<float> rotation)
+        public ref readonly Vector3D<float> Rotate(ref readonly Vector3D<float> rotation)
         {
-            _rotation += rotation;
-            return rotation;
+            _rotation.X += rotation.X;
+            _rotation.Y += rotation.Y;
+            _rotation.Z += rotation.Z;
+            return ref _rotation;
         }
 
         /// <inheritdoc/>
@@ -106,7 +110,7 @@ namespace PetitMoteur3D
         }
 
         /// <inheritdoc/>
-        public unsafe void Draw(ComPtr<ID3D11DeviceContext> deviceContext, Matrix4X4<float> matViewProj)
+        public unsafe void Draw(ref readonly ComPtr<ID3D11DeviceContext> deviceContext, ref readonly Matrix4X4<float> matViewProj)
         {
             // Choisir la topologie des primitives
             deviceContext.IASetPrimitiveTopology(D3DPrimitiveTopology.D3D11PrimitiveTopologyTrianglelist);
@@ -120,7 +124,7 @@ namespace PetitMoteur3D
             foreach (SubObjet3D subObjet3D in GetSubObjets())
             {
                 // Initialiser et sélectionner les « constantes » des shaders
-                ObjectShadersParams shadersParams = _objectShadersParamsPool.Get();
+                _objectShadersParamsPool.Get(out ObjectShadersParams shadersParams);
                 shadersParams.matWorldViewProj = Matrix4X4.Transpose(subObjet3D.Transformation * _matWorld * matViewProj);
                 shadersParams.matWorld = Matrix4X4.Transpose(subObjet3D.Transformation * _matWorld);
                 shadersParams.ambiantMaterialValue = subObjet3D.Material.Ambient;
@@ -152,7 +156,7 @@ namespace PetitMoteur3D
                 // **** Rendu de l’objet
                 deviceContext.DrawIndexed((uint)_indices.Length, 0, 0);
 
-                _objectShadersParamsPool.Return(shadersParams);
+                _objectShadersParamsPool.Return(ref shadersParams);
             }
         }
 
@@ -203,7 +207,7 @@ namespace PetitMoteur3D
         private unsafe void InitTexture(TextureManager textureManager)
         {
             // Initialisation des paramètres de sampling de la texture
-            SamplerDesc samplerDesc = _shaderDescPool.Get();
+            _shaderDescPool.Get(out SamplerDesc samplerDesc);
             {
                 samplerDesc.Filter = Filter.Anisotropic;
                 samplerDesc.AddressU = TextureAddressMode.Wrap;
@@ -224,7 +228,7 @@ namespace PetitMoteur3D
             // Création de l’état de sampling
             _sampleState = textureManager.Factory.CreateSampler(samplerDesc, $"{_name}_SamplerState");
 
-            _shaderDescPool.Return(samplerDesc);
+            _shaderDescPool.Return(ref samplerDesc);
         }
 
         private unsafe void InitBuffers<TVertex, TIndice>(GraphicBufferFactory bufferFactory, TVertex[] sommets, TIndice[] indices)

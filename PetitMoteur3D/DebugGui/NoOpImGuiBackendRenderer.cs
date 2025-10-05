@@ -10,7 +10,7 @@ namespace PetitMoteur3D.DebugGui
             
         }
 
-        public bool Init(ImGuiIOPtr io)
+        public bool Init(ref readonly ImGuiIOPtr io)
         {
             io.Fonts.GetTexDataAsRGBA32(out nint _, out int _, out int _, out int _);
             return true;
@@ -21,9 +21,9 @@ namespace PetitMoteur3D.DebugGui
             
         }
 
-        public void RenderDrawData(ImDrawDataPtr drawData)
+        public void RenderDrawData(ref readonly ImDrawDataPtr drawData)
         {
-            
+
         }
     }
 }

@@ -5,7 +5,7 @@ namespace PetitMoteur3D.Camera
 {
     internal static class CameraHelper
     {
-        public static Matrix4X4<T> CreateLookAtLH<T>(Vector3D<T> cameraPosition, Vector3D<T> cameraTarget, Vector3D<T> cameraUpVector)
+        public static Matrix4X4<T> CreateLookAtLH<T>(ref readonly Vector3D<T> cameraPosition, ref readonly Vector3D<T> cameraTarget, ref readonly Vector3D<T> cameraUpVector)
            where T : unmanaged, IFormattable, IEquatable<T>, IComparable<T>
         {
             Vector3D<T> zaxis = Vector3D.Normalize(cameraTarget - cameraPosition);

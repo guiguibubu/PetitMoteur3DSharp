@@ -10,6 +10,6 @@ namespace PetitMoteur3D
         /// <summary>
         /// Position
         /// </summary>
-        Vector3D<float> Position { get; }
+        ref readonly Vector3D<float> Position { get; }
     }
 }

@@ -1,7 +1,6 @@
 // Uncomment to add a (heavy) check of buffer content (vertex and index buffer only for the moment)
 //#define DEBUG_BUFFERS 
 using System;
-using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using ImGuiNET;
@@ -36,6 +35,11 @@ namespace PetitMoteur3D.DebugGui
         private static readonly IObjectPool<Box2D<int>> _box2DPool = ObjectPoolFactory.Create(new Box2DResetter<int>());
         private static readonly IObjectPool<SamplerDesc> _shaderDescPool = ObjectPoolFactory.Create<SamplerDesc>(new DX11SamplerDescResetter());
         private static readonly IObjectPool<BackupDX11State> _backupDX11StatePool = ObjectPoolFactory.Create<BackupDX11State>();
+        private static readonly IObjectPool<Viewport> _viewPortPool = ObjectPoolFactory.Create<Viewport>(new ViewportResetter());
+
+        private static unsafe readonly uint VertexBufferStride = (uint)Unsafe.SizeOf<ImDrawVert>();
+        private static unsafe readonly uint IndexBufferStride = (uint)Unsafe.SizeOf<ImDrawIdx>();
+        private static readonly uint VertexBufferOffset = 0;
 
         public ImGuiImplDX11(DeviceD3D11 renderDevice, GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, GraphicPipelineFactory pipelineFactory)
         {
@@ -51,12 +55,12 @@ namespace PetitMoteur3D.DebugGui
             Dispose(disposing: false);
         }
 
-        public bool Init(ImGuiIOPtr io)
+        public bool Init(ref readonly ImGuiIOPtr io)
         {
-            return InitImpl(io, _renderDevice.Device, _renderDevice.DeviceContext);
+            return InitImpl(in io, in _renderDevice.Device, in _renderDevice.DeviceContext);
         }
 
-        private unsafe bool InitImpl(ImGuiIOPtr io, ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> deviceContext)
+        private unsafe bool InitImpl(ref readonly ImGuiIOPtr io, ref readonly ComPtr<ID3D11Device> device, ref readonly ComPtr<ID3D11DeviceContext> deviceContext)
         {
             if (io.BackendRendererUserData != IntPtr.Zero || _backendInitialized)
             {
@@ -129,10 +133,12 @@ namespace PetitMoteur3D.DebugGui
                 CreateDeviceObjects(_graphicDeviceRessourceFactory, _pipelineFactory);
         }
 
-        public unsafe void RenderDrawData(ImDrawDataPtr drawData)
+        public unsafe void RenderDrawData(ref readonly ImDrawDataPtr drawDataPtr)
         {
+            ref readonly ImDrawData drawData = ref Unsafe.AsRef<ImDrawData>(drawDataPtr.NativePtr);
+            ref readonly System.Numerics.Vector2 displaySize = ref drawData.DisplaySize;
             // Avoid rendering when minimized
-            if (drawData.DisplaySize.X <= 0.0f || drawData.DisplaySize.Y <= 0.0f)
+            if (displaySize.X <= 0.0f || displaySize.Y <= 0.0f)
                 return;
 
             ComPtr<ID3D11DeviceContext> deviceContext = _backendRendererUserData.D3dDeviceContext;
@@ -258,16 +264,20 @@ namespace PetitMoteur3D.DebugGui
                 int remainingVertexBufferSpace = _backendRendererUserData.VertexBufferSize;
                 int remainingIndexBufferSpace = _backendRendererUserData.IndexBufferSize;
 
-                for (int n = 0; n < drawData.CmdListsCount; n++)
+                Span<nint> cmdLists = new(drawData.CmdLists.Data.ToPointer(), drawData.CmdListsCount);
+                for (int n = 0; n < cmdLists.Length; n++)
                 {
-                    ImDrawListPtr cmdList = drawData.CmdLists[n];
+                    nint cmdListPtr = cmdLists[n];
+                    ref readonly ImDrawList cmdList = ref Unsafe.AsRef<ImDrawList>(cmdListPtr.ToPointer());
+                    ref readonly ImVector cmdVertexBuffer = ref cmdList.VtxBuffer;
+                    ref readonly ImVector cmdIndexBuffer = ref cmdList.IdxBuffer;
                     //MemoryCopy (void* source, void* destination, long destinationSizeInBytes, long sourceBytesToCopy)
-                    System.Buffer.MemoryCopy((void*)cmdList.VtxBuffer.Data, vertexDest, remainingVertexBufferSpace * sizeof(ImDrawVert), cmdList.VtxBuffer.Size * sizeof(ImDrawVert));
-                    System.Buffer.MemoryCopy((void*)cmdList.IdxBuffer.Data, indexDest, remainingIndexBufferSpace * sizeof(ImDrawIdx), cmdList.IdxBuffer.Size * sizeof(ImDrawIdx));
-                    remainingVertexBufferSpace -= cmdList.VtxBuffer.Size;
-                    remainingIndexBufferSpace -= cmdList.IdxBuffer.Size;
-                    vertexDest += cmdList.VtxBuffer.Size;
-                    indexDest += cmdList.IdxBuffer.Size;
+                    System.Buffer.MemoryCopy(cmdVertexBuffer.Data.ToPointer(), vertexDest, remainingVertexBufferSpace * VertexBufferStride, cmdVertexBuffer.Size * VertexBufferStride);
+                    System.Buffer.MemoryCopy(cmdIndexBuffer.Data.ToPointer(), indexDest, remainingIndexBufferSpace * IndexBufferStride, cmdIndexBuffer.Size * IndexBufferStride);
+                    remainingVertexBufferSpace -= cmdVertexBuffer.Size;
+                    remainingIndexBufferSpace -= cmdIndexBuffer.Size;
+                    vertexDest += cmdVertexBuffer.Size;
+                    indexDest += cmdIndexBuffer.Size;
                 }
 
                 deviceContext.Unmap(_backendRendererUserData.VertexBuffer, 0);
@@ -295,23 +305,26 @@ namespace PetitMoteur3D.DebugGui
             }
 
             // Saveold DX conf
-            BackupDX11State oldDxState = GetCurrentDX11State(deviceContext);
+            GetCurrentDX11State(in deviceContext, out BackupDX11State oldDxState);
 
             // Setup desired DX state
-            SetupRenderState(drawData, deviceContext);
+            SetupRenderState(in drawData, in deviceContext);
 
             // Render command lists
             // (Because we merged all buffers into a single one, we maintain our own offset into them)
             {
                 int globalIdxOffset = 0;
                 int globalVtxOffset = 0;
-                System.Numerics.Vector2 clipOff = drawData.DisplayPos;
-                for (int i = 0; i < drawData.CmdListsCount; i++)
+                ref readonly System.Numerics.Vector2 clipOff = ref drawData.DisplayPos;
+                Span<nint> cmdLists = new(drawData.CmdLists.Data.ToPointer(), drawData.CmdListsCount);
+                for (int i = 0; i < cmdLists.Length; i++)
                 {
-                    ImDrawListPtr cmdList = drawData.CmdLists[i];
-                    for (int j = 0; j < cmdList.CmdBuffer.Size; j++)
+                    nint cmdListPtr = cmdLists[i];
+                    ref readonly ImDrawList cmdList = ref Unsafe.AsRef<ImDrawList>(cmdListPtr.ToPointer());
+                    Span<ImDrawCmd> cmdBuffer = new(cmdList.CmdBuffer.Data.ToPointer(), cmdList.CmdBuffer.Size);
+                    for (int j = 0; j < cmdBuffer.Length; j++)
                     {
-                        ImDrawCmdPtr cmd = cmdList.CmdBuffer[j];
+                        ref readonly ImDrawCmd cmd = ref cmdBuffer[j];
                         if (cmd.UserCallback != IntPtr.Zero)
                         {
                             // User callback, registered via ImDrawList::AddCallback()
@@ -319,7 +332,7 @@ namespace PetitMoteur3D.DebugGui
                             // #define ImDrawCallback_ResetRenderState     (ImDrawCallback)(-8)
                             if (cmd.UserCallback == -8)
                             {
-                                SetupRenderState(drawData, deviceContext);
+                                SetupRenderState(in drawData, in deviceContext);
                             }
                             else
                             {
@@ -329,42 +342,52 @@ namespace PetitMoteur3D.DebugGui
                         else
                         {
                             // Project scissor/clipping rectangles into framebuffer space
-                            System.Numerics.Vector2 clipMin = _vector2Pool.Get();
+                            _vector2Pool.Get(out System.Numerics.Vector2 clipMin);
                             clipMin.X = cmd.ClipRect.X - clipOff.X;
                             clipMin.Y = cmd.ClipRect.Y - clipOff.Y;
 
-                            System.Numerics.Vector2 clipMax = _vector2Pool.Get();
+                            _vector2Pool.Get(out System.Numerics.Vector2 clipMax);
                             clipMax.X = cmd.ClipRect.Z - clipOff.X;
                             clipMax.Y = cmd.ClipRect.W - clipOff.Y;
                             if (clipMax.X <= clipMin.X || clipMax.Y <= clipMin.Y)
                                 continue;
 
                             // Apply scissor/clipping rectangle
-                            Box2D<int> r = _box2DPool.Get();
+                            _box2DPool.Get(out Box2D<int> r);
                             r.Min.X = (int)clipMin.X;
                             r.Min.Y = (int)clipMin.Y;
                             r.Max.X = (int)clipMax.X;
                             r.Max.Y = (int)clipMax.Y;
                             deviceContext.RSSetScissorRects(1, ref r);
 
+                            _vector2Pool.Return(ref clipMin);
+                            _vector2Pool.Return(ref clipMax);
+                            _box2DPool.Return(ref r);
+
                             // Bind texture, Draw
-                            ID3D11ShaderResourceView* texture_srv = (ID3D11ShaderResourceView*)cmd.GetTexID();
-                            deviceContext.PSSetShaderResources(0, 1, in texture_srv);
+                            fixed (ImDrawCmd* cmdPtr = &cmd)
+                            {
+                                ID3D11ShaderResourceView* texture_srv = (ID3D11ShaderResourceView*)ImGuiNative.ImDrawCmd_GetTexID(cmdPtr);
+                                deviceContext.PSSetShaderResources(0, 1, in texture_srv);
+                            }
                             uint nbIndexToDraw = cmd.ElemCount;
                             uint indexOffset = (uint)(cmd.IdxOffset + globalIdxOffset);
                             int baseVertexLocation = (int)(cmd.VtxOffset + globalVtxOffset);
                             deviceContext.DrawIndexed(nbIndexToDraw, indexOffset, baseVertexLocation);
                         }
                     }
-                    globalIdxOffset += cmdList.IdxBuffer.Size;
-                    globalVtxOffset += cmdList.VtxBuffer.Size;
+                    ref readonly ImVector cmdVertexBuffer = ref cmdList.VtxBuffer;
+                    ref readonly ImVector cmdIndexBuffer = ref cmdList.IdxBuffer;
+
+                    globalIdxOffset += cmdIndexBuffer.Size;
+                    globalVtxOffset += cmdVertexBuffer.Size;
                 }
             }
 
             // Restore modified DX state
-            SetDX11State(deviceContext, oldDxState);
+            SetDX11State(in deviceContext, ref oldDxState);
 
-            oldDxState.Dispose();
+            _backupDX11StatePool.Return(ref oldDxState);
         }
 
         private unsafe bool CreateDeviceObjects(GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, GraphicPipelineFactory pipelineFactory)
@@ -421,7 +444,7 @@ namespace PetitMoteur3D.DebugGui
             // Create texture sampler
             // (Bilinear sampling is required by default. Set 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false' to allow point/nearest sampling)
             {
-                SamplerDesc desc = _shaderDescPool.Get();
+                _shaderDescPool.Get(out SamplerDesc desc);
                 desc.Filter = Filter.MinMagMipLinear;
                 desc.AddressU = TextureAddressMode.Wrap;
                 desc.AddressV = TextureAddressMode.Wrap;
@@ -433,6 +456,8 @@ namespace PetitMoteur3D.DebugGui
                 desc.MaxLOD = float.MaxValue;
 
                 _backendRendererUserData.FontSampler = textureManager.Factory.CreateSampler(desc, "ImGuiFontSampler");
+
+                _shaderDescPool.Return(ref desc);
             }
         }
 
@@ -573,25 +598,24 @@ namespace PetitMoteur3D.DebugGui
             return true;
         }
 
-        private unsafe void SetupRenderState(ImDrawDataPtr drawData, ComPtr<ID3D11DeviceContext> deviceContext)
+        private unsafe void SetupRenderState(ref readonly ImDrawData drawData, ref readonly ComPtr<ID3D11DeviceContext> deviceContext)
         {
             // Setup viewport
-            Viewport viewPort = new()
-            {
-                Width = drawData.DisplaySize.X,
-                Height = drawData.DisplaySize.Y,
-                MinDepth = 0f,
-                MaxDepth = 1f,
-                TopLeftX = 0f,
-                TopLeftY = 0f
-            };
+            _viewPortPool.Get(out Viewport viewPort);
+            viewPort.Width = drawData.DisplaySize.X;
+            viewPort.Height = drawData.DisplaySize.Y;
+            viewPort.MinDepth = 0f;
+            viewPort.MaxDepth = 1f;
+            viewPort.TopLeftX = 0f;
+            viewPort.TopLeftY = 0f;
             deviceContext.RSSetViewports(1, ref viewPort);
 
+            _viewPortPool.Return(ref viewPort);
+
             // Setup shader and vertex buffers
-            uint stride = (uint)sizeof(ImDrawVert);
-            uint offset = 0;
+
             deviceContext.IASetInputLayout(_backendRendererUserData.InputLayout);
-            deviceContext.IASetVertexBuffers(0, 1, ref _backendRendererUserData.VertexBuffer, ref stride, ref offset);
+            deviceContext.IASetVertexBuffers(0, 1, ref _backendRendererUserData.VertexBuffer, in VertexBufferStride, in VertexBufferOffset);
             deviceContext.IASetIndexBuffer(_backendRendererUserData.IndexBuffer, sizeof(ImDrawIdx) == 2 ? Format.FormatR16Uint : Format.FormatR32Uint, 0);
             deviceContext.IASetPrimitiveTopology(D3DPrimitiveTopology.D3D11PrimitiveTopologyTrianglelist);
             deviceContext.VSSetShader(_backendRendererUserData.VertexShader, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
@@ -610,9 +634,9 @@ namespace PetitMoteur3D.DebugGui
             deviceContext.RSSetState(_backendRendererUserData.RasterizerState);
         }
 
-        private BackupDX11State GetCurrentDX11State(ComPtr<ID3D11DeviceContext> deviceContext)
+        private void GetCurrentDX11State(ref readonly ComPtr<ID3D11DeviceContext> deviceContext, out BackupDX11State curentState)
         {
-            BackupDX11State curentState = _backupDX11StatePool.Get();
+            _backupDX11StatePool.Get(out curentState);
             deviceContext.RSGetScissorRects(ref curentState.ScissorRectsCount, ref curentState.ScissorRects.Value);
             deviceContext.RSGetViewports(ref curentState.ViewportsCount, ref curentState.Viewports.Value);
             deviceContext.RSGetState(ref curentState.RasterizerState);
@@ -628,10 +652,9 @@ namespace PetitMoteur3D.DebugGui
             deviceContext.IAGetIndexBuffer(ref curentState.IndexBuffer, ref curentState.IndexBufferFormat, ref curentState.IndexBufferOffset);
             deviceContext.IAGetVertexBuffers(0, 1, ref curentState.VertexBuffer, ref curentState.VertexBufferStride, ref curentState.VertexBufferOffset);
             deviceContext.IAGetInputLayout(ref curentState.InputLayout);
-            return curentState;
         }
 
-        private unsafe void SetDX11State(ComPtr<ID3D11DeviceContext> deviceContext, BackupDX11State newDxState)
+        private unsafe void SetDX11State(ref readonly ComPtr<ID3D11DeviceContext> deviceContext, ref BackupDX11State newDxState)
         {
             deviceContext.RSSetScissorRects(newDxState.ScissorRectsCount, newDxState.ScissorRects);
             deviceContext.RSSetViewports(newDxState.ViewportsCount, newDxState.Viewports);

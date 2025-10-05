@@ -13,13 +13,13 @@ namespace PetitMoteur3D
 {
     internal class DeviceD3D11
     {
-        public ComPtr<ID3D11Device> Device { get { return _device; } }
-        public ComPtr<ID3D11DeviceContext> DeviceContext { get { return _deviceContext; } }
-        public ComPtr<IDXGISwapChain1> Swapchain { get { return _swapchain; } }
-        public ComPtr<ID3D11RenderTargetView> RenderTargetView { get { return _renderTargetView; } }
-        public ComPtr<ID3D11DepthStencilView> DepthStencilView { get { return _depthStencilView; } }
-        public ComPtr<ID3D11RasterizerState> SolidCullBackRS { get { return _solidCullBackRS; } }
-        public ComPtr<ID3D11RasterizerState> WireFrameCullBackRS { get { return _wireFrameCullBackRS; } }
+        public ref ComPtr<ID3D11Device> Device { get { return ref _device; } }
+        public ref ComPtr<ID3D11DeviceContext> DeviceContext { get { return ref _deviceContext; } }
+        public ref ComPtr<IDXGISwapChain1> Swapchain { get { return ref _swapchain; } }
+        public ref ComPtr<ID3D11RenderTargetView> RenderTargetView { get { return ref _renderTargetView; } }
+        public ref ComPtr<ID3D11DepthStencilView> DepthStencilView { get { return ref _depthStencilView; } }
+        public ref ComPtr<ID3D11RasterizerState> SolidCullBackRS { get { return ref _solidCullBackRS; } }
+        public ref ComPtr<ID3D11RasterizerState> WireFrameCullBackRS { get { return ref _wireFrameCullBackRS; } }
         public D3DCompiler ShaderCompiler { get { return _compiler; } }
 
         private ComPtr<ID3D11Device> _device;
@@ -120,7 +120,7 @@ namespace PetitMoteur3D
             );
         }
 
-        public unsafe void Resize(Vector2D<int> size)
+        public unsafe void Resize(ref readonly Vector2D<int> size)
         {
             if (size.X == _window.Size.X && size.Y == _window.Size.Y)
             {
@@ -160,9 +160,9 @@ namespace PetitMoteur3D
             }
         }
 
-        public Vector4D<float> GetBackgroundColour()
+        public void GetBackgroundColour(out Vector4D<float> backgroundColour)
         {
-            return new Vector4D<float>(_backgroundColour[0], _backgroundColour[1], _backgroundColour[2], _backgroundColour[3]);
+            backgroundColour = new Vector4D<float>(_backgroundColour[0], _backgroundColour[1], _backgroundColour[2], _backgroundColour[3]);
         }
 
         public void SetBackgroundColour(float r, float g, float b, float a)
@@ -173,14 +173,13 @@ namespace PetitMoteur3D
             _backgroundColour[3] = a;
         }
 
-        public ComPtr<ID3D11RasterizerState> GetRasterizerState()
+        public void GetRasterizerState(out ComPtr<ID3D11RasterizerState> result)
         {
-            ComPtr<ID3D11RasterizerState> result = null;
+            result = null;
             _deviceContext.RSGetState(ref result);
-            return result;
         }
 
-        public unsafe void SetRasterizerState(ComPtr<ID3D11RasterizerState> rsState)
+        public unsafe void SetRasterizerState(ref readonly ComPtr<ID3D11RasterizerState> rsState)
         {
             if (rsState.Handle is null)
             {

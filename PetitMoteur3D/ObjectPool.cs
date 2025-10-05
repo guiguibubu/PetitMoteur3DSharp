@@ -1,85 +1,65 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Linq;
 
 namespace PetitMoteur3D
 {
-    internal interface IObjectPool<T>
+    public delegate void ObjectReseterDelegate<T>(ref T instance) where T : struct;
+
+    internal interface IObjectPool<T> where T : struct
     {
-        T Get();
-        void Return(T item);
+        void Get(out T item);
+        void Return(ref T item);
     }
 
     internal static class ObjectPoolFactory
     {
-        public static IObjectPool<T> Create<T>() where T : IResetable, new()
+        public static IObjectPool<T> Create<T>() where T : struct, IResetable
         {
-            return new ObjectPoolNoParameterConstructorResetable<T>();
+            return new BaseObjectPoolImpl<T>((ref T item) => item.Reset());
         }
 
-        public static IObjectPool<T> Create<T>(Action<T> objectResetFunc) where T : new()
+        public static IObjectPool<T> Create<T>(ObjectReseterDelegate<T> objectResetFunc) where T : struct
         {
-            return new ObjectPoolNoParameterConstructor<T>(objectResetFunc);
+            return new BaseObjectPoolImpl<T>(objectResetFunc);
         }
 
-        public static IObjectPool<T> Create<T>(IIResetter<T> resetter) where T : new()
+        public static IObjectPool<T> Create<T>(IIResetter<T> resetter) where T : struct
         {
-            return new ObjectPoolNoParameterConstructor<T>(resetter);
+            return new BaseObjectPoolImpl<T>(resetter);
         }
 
-        public static IObjectPool<T> Create<T>(Func<T> objectGenerator) where T : IResetable
-        {
-            return new ObjectPoolResetable<T>(objectGenerator);
-        }
-
-        public static IObjectPool<T> Create<T>(Func<T> objectGenerator, Action<T> objectResetFunc)
-        {
-            return new BaseObjectPoolImpl<T>(objectGenerator, objectResetFunc);
-        }
-
-        public static IObjectPool<T> Create<T>(Func<T> objectGenerator, IIResetter<T> resetter)
-        {
-            return new BaseObjectPoolImpl<T>(objectGenerator, resetter);
-        }
-
-        private class BaseObjectPoolImpl<T> : IObjectPool<T>, IDisposable
+        private class BaseObjectPoolImpl<T> : IObjectPool<T>, IDisposable where T : struct
         {
             private readonly ConcurrentBag<T> _objects;
-            private readonly Func<T> _objectGenerator;
-            private readonly Action<T> _objectResetFunc;
+            private readonly ObjectReseterDelegate<T> _objectResetFunc;
 
-            public BaseObjectPoolImpl(Func<T> objectGenerator, Action<T> objectResetFunc)
+            public BaseObjectPoolImpl(ObjectReseterDelegate<T> objectResetFunc)
             {
-                ArgumentNullException.ThrowIfNull(objectGenerator);
                 ArgumentNullException.ThrowIfNull(objectResetFunc);
-                _objectGenerator = objectGenerator;
                 _objectResetFunc = objectResetFunc;
                 _objects = new ConcurrentBag<T>();
             }
 
-            public BaseObjectPoolImpl(Func<T> objectGenerator, IIResetter<T> resetter)
-                : this(objectGenerator, (T item) => resetter.Reset(ref item))
+            public BaseObjectPoolImpl(IIResetter<T> resetter)
+                : this((ref T item) => resetter.Reset(ref item))
             { }
 
-            public T Get()
+            public void Get(out T item)
             {
-                if (_objects.TryTake(out T? item))
+                if (_objects.TryTake(out item))
                 {
-                    _objectResetFunc.Invoke(item);
+                    _objectResetFunc.Invoke(ref item);
                     //ResetMemory(item);
                     GC.ReRegisterForFinalize(item!);
-                    return item;
                 }
                 else
                 {
-                    return _objectGenerator();
+                    item = new();
                 }
             }
 
-            public void Return(T item)
+            public void Return(ref T item)
             {
-                if (item is null)
-                    return;
                 GC.SuppressFinalize(item);
                 _objects.Add(item);
             }
@@ -122,7 +102,7 @@ namespace PetitMoteur3D
                     // If disposing is false,
                     // only the following code is executed.
 
-                    foreach (T item in _objects.Where(o => o is not null))
+                    foreach (T item in _objects)
                     {
                         GC.ReRegisterForFinalize(item!);
                     }
@@ -130,30 +110,6 @@ namespace PetitMoteur3D
                     // Note disposing has been done.
                     _disposed = true;
                 }
-            }
-        }
-
-        private class ObjectPoolNoParameterConstructor<T> : BaseObjectPoolImpl<T> where T : new()
-        {
-            public ObjectPoolNoParameterConstructor(Action<T> objectResetFunc) : base(() => new T(), objectResetFunc)
-            {
-            }
-            public ObjectPoolNoParameterConstructor(IIResetter<T> resetter) : base(() => new T(), (T item) => resetter.Reset(ref item))
-            {
-            }
-        }
-
-        private class ObjectPoolResetable<T> : BaseObjectPoolImpl<T> where T : IResetable
-        {
-            public ObjectPoolResetable(Func<T> objectGenerator) : base(objectGenerator, (T item) => item.Reset())
-            {
-            }
-        }
-
-        private class ObjectPoolNoParameterConstructorResetable<T> : BaseObjectPoolImpl<T> where T : IResetable, new()
-        {
-            public ObjectPoolNoParameterConstructorResetable() : base(() => new T(), (T item) => item.Reset())
-            {
             }
         }
     }

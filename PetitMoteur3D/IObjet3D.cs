@@ -16,6 +16,6 @@ namespace PetitMoteur3D
         /// </summary>
         /// <param name="deviceContext"></param>
         /// <param name="matViewProj"></param>
-        void Draw(ComPtr<ID3D11DeviceContext> deviceContext, Matrix4X4<float> matViewProj);
+        void Draw(ref readonly ComPtr<ID3D11DeviceContext> deviceContext, ref readonly Matrix4X4<float> matViewProj);
     }
 }
