@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Silk.NET.Maths;
 
@@ -35,12 +36,7 @@ namespace PetitMoteur3D
 
         public void Reset()
         {
-            matWorldViewProj = Matrix4X4<float>.Identity;
-            matWorld = Matrix4X4<float>.Identity;
-            ambiantMaterialValue = Vector4D<float>.Zero;
-            diffuseMaterialValue = Vector4D<float>.Zero;
-            hasTexture = 0;
-            hasNormalMap = 0;
+            MemoryHelper.ResetMemory(this);
         }
     }
 }

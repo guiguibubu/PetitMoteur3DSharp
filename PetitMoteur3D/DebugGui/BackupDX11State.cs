@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
 using Silk.NET.DXGI;
@@ -13,15 +14,15 @@ namespace PetitMoteur3D.DebugGui
     /// <remarks>
     /// Adapted from BACKUP_DX11_STATE struct in official ImGui code (https://github.com/ocornut/imgui/blob/master/backends/imgui_impl_dx11.cpp)
     /// </remarks>
-    internal struct BackupDX11State : IComVtbl<BackupDX11State>, IDisposable
+    internal struct BackupDX11State : IComVtbl<BackupDX11State>, IResetable, IDisposable
     {
         public uint ScissorRectsCount = D3D11.ViewportAndScissorrectObjectCountPerPipeline;
         public uint ViewportsCount = D3D11.ViewportAndScissorrectObjectCountPerPipeline;
-        public Box2D<int>[] ScissorRects = new Box2D<int>[D3D11.ViewportAndScissorrectObjectCountPerPipeline];
-        public Viewport[] Viewports = new Viewport[D3D11.ViewportAndScissorrectObjectCountPerPipeline];
+        public ScissorRectsBufferType ScissorRects;
+        public ViewportsBufferType Viewports;
         public ComPtr<ID3D11RasterizerState> RasterizerState = null;
         public ComPtr<ID3D11BlendState> BlendState = null;
-        public float[] BlendFactor = new float[4];
+        public BlendFactorBufferType BlendFactor;
         public uint SampleMask = 0;
         public uint StencilRef = 0;
         public ComPtr<ID3D11DepthStencilState> DepthStencilState = null;
@@ -134,6 +135,58 @@ namespace PetitMoteur3D.DebugGui
                 // Note disposing has been done.
                 _disposed = true;
             }
+        }
+
+        public void Reset()
+        {
+            ScissorRectsCount = D3D11.ViewportAndScissorrectObjectCountPerPipeline;
+            ViewportsCount = D3D11.ViewportAndScissorrectObjectCountPerPipeline;
+            MemoryHelper.ResetMemory(ScissorRects);
+            MemoryHelper.ResetMemory(Viewports);
+            RasterizerState = null;
+            BlendState = null;
+            MemoryHelper.ResetMemory(BlendFactor);
+            SampleMask = 0;
+            StencilRef = 0;
+            DepthStencilState = null;
+            PSShaderResource = null;
+            PSSampler = null;
+            PixelShader = null;
+            VertexShader = null;
+            GeometryShader = null;
+            PSInstancesCount = MAX_COUNT_INSTANCES_SHADER;
+            VSInstancesCount = MAX_COUNT_INSTANCES_SHADER;
+            GSInstancesCount = MAX_COUNT_INSTANCES_SHADER;
+            PSInstances = null;
+            VSInstances = null;
+            GSInstances = null;
+            PrimitiveTopology = D3DPrimitiveTopology.D3D11PrimitiveTopologyUndefined;
+            IndexBuffer = null;
+            VertexBuffer = null;
+            VSConstantBuffer = null;
+            IndexBufferOffset = 0;
+            VertexBufferStride = 0;
+            VertexBufferOffset = 0;
+            IndexBufferFormat = Format.FormatUnknown;
+            InputLayout = null;
+        }
+
+        [System.Runtime.CompilerServices.InlineArray(D3D11.ViewportAndScissorrectObjectCountPerPipeline)]
+        public struct ScissorRectsBufferType
+        {
+            public Box2D<int> Value;
+        }
+
+        [System.Runtime.CompilerServices.InlineArray(4)]
+        public struct BlendFactorBufferType
+        {
+            public float Value;
+        }
+
+        [System.Runtime.CompilerServices.InlineArray(D3D11.ViewportAndScissorrectObjectCountPerPipeline)]
+        public struct ViewportsBufferType
+        {
+            public Viewport Value;
         }
     }
 }

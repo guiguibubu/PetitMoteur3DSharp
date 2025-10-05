@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Linq;
-using System.Runtime.CompilerServices;
 
 namespace PetitMoteur3D
 {
@@ -66,6 +65,8 @@ namespace PetitMoteur3D
             {
                 if (_objects.TryTake(out T? item))
                 {
+                    _objectResetFunc.Invoke(item);
+                    //ResetMemory(item);
                     GC.ReRegisterForFinalize(item!);
                     return item;
                 }
@@ -79,17 +80,8 @@ namespace PetitMoteur3D
             {
                 if (item is null)
                     return;
-                //_objectResetFunc.Invoke(item);
-                ResetMemory(item);
                 GC.SuppressFinalize(item);
                 _objects.Add(item);
-            }
-
-            private void ResetMemory(T item)
-            {
-                ref T managedRef = ref item;
-                ref byte starAdress = ref Unsafe.As<T, byte>(ref managedRef); // reinterpret as managed pointer to Int16
-                Unsafe.InitBlock(ref starAdress, 0, (uint)Unsafe.SizeOf<T>());
             }
 
             private bool _disposed = false;

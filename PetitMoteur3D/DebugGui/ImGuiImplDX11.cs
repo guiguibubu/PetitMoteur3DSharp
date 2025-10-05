@@ -30,9 +30,12 @@ namespace PetitMoteur3D.DebugGui
 
         private readonly DeviceD3D11 _renderDevice;
         private readonly GraphicDeviceRessourceFactory _graphicDeviceRessourceFactory;
-        private readonly ShaderManager _shaderManager;
-        private readonly TextureManager _textureManager;
         private readonly GraphicPipelineFactory _pipelineFactory;
+
+        private static readonly IObjectPool<System.Numerics.Vector2> _vector2Pool = ObjectPoolFactory.Create(new Vector2Resetter());
+        private static readonly IObjectPool<Box2D<int>> _box2DPool = ObjectPoolFactory.Create(new Box2DResetter<int>());
+        private static readonly IObjectPool<SamplerDesc> _shaderDescPool = ObjectPoolFactory.Create<SamplerDesc>(new DX11SamplerDescResetter());
+        private static readonly IObjectPool<BackupDX11State> _backupDX11StatePool = ObjectPoolFactory.Create<BackupDX11State>();
 
         public ImGuiImplDX11(DeviceD3D11 renderDevice, GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, GraphicPipelineFactory pipelineFactory)
         {
@@ -326,13 +329,22 @@ namespace PetitMoteur3D.DebugGui
                         else
                         {
                             // Project scissor/clipping rectangles into framebuffer space
-                            System.Numerics.Vector2 clipMin = new(cmd.ClipRect.X - clipOff.X, cmd.ClipRect.Y - clipOff.Y);
-                            System.Numerics.Vector2 clipMax = new(cmd.ClipRect.Z - clipOff.X, cmd.ClipRect.W - clipOff.Y);
+                            System.Numerics.Vector2 clipMin = _vector2Pool.Get();
+                            clipMin.X = cmd.ClipRect.X - clipOff.X;
+                            clipMin.Y = cmd.ClipRect.Y - clipOff.Y;
+
+                            System.Numerics.Vector2 clipMax = _vector2Pool.Get();
+                            clipMax.X = cmd.ClipRect.Z - clipOff.X;
+                            clipMax.Y = cmd.ClipRect.W - clipOff.Y;
                             if (clipMax.X <= clipMin.X || clipMax.Y <= clipMin.Y)
                                 continue;
 
                             // Apply scissor/clipping rectangle
-                            Box2D<int> r = new Box2D<int>((int)clipMin.X, (int)clipMin.Y, (int)clipMax.X, (int)clipMax.Y);
+                            Box2D<int> r = _box2DPool.Get();
+                            r.Min.X = (int)clipMin.X;
+                            r.Min.Y = (int)clipMin.Y;
+                            r.Max.X = (int)clipMax.X;
+                            r.Max.Y = (int)clipMax.Y;
                             deviceContext.RSSetScissorRects(1, ref r);
 
                             // Bind texture, Draw
@@ -409,18 +421,16 @@ namespace PetitMoteur3D.DebugGui
             // Create texture sampler
             // (Bilinear sampling is required by default. Set 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false' to allow point/nearest sampling)
             {
-                SamplerDesc desc = new()
-                {
-                    Filter = Filter.MinMagMipLinear,
-                    AddressU = TextureAddressMode.Wrap,
-                    AddressV = TextureAddressMode.Wrap,
-                    AddressW = TextureAddressMode.Wrap,
-                    MipLODBias = 0f,
-                    MaxAnisotropy = 1,
-                    ComparisonFunc = ComparisonFunc.Always,
-                    MinLOD = 0f,
-                    MaxLOD = float.MaxValue,
-                };
+                SamplerDesc desc = _shaderDescPool.Get();
+                desc.Filter = Filter.MinMagMipLinear;
+                desc.AddressU = TextureAddressMode.Wrap;
+                desc.AddressV = TextureAddressMode.Wrap;
+                desc.AddressW = TextureAddressMode.Wrap;
+                desc.MipLODBias = 0f;
+                desc.MaxAnisotropy = 1;
+                desc.ComparisonFunc = ComparisonFunc.Always;
+                desc.MinLOD = 0f;
+                desc.MaxLOD = float.MaxValue;
 
                 _backendRendererUserData.FontSampler = textureManager.Factory.CreateSampler(desc, "ImGuiFontSampler");
             }
@@ -602,24 +612,22 @@ namespace PetitMoteur3D.DebugGui
 
         private BackupDX11State GetCurrentDX11State(ComPtr<ID3D11DeviceContext> deviceContext)
         {
-            BackupDX11State curentState = new();
-            {
-                deviceContext.RSGetScissorRects(ref curentState.ScissorRectsCount, ref curentState.ScissorRects.AsSpan()[0]);
-                deviceContext.RSGetViewports(ref curentState.ViewportsCount, ref curentState.Viewports[0]);
-                deviceContext.RSGetState(ref curentState.RasterizerState);
-                deviceContext.OMGetBlendState(ref curentState.BlendState, ref curentState.BlendFactor[0], ref curentState.SampleMask);
-                deviceContext.OMGetDepthStencilState(ref curentState.DepthStencilState, ref curentState.StencilRef);
-                deviceContext.PSGetShaderResources(0, 1, ref curentState.PSShaderResource);
-                deviceContext.PSGetSamplers(0, 1, ref curentState.PSSampler);
-                deviceContext.PSGetShader(ref curentState.PixelShader, ref curentState.PSInstances, ref curentState.PSInstancesCount);
-                deviceContext.VSGetShader(ref curentState.VertexShader, ref curentState.VSInstances, ref curentState.VSInstancesCount);
-                deviceContext.VSGetConstantBuffers(0, 1, ref curentState.VSConstantBuffer);
-                deviceContext.GSGetShader(ref curentState.GeometryShader, ref curentState.GSInstances, ref curentState.GSInstancesCount);
-                deviceContext.IAGetPrimitiveTopology(ref curentState.PrimitiveTopology);
-                deviceContext.IAGetIndexBuffer(ref curentState.IndexBuffer, ref curentState.IndexBufferFormat, ref curentState.IndexBufferOffset);
-                deviceContext.IAGetVertexBuffers(0, 1, ref curentState.VertexBuffer, ref curentState.VertexBufferStride, ref curentState.VertexBufferOffset);
-                deviceContext.IAGetInputLayout(ref curentState.InputLayout);
-            }
+            BackupDX11State curentState = _backupDX11StatePool.Get();
+            deviceContext.RSGetScissorRects(ref curentState.ScissorRectsCount, ref curentState.ScissorRects.Value);
+            deviceContext.RSGetViewports(ref curentState.ViewportsCount, ref curentState.Viewports.Value);
+            deviceContext.RSGetState(ref curentState.RasterizerState);
+            deviceContext.OMGetBlendState(ref curentState.BlendState, ref curentState.BlendFactor.Value, ref curentState.SampleMask);
+            deviceContext.OMGetDepthStencilState(ref curentState.DepthStencilState, ref curentState.StencilRef);
+            deviceContext.PSGetShaderResources(0, 1, ref curentState.PSShaderResource);
+            deviceContext.PSGetSamplers(0, 1, ref curentState.PSSampler);
+            deviceContext.PSGetShader(ref curentState.PixelShader, ref curentState.PSInstances, ref curentState.PSInstancesCount);
+            deviceContext.VSGetShader(ref curentState.VertexShader, ref curentState.VSInstances, ref curentState.VSInstancesCount);
+            deviceContext.VSGetConstantBuffers(0, 1, ref curentState.VSConstantBuffer);
+            deviceContext.GSGetShader(ref curentState.GeometryShader, ref curentState.GSInstances, ref curentState.GSInstancesCount);
+            deviceContext.IAGetPrimitiveTopology(ref curentState.PrimitiveTopology);
+            deviceContext.IAGetIndexBuffer(ref curentState.IndexBuffer, ref curentState.IndexBufferFormat, ref curentState.IndexBufferOffset);
+            deviceContext.IAGetVertexBuffers(0, 1, ref curentState.VertexBuffer, ref curentState.VertexBufferStride, ref curentState.VertexBufferOffset);
+            deviceContext.IAGetInputLayout(ref curentState.InputLayout);
             return curentState;
         }
 

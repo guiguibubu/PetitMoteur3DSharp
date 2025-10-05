@@ -38,7 +38,7 @@ namespace PetitMoteur3D
         private ushort[] _indices;
 
         private unsafe readonly uint _vertexStride = (uint)sizeof(Sommet);
-        private const uint _vertextOffset = 0;
+        private static readonly uint _vertexOffset = 0;
 
         private string _name;
 
@@ -112,7 +112,7 @@ namespace PetitMoteur3D
             deviceContext.IASetPrimitiveTopology(D3DPrimitiveTopology.D3D11PrimitiveTopologyTrianglelist);
             // Source des sommets
 
-            deviceContext.IASetVertexBuffers(0, 1, ref _vertexBuffer, _vertexStride, _vertextOffset);
+            deviceContext.IASetVertexBuffers(0, 1, ref _vertexBuffer, in _vertexStride, in _vertexOffset);
             // Source des index
             deviceContext.IASetIndexBuffer(_indexBuffer, Silk.NET.DXGI.Format.FormatR16Uint, 0);
             // input layout des sommets
