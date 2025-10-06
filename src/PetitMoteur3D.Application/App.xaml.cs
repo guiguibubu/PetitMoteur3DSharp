@@ -26,7 +26,7 @@ namespace PetitMoteur3D.Application
     /// </summary>
     public partial class App : Microsoft.UI.Xaml.Application
     {
-        private Window? _window;
+        private global::Microsoft.UI.Xaml.Window? _window;
 
         /// <summary>
         /// Initializes the singleton application object.  This is the first line of authored code

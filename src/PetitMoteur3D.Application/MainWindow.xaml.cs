@@ -1,17 +1,9 @@
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
+using System.Runtime.CompilerServices;
 using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Controls.Primitives;
-using Microsoft.UI.Xaml.Data;
-using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml.Navigation;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
+using Windows.Win32.System.Com;
+
+using ISwapChainPanelNative = Windows.Win32.System.WinRT.Xaml.ISwapChainPanelNative;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -21,11 +13,28 @@ namespace PetitMoteur3D.Application
     /// <summary>
     /// An empty window that can be used on its own or navigated to within a Frame.
     /// </summary>
-    public sealed partial class MainWindow : Window
+    public sealed partial class MainWindow : global::Microsoft.UI.Xaml.Window
     {
         public MainWindow()
         {
             InitializeComponent();
+        }
+
+        private void DXSwapChainPanel_Loaded(object sender, RoutedEventArgs e)
+        {
+            nint swapChainPtr = ABI.Microsoft.UI.Xaml.Controls.SwapChainPanel.FromManaged(DXSwapChainPanel);
+            unsafe
+            {
+                ref IUnknown comUnknown = ref Unsafe.AsRef<IUnknown>(swapChainPtr.ToPointer());
+                comUnknown.QueryInterface<ISwapChainPanelNative>(out ISwapChainPanelNative* swapChainPanelNativePtr);
+                ref ISwapChainPanelNative swapChainPanelNative = ref Unsafe.AsRef<ISwapChainPanelNative>(swapChainPanelNativePtr);
+                //swapChainPanelNative.SetSwapChain();
+            }
+
+            nint appWindowId = nint.CreateChecked(this.AppWindow.Id.Value);
+
+            Engine engine = new();
+            engine.Run();
         }
     }
 }
