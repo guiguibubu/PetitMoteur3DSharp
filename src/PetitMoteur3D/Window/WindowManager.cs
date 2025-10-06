@@ -1,12 +1,12 @@
 ﻿using Silk.NET.Maths;
 using Silk.NET.Windowing;
 
-namespace PetitMoteur3D
+namespace PetitMoteur3D.Window
 {
     internal class WindowManager
     {
         private WindowManager() { }
-        public static Silk.NET.Windowing.IWindow Create()
+        public static IWindow Create()
         {
             WindowOptions options = WindowOptions.Default;
             options.WindowState = WindowState.Maximized;

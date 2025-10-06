@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using PetitMoteur3D.Camera;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
+using PetitMoteur3D.Window;
 
 namespace PetitMoteur3D
 {
