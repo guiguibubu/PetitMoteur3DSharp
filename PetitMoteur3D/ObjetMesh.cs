@@ -8,7 +8,9 @@ namespace PetitMoteur3D
         public SceneMesh Mesh => _sceneMesh;
         private readonly SceneMesh _sceneMesh;
 
-        public ObjetMesh(SceneMesh sceneMesh, GraphicDeviceRessourceFactory graphicDeviceRessourceFactory) 
+        private IReadOnlyList<SubObjet3D>? _subObjects = null;
+
+        public ObjetMesh(SceneMesh sceneMesh, GraphicDeviceRessourceFactory graphicDeviceRessourceFactory)
             : base(graphicDeviceRessourceFactory)
         {
             _sceneMesh = sceneMesh;
@@ -31,7 +33,11 @@ namespace PetitMoteur3D
         /// <inheritdoc/>
         protected override IReadOnlyList<SubObjet3D> GetSubObjets()
         {
-            return GetSubObjets(_sceneMesh);
+            if (_subObjects is null)
+            {
+                _subObjects = GetSubObjets(_sceneMesh);
+            }
+            return _subObjects;
         }
 
         private static IReadOnlyList<SubObjet3D> GetSubObjets(SceneMesh sceneMesh)
