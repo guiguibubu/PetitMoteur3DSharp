@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 
 namespace PetitMoteur3D
 {
@@ -7,8 +8,8 @@ namespace PetitMoteur3D
 
     internal interface IObjectPool<T> where T : struct
     {
-        void Get(out T item);
-        void Return(ref T item);
+        void Get([NotNull] out ObjectPoolWrapper<T> item);
+        void Return(ObjectPoolWrapper<T> item);
     }
 
     internal static class ObjectPoolFactory
@@ -30,38 +31,41 @@ namespace PetitMoteur3D
 
         private class BaseObjectPoolImpl<T> : IObjectPool<T>, IDisposable where T : struct
         {
-            private readonly ConcurrentBag<T> _objects;
+            private readonly ConcurrentDictionary<Guid, ObjectPoolWrapper<T>> _objects;
+            private readonly ConcurrentBag<Guid> _objectsAvailableKeys;
             private readonly ObjectReseterDelegate<T> _objectResetFunc;
 
             public BaseObjectPoolImpl(ObjectReseterDelegate<T> objectResetFunc)
             {
                 ArgumentNullException.ThrowIfNull(objectResetFunc);
                 _objectResetFunc = objectResetFunc;
-                _objects = new ConcurrentBag<T>();
+                _objects = new ConcurrentDictionary<Guid, ObjectPoolWrapper<T>>();
+                _objectsAvailableKeys = new ConcurrentBag<Guid>();
             }
 
             public BaseObjectPoolImpl(IIResetter<T> resetter)
                 : this((ref T item) => resetter.Reset(ref item))
             { }
 
-            public void Get(out T item)
+            public void Get(out ObjectPoolWrapper<T> item)
             {
-                if (_objects.TryTake(out item))
+                if (_objectsAvailableKeys.TryTake(out Guid id))
                 {
-                    _objectResetFunc.Invoke(ref item);
-                    //ResetMemory(item);
-                    GC.ReRegisterForFinalize(item!);
+                    item = _objects[id];
+                    _objectResetFunc.Invoke(ref item.Data);
+                    //GC.ReRegisterForFinalize(item!);
                 }
                 else
                 {
                     item = new();
+                    _objects.TryAdd(item.Id, item);
+                    GC.SuppressFinalize(item);
                 }
             }
 
-            public void Return(ref T item)
+            public void Return(ObjectPoolWrapper<T> item)
             {
-                GC.SuppressFinalize(item);
-                _objects.Add(item);
+                _objectsAvailableKeys.Add(item.Id);
             }
 
             private bool _disposed = false;
@@ -102,7 +106,7 @@ namespace PetitMoteur3D
                     // If disposing is false,
                     // only the following code is executed.
 
-                    foreach (T item in _objects)
+                    foreach (ObjectPoolWrapper<T> item in _objects.Values)
                     {
                         GC.ReRegisterForFinalize(item!);
                     }
@@ -111,6 +115,18 @@ namespace PetitMoteur3D
                     _disposed = true;
                 }
             }
+        }
+    }
+
+    internal class ObjectPoolWrapper<T> where T : struct
+    {
+        public readonly Guid Id;
+        public T Data;
+
+        public ObjectPoolWrapper()
+        {
+            Id = Guid.NewGuid();
+            Data = new T();
         }
     }
 }

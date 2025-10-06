@@ -173,7 +173,8 @@ namespace PetitMoteur3D
                         ImGui.Text("Hello, world!");
                         ImGui.SliderFloat("float", ref f, 0.0f, 1.0f);
                         ImGui.Text(string.Format("Application average {0} ms/frame ({1} FPS)", (1000.0f / io.Framerate).ToString("F3", System.Globalization.CultureInfo.InvariantCulture), io.Framerate.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)));
-                        ImGui.Text(string.Format("Application (managed) memory usage {0} kB", _currentProcess.WorkingSet64 / 1000));
+                        ImGui.Text(string.Format("Application memory usage {0} kB", _currentProcess.WorkingSet64 / 1000));
+                        ImGui.Text(string.Format("Application (managed) heap usage {0} kB", GC.GetTotalMemory(false) / 1000));
                         bool runGc = ImGui.Button("Run GC");
                         bool colorChanged = ImGui.ColorEdit4("Background Color", ref _backgroundColour);     // Edit 4 floats representing a color
                         bool wireFrameChanged = ImGui.Checkbox("WireFrame", ref _showWireFrame);     // Edit bool

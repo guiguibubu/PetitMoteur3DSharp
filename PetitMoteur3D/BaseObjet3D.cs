@@ -124,7 +124,8 @@ namespace PetitMoteur3D
             foreach (SubObjet3D subObjet3D in GetSubObjets())
             {
                 // Initialiser et sélectionner les « constantes » des shaders
-                _objectShadersParamsPool.Get(out ObjectShadersParams shadersParams);
+                _objectShadersParamsPool.Get(out ObjectPoolWrapper<ObjectShadersParams> shadersParamsWrapper);
+                ref ObjectShadersParams shadersParams = ref shadersParamsWrapper.Data;
                 shadersParams.matWorldViewProj = Matrix4X4.Transpose(subObjet3D.Transformation * _matWorld * matViewProj);
                 shadersParams.matWorld = Matrix4X4.Transpose(subObjet3D.Transformation * _matWorld);
                 shadersParams.ambiantMaterialValue = subObjet3D.Material.Ambient;
@@ -156,7 +157,7 @@ namespace PetitMoteur3D
                 // **** Rendu de l’objet
                 deviceContext.DrawIndexed((uint)_indices.Length, 0, 0);
 
-                _objectShadersParamsPool.Return(ref shadersParams);
+                _objectShadersParamsPool.Return(shadersParamsWrapper);
             }
         }
 
@@ -207,19 +208,17 @@ namespace PetitMoteur3D
         private unsafe void InitTexture(TextureManager textureManager)
         {
             // Initialisation des paramètres de sampling de la texture
-            _shaderDescPool.Get(out SamplerDesc samplerDesc);
-            {
-                samplerDesc.Filter = Filter.Anisotropic;
-                samplerDesc.AddressU = TextureAddressMode.Wrap;
-                samplerDesc.AddressV = TextureAddressMode.Wrap;
-                samplerDesc.AddressW = TextureAddressMode.Wrap;
-                samplerDesc.MipLODBias = 0f;
-                samplerDesc.MaxAnisotropy = 4;
-                samplerDesc.ComparisonFunc = ComparisonFunc.Always;
-                samplerDesc.MinLOD = 0;
-                samplerDesc.MaxLOD = float.MaxValue;
-            }
-            ;
+            _shaderDescPool.Get(out ObjectPoolWrapper<SamplerDesc> samplerDescWrapper);
+            ref SamplerDesc samplerDesc = ref samplerDescWrapper.Data;
+            samplerDesc.Filter = Filter.Anisotropic;
+            samplerDesc.AddressU = TextureAddressMode.Wrap;
+            samplerDesc.AddressV = TextureAddressMode.Wrap;
+            samplerDesc.AddressW = TextureAddressMode.Wrap;
+            samplerDesc.MipLODBias = 0f;
+            samplerDesc.MaxAnisotropy = 4;
+            samplerDesc.ComparisonFunc = ComparisonFunc.Always;
+            samplerDesc.MinLOD = 0;
+            samplerDesc.MaxLOD = float.MaxValue;
             samplerDesc.BorderColor[0] = 0f;
             samplerDesc.BorderColor[1] = 0f;
             samplerDesc.BorderColor[2] = 0f;
@@ -228,7 +227,7 @@ namespace PetitMoteur3D
             // Création de l’état de sampling
             _sampleState = textureManager.Factory.CreateSampler(samplerDesc, $"{_name}_SamplerState");
 
-            _shaderDescPool.Return(ref samplerDesc);
+            _shaderDescPool.Return(samplerDescWrapper);
         }
 
         private unsafe void InitBuffers<TVertex, TIndice>(GraphicBufferFactory bufferFactory, TVertex[] sommets, TIndice[] indices)

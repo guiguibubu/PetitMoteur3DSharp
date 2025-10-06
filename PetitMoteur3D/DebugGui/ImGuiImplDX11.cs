@@ -26,6 +26,7 @@ namespace PetitMoteur3D.DebugGui
         private readonly nint _backendRendererName;
         private ImGuiImplDX11Data _backendRendererUserData;
         private bool _backendInitialized = false;
+        private BackupDX11State _oldDxState = new();
 
         private readonly DeviceD3D11 _renderDevice;
         private readonly GraphicDeviceRessourceFactory _graphicDeviceRessourceFactory;
@@ -34,7 +35,6 @@ namespace PetitMoteur3D.DebugGui
         private static readonly IObjectPool<System.Numerics.Vector2> _vector2Pool = ObjectPoolFactory.Create(new Vector2Resetter());
         private static readonly IObjectPool<Box2D<int>> _box2DPool = ObjectPoolFactory.Create(new Box2DResetter<int>());
         private static readonly IObjectPool<SamplerDesc> _shaderDescPool = ObjectPoolFactory.Create<SamplerDesc>(new DX11SamplerDescResetter());
-        private static readonly IObjectPool<BackupDX11State> _backupDX11StatePool = ObjectPoolFactory.Create<BackupDX11State>();
         private static readonly IObjectPool<Viewport> _viewPortPool = ObjectPoolFactory.Create<Viewport>(new ViewportResetter());
 
         private static unsafe readonly uint VertexBufferStride = (uint)Unsafe.SizeOf<ImDrawVert>();
@@ -305,7 +305,7 @@ namespace PetitMoteur3D.DebugGui
             }
 
             // Saveold DX conf
-            GetCurrentDX11State(in deviceContext, out BackupDX11State oldDxState);
+            GetCurrentDX11State(in deviceContext, ref _oldDxState);
 
             // Setup desired DX state
             SetupRenderState(in drawData, in deviceContext);
@@ -342,27 +342,30 @@ namespace PetitMoteur3D.DebugGui
                         else
                         {
                             // Project scissor/clipping rectangles into framebuffer space
-                            _vector2Pool.Get(out System.Numerics.Vector2 clipMin);
+                            _vector2Pool.Get(out ObjectPoolWrapper<System.Numerics.Vector2> clipMinWrapper);
+                            ref System.Numerics.Vector2 clipMin = ref clipMinWrapper.Data;
                             clipMin.X = cmd.ClipRect.X - clipOff.X;
                             clipMin.Y = cmd.ClipRect.Y - clipOff.Y;
 
-                            _vector2Pool.Get(out System.Numerics.Vector2 clipMax);
+                            _vector2Pool.Get(out ObjectPoolWrapper<System.Numerics.Vector2> clipMaxWrapper);
+                            ref System.Numerics.Vector2 clipMax = ref clipMaxWrapper.Data;
                             clipMax.X = cmd.ClipRect.Z - clipOff.X;
                             clipMax.Y = cmd.ClipRect.W - clipOff.Y;
                             if (clipMax.X <= clipMin.X || clipMax.Y <= clipMin.Y)
                                 continue;
 
                             // Apply scissor/clipping rectangle
-                            _box2DPool.Get(out Box2D<int> r);
+                            _box2DPool.Get(out ObjectPoolWrapper<Box2D<int>> rWrapper);
+                            ref Box2D<int> r = ref rWrapper.Data;
                             r.Min.X = (int)clipMin.X;
                             r.Min.Y = (int)clipMin.Y;
                             r.Max.X = (int)clipMax.X;
                             r.Max.Y = (int)clipMax.Y;
                             deviceContext.RSSetScissorRects(1, ref r);
 
-                            _vector2Pool.Return(ref clipMin);
-                            _vector2Pool.Return(ref clipMax);
-                            _box2DPool.Return(ref r);
+                            _vector2Pool.Return(clipMinWrapper);
+                            _vector2Pool.Return(clipMaxWrapper);
+                            _box2DPool.Return(rWrapper);
 
                             // Bind texture, Draw
                             fixed (ImDrawCmd* cmdPtr = &cmd)
@@ -385,9 +388,7 @@ namespace PetitMoteur3D.DebugGui
             }
 
             // Restore modified DX state
-            SetDX11State(in deviceContext, ref oldDxState);
-
-            _backupDX11StatePool.Return(ref oldDxState);
+            SetDX11State(in deviceContext, ref _oldDxState);
         }
 
         private unsafe bool CreateDeviceObjects(GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, GraphicPipelineFactory pipelineFactory)
@@ -444,20 +445,21 @@ namespace PetitMoteur3D.DebugGui
             // Create texture sampler
             // (Bilinear sampling is required by default. Set 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false' to allow point/nearest sampling)
             {
-                _shaderDescPool.Get(out SamplerDesc desc);
-                desc.Filter = Filter.MinMagMipLinear;
-                desc.AddressU = TextureAddressMode.Wrap;
-                desc.AddressV = TextureAddressMode.Wrap;
-                desc.AddressW = TextureAddressMode.Wrap;
-                desc.MipLODBias = 0f;
-                desc.MaxAnisotropy = 1;
-                desc.ComparisonFunc = ComparisonFunc.Always;
-                desc.MinLOD = 0f;
-                desc.MaxLOD = float.MaxValue;
+                _shaderDescPool.Get(out ObjectPoolWrapper<SamplerDesc> samplerDescWrapper);
+                ref SamplerDesc samplerDesc = ref samplerDescWrapper.Data;
+                samplerDesc.Filter = Filter.MinMagMipLinear;
+                samplerDesc.AddressU = TextureAddressMode.Wrap;
+                samplerDesc.AddressV = TextureAddressMode.Wrap;
+                samplerDesc.AddressW = TextureAddressMode.Wrap;
+                samplerDesc.MipLODBias = 0f;
+                samplerDesc.MaxAnisotropy = 1;
+                samplerDesc.ComparisonFunc = ComparisonFunc.Always;
+                samplerDesc.MinLOD = 0f;
+                samplerDesc.MaxLOD = float.MaxValue;
 
-                _backendRendererUserData.FontSampler = textureManager.Factory.CreateSampler(desc, "ImGuiFontSampler");
+                _backendRendererUserData.FontSampler = textureManager.Factory.CreateSampler(samplerDesc, "ImGuiFontSampler");
 
-                _shaderDescPool.Return(ref desc);
+                _shaderDescPool.Return(samplerDescWrapper);
             }
         }
 
@@ -601,7 +603,8 @@ namespace PetitMoteur3D.DebugGui
         private unsafe void SetupRenderState(ref readonly ImDrawData drawData, ref readonly ComPtr<ID3D11DeviceContext> deviceContext)
         {
             // Setup viewport
-            _viewPortPool.Get(out Viewport viewPort);
+            _viewPortPool.Get(out ObjectPoolWrapper<Viewport> viewPortWrapper);
+            ref Viewport viewPort = ref viewPortWrapper.Data;
             viewPort.Width = drawData.DisplaySize.X;
             viewPort.Height = drawData.DisplaySize.Y;
             viewPort.MinDepth = 0f;
@@ -610,7 +613,7 @@ namespace PetitMoteur3D.DebugGui
             viewPort.TopLeftY = 0f;
             deviceContext.RSSetViewports(1, ref viewPort);
 
-            _viewPortPool.Return(ref viewPort);
+            _viewPortPool.Return(viewPortWrapper);
 
             // Setup shader and vertex buffers
 
@@ -634,9 +637,8 @@ namespace PetitMoteur3D.DebugGui
             deviceContext.RSSetState(_backendRendererUserData.RasterizerState);
         }
 
-        private void GetCurrentDX11State(ref readonly ComPtr<ID3D11DeviceContext> deviceContext, out BackupDX11State curentState)
+        private void GetCurrentDX11State(ref readonly ComPtr<ID3D11DeviceContext> deviceContext, ref BackupDX11State curentState)
         {
-            _backupDX11StatePool.Get(out curentState);
             deviceContext.RSGetScissorRects(ref curentState.ScissorRectsCount, ref curentState.ScissorRects.Value);
             deviceContext.RSGetViewports(ref curentState.ViewportsCount, ref curentState.Viewports.Value);
             deviceContext.RSGetState(ref curentState.RasterizerState);
