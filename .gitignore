@@ -401,4 +401,4 @@ FodyWeavers.xsd
 **/imgui.ini
 
 # OBJ Models
-!PetitMoteur3D/models/**/*.obj
+!src/PetitMoteur3D/models/**/*.obj

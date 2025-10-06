@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "PetitMoteur3D.Editor (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "PetitMoteur3D.Editor (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}
