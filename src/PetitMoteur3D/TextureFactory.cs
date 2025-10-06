@@ -48,7 +48,7 @@ namespace PetitMoteur3D
             return texture;
         }
 
-        public unsafe Texture Create(string name, nint pixels, int width, int height, int bytesPerPixel) => Create(name, (void*)pixels, width, height, bytesPerPixel);
+        public unsafe Texture Create(string name, nint pixels, int width, int height, int bytesPerPixel) => Create(name, pixels.ToPointer(), width, height, bytesPerPixel);
 
         public unsafe Texture Create(string name, void* pixels, int width, int height, int bytesPerPixel)
         {
@@ -72,7 +72,7 @@ namespace PetitMoteur3D
             {
                 SubresourceData subresourceData = new()
                 {
-                    PSysMem = (void*)pixels,
+                    PSysMem = pixels,
                     SysMemPitch = (uint)(width * Marshal.SizeOf<SixLabors.ImageSharp.PixelFormats.Bgra32>()),
                     SysMemSlicePitch = (uint)(width * Marshal.SizeOf<SixLabors.ImageSharp.PixelFormats.Bgra32>() * height)
                 };
@@ -131,9 +131,9 @@ namespace PetitMoteur3D
                 using (GlobalMemory unmanagedName = SilkMarshal.StringToMemory(name, NativeStringEncoding.Ansi))
                 {
                     IntPtr namePtr = unmanagedName.Handle;
-                    fixed (Guid* guidPtr = &D3DCommonGuids.DebugObjectName)
+                    fixed (Guid* guidPtr = &Windows.Win32.PInvoke.WKPDID_D3DDebugObjectName)
                     {
-                        sampler.SetPrivateData(guidPtr, (uint)name.Length, (void*)namePtr);
+                        sampler.SetPrivateData(guidPtr, (uint)name.Length, namePtr.ToPointer());
                     }
                 }
             }

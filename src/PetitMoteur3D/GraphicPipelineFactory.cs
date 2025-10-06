@@ -23,9 +23,9 @@ namespace PetitMoteur3D
                 using (GlobalMemory unmanagedName = SilkMarshal.StringToMemory(name, NativeStringEncoding.Ansi))
                 {
                     IntPtr namePtr = unmanagedName.Handle;
-                    fixed (Guid* guidPtr = &D3DCommonGuids.DebugObjectName)
+                    fixed (Guid* guidPtr = &Windows.Win32.PInvoke.WKPDID_D3DDebugObjectName)
                     {
-                        blendState.SetPrivateData(guidPtr, (uint)name.Length, (void*)namePtr);
+                        blendState.SetPrivateData(guidPtr, (uint)name.Length, namePtr.ToPointer());
                     }
                 }
             }
@@ -41,9 +41,9 @@ namespace PetitMoteur3D
                 using (GlobalMemory unmanagedName = SilkMarshal.StringToMemory(name, NativeStringEncoding.Ansi))
                 {
                     IntPtr namePtr = unmanagedName.Handle;
-                    fixed (Guid* guidPtr = &D3DCommonGuids.DebugObjectName)
+                    fixed (Guid* guidPtr = &Windows.Win32.PInvoke.WKPDID_D3DDebugObjectName)
                     {
-                        depthStencilState.SetPrivateData(guidPtr, (uint)name.Length, (void*)namePtr);
+                        depthStencilState.SetPrivateData(guidPtr, (uint)name.Length, namePtr.ToPointer());
                     }
                 }
             }
@@ -60,9 +60,9 @@ namespace PetitMoteur3D
                 using (GlobalMemory unmanagedName = SilkMarshal.StringToMemory(name, NativeStringEncoding.Ansi))
                 {
                     IntPtr namePtr = unmanagedName.Handle;
-                    fixed (Guid* guidPtr = &D3DCommonGuids.DebugObjectName)
+                    fixed (Guid* guidPtr = &Windows.Win32.PInvoke.WKPDID_D3DDebugObjectName)
                     {
-                        rasterizerState.SetPrivateData(guidPtr, (uint)name.Length, (void*)namePtr);
+                        rasterizerState.SetPrivateData(guidPtr, (uint)name.Length, namePtr.ToPointer());
                     }
                 }
             }

@@ -34,9 +34,9 @@ namespace PetitMoteur3D
                 using (GlobalMemory unmanagedName = SilkMarshal.StringToMemory(name, NativeStringEncoding.Ansi))
                 {
                     IntPtr namePtr = unmanagedName.Handle;
-                    fixed (Guid* guidPtr = &D3DCommonGuids.DebugObjectName)
+                    fixed (Guid* guidPtr = &Windows.Win32.PInvoke.WKPDID_D3DDebugObjectName)
                     {
-                        _textureView.SetPrivateData(guidPtr, (uint)name.Length, (void*)namePtr);
+                        _textureView.SetPrivateData(guidPtr, (uint)name.Length, namePtr.ToPointer());
                     }
                 }
             }
