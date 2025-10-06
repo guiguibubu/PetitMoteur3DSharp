@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using PetitMoteur3D.Camera;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
+using System.Runtime.InteropServices;
 
 namespace PetitMoteur3D
 {
@@ -58,6 +59,10 @@ namespace PetitMoteur3D
 
         static void Main(string[] args)
         {
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                throw new NotSupportedException("Currently this engine only supports DirectX 11 so is Windows only");
+            }
             System.Console.WriteLine("Memory created at statup = {0} kB", _memoryAtStartUp / 1000);
             System.Console.WriteLine("Memory created at Main begin = {0} kB", _currentProcess.WorkingSet64 / 1000);
             try
