@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PetitMoteur3D", "src\PetitM
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PetitMoteur3D.Editor", "src\PetitMoteur3D.Editor\PetitMoteur3D.Editor.csproj", "{C1463F90-E62C-46F9-9D78-3FED25E9B2B6}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PetitMoteur3D.CLI", "src\PetitMoteur3D.CLI\PetitMoteur3D.CLI.csproj", "{B350D13E-5A93-448E-A0DA-F300BB39FF38}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -23,6 +25,10 @@ Global
 		{C1463F90-E62C-46F9-9D78-3FED25E9B2B6}.Release|Any CPU.ActiveCfg = Release|x64
 		{C1463F90-E62C-46F9-9D78-3FED25E9B2B6}.Release|Any CPU.Build.0 = Release|x64
 		{C1463F90-E62C-46F9-9D78-3FED25E9B2B6}.Release|Any CPU.Deploy.0 = Release|x64
+		{B350D13E-5A93-448E-A0DA-F300BB39FF38}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B350D13E-5A93-448E-A0DA-F300BB39FF38}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B350D13E-5A93-448E-A0DA-F300BB39FF38}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B350D13E-5A93-448E-A0DA-F300BB39FF38}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

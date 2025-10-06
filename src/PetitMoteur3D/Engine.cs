@@ -9,37 +9,36 @@ using System.Collections.Generic;
 using PetitMoteur3D.Camera;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
-using System.Runtime.InteropServices;
 
 namespace PetitMoteur3D
 {
-    internal class Program
+    public class Engine
     {
-        private static IWindow _window = default!;
-        private static IInputContext _inputContext = default!;
-        private static ImGuiController _imGuiController = default!;
-        private static DeviceD3D11 _deviceD3D11 = default!;
-        private static GraphicDeviceRessourceFactory _graphicDeviceRessourceFactory = default!;
-        private static GraphicPipelineFactory _graphicPipelineFactory = default!;
+        private IWindow _window = default!;
+        private IInputContext _inputContext = default!;
+        private ImGuiController _imGuiController = default!;
+        private DeviceD3D11 _deviceD3D11 = default!;
+        private GraphicDeviceRessourceFactory _graphicDeviceRessourceFactory = default!;
+        private GraphicPipelineFactory _graphicPipelineFactory = default!;
 
-        private static MeshLoader _meshLoader = default!;
-        private static Scene _scene = default!;
-        private static ICamera _camera = default!;
-        private static Matrix4X4<float> _matView = default;
-        private static Matrix4X4<float> _matProj = default;
+        private MeshLoader _meshLoader = default!;
+        private Scene _scene = default!;
+        private ICamera _camera = default!;
+        private Matrix4X4<float> _matView = default;
+        private Matrix4X4<float> _matProj = default;
 
-        private static bool _imGuiShowDemo = false;
-        private static bool _imGuiShowDebugLogs = false;
-        private static bool _imGuiShowMetrics = false;
-        private static bool _debugToolKeyPressed = false;
-        private static bool _showDebugTool = false;
-        private static bool _showWireFrame = false;
-        private static bool _showScene = true;
-        private static System.Numerics.Vector4 _backgroundColour = default!;
+        private bool _imGuiShowDemo = false;
+        private bool _imGuiShowDebugLogs = false;
+        private bool _imGuiShowMetrics = false;
+        private bool _debugToolKeyPressed = false;
+        private bool _showDebugTool = false;
+        private bool _showWireFrame = false;
+        private bool _showScene = true;
+        private System.Numerics.Vector4 _backgroundColour = default!;
 
-        private static Stopwatch _horlogeEngine = new Stopwatch();
-        private static Stopwatch _horlogeScene = new Stopwatch();
-        private static Stopwatch _horlogeDebugTool = new Stopwatch();
+        private Stopwatch _horlogeEngine = new Stopwatch();
+        private Stopwatch _horlogeScene = new Stopwatch();
+        private Stopwatch _horlogeDebugTool = new Stopwatch();
         private const int IMAGESPARSECONDE_ENGINE = 60;
         private const int IMAGESPARSECONDE_SCENE = 60;
         private const int IMAGESPARSECONDE_DEBUGTOOL = 30;
@@ -47,22 +46,18 @@ namespace PetitMoteur3D
         private const double ECART_TEMPS_SCENE = (1.0 / (double)IMAGESPARSECONDE_SCENE) * 1000.0;
         private const double ECART_TEMPS_DEBUGTOOL = (1.0 / (double)IMAGESPARSECONDE_DEBUGTOOL) * 1000.0;
 
-        private static readonly Int64 _memoryAtStartUp;
-        private static bool _initAnimationFinished = false;
+        private readonly Int64 _memoryAtStartUp;
+        private bool _initAnimationFinished = false;
 
-        private static Process _currentProcess = Process.GetCurrentProcess();
+        private Process _currentProcess = Process.GetCurrentProcess();
 
-        static Program()
+        public Engine()
         {
             _memoryAtStartUp = _currentProcess.WorkingSet64;
         }
 
-        static void Main(string[] args)
+        public void Run(params string[] args)
         {
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                throw new NotSupportedException("Currently this engine only supports DirectX 11 so is Windows only");
-            }
             System.Console.WriteLine("Memory created at statup = {0} kB", _memoryAtStartUp / 1000);
             System.Console.WriteLine("Memory created at Main begin = {0} kB", _currentProcess.WorkingSet64 / 1000);
             try
@@ -105,7 +100,7 @@ namespace PetitMoteur3D
             }
         }
 
-        private static void OnLoad()
+        private void OnLoad()
         {
             System.Console.WriteLine("Memory created before init = {0} kB", _currentProcess.WorkingSet64 / 1000);
             System.Console.WriteLine("OnLoad");
@@ -122,14 +117,14 @@ namespace PetitMoteur3D
             System.Console.WriteLine("Memory created after init = {0} kB", _currentProcess.WorkingSet64 / 1000);
         }
 
-        private static void OnClosing()
+        private void OnClosing()
         {
             System.Console.WriteLine("OnClosing");
             _imGuiController.Dispose();
             System.Console.WriteLine("OnClosing ImGuiController.Dispose Finished");
         }
 
-        private static unsafe void OnRender(double elapsedTime)
+        private unsafe void OnRender(double elapsedTime)
         {
             double tempsEcouleEngine = _horlogeEngine.ElapsedMilliseconds;
 
@@ -239,7 +234,7 @@ namespace PetitMoteur3D
             }
         }
 
-        private static void OnFramebufferResize(Vector2D<int> newSize)
+        private void OnFramebufferResize(Vector2D<int> newSize)
         {
             // If the window resizes, we need to be sure to update the swapchain's back buffers.
             _deviceD3D11.Resize(in newSize);
@@ -258,12 +253,12 @@ namespace PetitMoteur3D
             );
         }
 
-        private static void BeginRender()
+        private void BeginRender()
         {
             _deviceD3D11.BeforePresent();
         }
 
-        private static void InitRendering()
+        private void InitRendering()
         {
             _deviceD3D11 = new(_window);
             _deviceD3D11.GetBackgroundColour(out Vector4D<float> backgroundCoclor);
@@ -273,7 +268,7 @@ namespace PetitMoteur3D
             _meshLoader = new MeshLoader();
         }
 
-        private static void InitScene()
+        private void InitScene()
         {
             _camera = new FixedCamera(Vector3D<float>.Zero);
             _camera.Move(-10 * Vector3D<float>.UnitZ);
@@ -323,7 +318,7 @@ namespace PetitMoteur3D
             );
         }
 
-        private static void InitAnimation()
+        private void InitAnimation()
         {
             _horlogeEngine.Start();
             _horlogeScene.Start();
@@ -333,7 +328,7 @@ namespace PetitMoteur3D
             _initAnimationFinished = true;
         }
 
-        private static void InitInput()
+        private void InitInput()
         {
             _inputContext = _window.CreateInput();
             IKeyboard keyboard = _inputContext.Keyboards[0];
@@ -365,18 +360,18 @@ namespace PetitMoteur3D
             };
         }
 
-        private static void InitDebugTools()
+        private void InitDebugTools()
         {
             _imGuiController = new ImGuiController(_deviceD3D11, _graphicDeviceRessourceFactory, _graphicPipelineFactory, _window, _inputContext);
             //_imGuiController = new ImGuiController(new NoOpImGuiBackendRenderer(), _window, _inputContext);
         }
 
-        private static void AnimeScene(float tempsEcoule)
+        private void AnimeScene(float tempsEcoule)
         {
             _scene.Anime(tempsEcoule);
         }
 
-        private static void RenderScene()
+        private void RenderScene()
         {
             BeginRender();
             if (_initAnimationFinished)
