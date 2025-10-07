@@ -1,0 +1,74 @@
+﻿using System;
+using System.Numerics;
+
+namespace PetitMoteur3D.Window
+{
+    internal interface IWindow : IDisposable
+    {
+        /// <summary>
+        /// The underlying native window handle
+        /// </summary>
+        nint? NativeHandle { get; }
+
+        /// <summary>
+        /// The size of the window in pixels.
+        /// </summary>
+        Vector2 Size { get; set; }
+
+        /// <summary>
+        /// The size of the framebuffer. May differ from the window size.
+        /// </summary>
+        Vector2 FramebufferSize { get; set; }
+
+        /// <summary>
+        /// Determines whether the underlying platform has requested the window to close.
+        /// </summary>
+        bool IsClosing { get; }
+
+        /// <summary>
+        /// Elapsed time in seconds since the View was initialized.
+        /// </summary>
+        double Time { get; }
+
+        /// <summary>
+        /// Determines if the window is initialized.
+        /// </summary>
+        bool IsInitialized { get; }
+
+        /// <summary>
+        /// Raised when the window first begins to run.
+        /// </summary>
+        event Action? Load;
+
+        /// <summary>
+        /// Raised when the window is about to close.
+        /// </summary>
+        event Action? Closing;
+
+        /// <summary>
+        /// Raised when the window is resized.
+        /// </summary>
+        event Action<Vector2>? Resize;
+
+        /// <summary>
+        /// Creates the window on the underlying platform.
+        /// </summary>
+        void Initialize();
+
+        /// <summary>
+        /// Sets focus to current window.
+        /// </summary>
+        void Focus();
+
+        /// <summary>
+        /// Close this window.
+        /// </summary>
+        void Close();
+
+        /// <summary>
+        /// Initiates a render loop in which the given callback is called as fast as the underlying platform can manage.
+        /// </summary>
+        /// <param name="onFrame">The callback to run each frame.</param>
+        void Run(Action onFrame);
+    }
+}

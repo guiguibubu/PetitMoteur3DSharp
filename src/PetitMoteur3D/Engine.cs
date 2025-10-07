@@ -1,7 +1,6 @@
 ﻿using ImGuiNET;
 using PetitMoteur3D.DebugGui;
 using Silk.NET.Maths;
-using Silk.NET.Windowing;
 using Silk.NET.Input;
 using System;
 using System.Diagnostics;
@@ -10,6 +9,8 @@ using PetitMoteur3D.Camera;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
 using PetitMoteur3D.Window;
+using System.Numerics;
+using System.Runtime.InteropServices;
 
 namespace PetitMoteur3D
 {
@@ -51,10 +52,12 @@ namespace PetitMoteur3D
         private bool _initAnimationFinished = false;
 
         private Process _currentProcess = Process.GetCurrentProcess();
+        private bool _onNativeDxPlatform;
 
         public Engine()
         {
             _memoryAtStartUp = _currentProcess.WorkingSet64;
+            _onNativeDxPlatform = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
         }
 
         public void Run(params string[] args)
@@ -63,19 +66,19 @@ namespace PetitMoteur3D
             System.Console.WriteLine("Memory created at Main begin = {0} kB", _currentProcess.WorkingSet64 / 1000);
             try
             {
-                _window = WindowManager.Create();
+                using (_window = WindowManager.Create())
+                {
+                    // Assign events.
+                    _window.Load += OnLoad;
+                    _window.Closing += OnClosing;
+                    _window.Resize += OnResize;
 
-                // Assign events.
-                _window.Load += OnLoad;
-                _window.Closing += OnClosing;
-                _window.Render += OnRender;
-                _window.FramebufferResize += OnFramebufferResize;
+                    // Run the window.
+                    _window.Run(MainLoop);
 
-                // Run the window.
-                _window.Run();
-
-                //dispose the window, and its internal resources
-                _window.Dispose();
+                    //dispose the window, and its internal resources
+                    _window.Dispose();
+                }
             }
             catch (Exception ex)
             {
@@ -125,8 +128,18 @@ namespace PetitMoteur3D
             System.Console.WriteLine("OnClosing ImGuiController.Dispose Finished");
         }
 
-        private unsafe void OnRender(double elapsedTime)
+        private unsafe void MainLoop()
         {
+            if (_window.IsClosing)
+            {
+                System.Console.WriteLine("Main loop called window is closing");
+                return;
+            }
+            if (!_window.IsInitialized)
+            {
+                System.Console.WriteLine("Main loop called but window not initialized");
+                return;
+            }
             double tempsEcouleEngine = _horlogeEngine.ElapsedMilliseconds;
 
             // Est-il temps de rendre l’image ?
@@ -235,7 +248,7 @@ namespace PetitMoteur3D
             }
         }
 
-        private void OnFramebufferResize(Vector2D<int> newSize)
+        private void OnResize(Vector2 newSize)
         {
             // If the window resizes, we need to be sure to update the swapchain's back buffers.
             _deviceD3D11.Resize(in newSize);
@@ -261,9 +274,9 @@ namespace PetitMoteur3D
 
         private void InitRendering()
         {
-            _deviceD3D11 = new(_window);
-            _deviceD3D11.GetBackgroundColour(out Vector4D<float> backgroundCoclor);
-            _backgroundColour = backgroundCoclor.ToSystem();
+            _deviceD3D11 = new DeviceD3D11(_window, !_onNativeDxPlatform);
+            _deviceD3D11.GetBackgroundColour(out Vector4D<float> backgroundColor);
+            _backgroundColour = backgroundColor.ToSystem();
             _graphicDeviceRessourceFactory = new GraphicDeviceRessourceFactory(_deviceD3D11.Device, _deviceD3D11.ShaderCompiler);
             _graphicPipelineFactory = new GraphicPipelineFactory(_deviceD3D11.Device);
             _meshLoader = new MeshLoader();
@@ -331,7 +344,12 @@ namespace PetitMoteur3D
 
         private void InitInput()
         {
-            _inputContext = _window.CreateInput();
+            if (_window is not ISilkWindow silkWindow)
+            {
+                System.Console.WriteLine("InitInput Onnly Silk.Net input supported. No input will be initialized");
+                return;
+            }
+            _inputContext = silkWindow.SilkWindow.CreateInput();
             IKeyboard keyboard = _inputContext.Keyboards[0];
             keyboard.KeyDown += (_, key, i) =>
             {

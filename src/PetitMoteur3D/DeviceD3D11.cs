@@ -1,13 +1,14 @@
-﻿using Silk.NET.Core.Native;
+﻿//#define USE_RENDERDOC
+using Silk.NET.Core.Native;
 using Silk.NET.Direct3D.Compilers;
 using Silk.NET.Direct3D11;
 using Silk.NET.DXGI;
 using Silk.NET.Maths;
 using System;
+using System.Numerics;
 using System.Runtime.CompilerServices;
-using Evergine.Bindings.RenderDoc;
-using System.IO;
-using Silk.NET.Windowing;
+using IWindow = PetitMoteur3D.Window.IWindow;
+//using IWindow = Silk.NET.Windowing.IWindow;
 
 namespace PetitMoteur3D
 {
@@ -39,23 +40,29 @@ namespace PetitMoteur3D
             D3DFeatureLevel.Level110
         };
 
-        private readonly Silk.NET.Windowing.IWindow _window;
 
+        private readonly IWindow _window;
         private readonly float[] _backgroundColour = new[] { 0.0f, 0.5f, 0.0f, 1.0f };
 
-        private readonly RenderDoc _renderDoc;
+#if USE_RENDERDOC
+        private readonly Evergine.Bindings.RenderDoc.RenderDoc _renderDoc;
+#endif
 
-        public unsafe DeviceD3D11(Silk.NET.Windowing.IWindow window)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="window"></param>
+        /// <param name="forceDxvk">Whether or not to force use of DXVK on platforms where native DirectX implementations are available</param>
+        public unsafe DeviceD3D11(IWindow window, bool forceDxvk = false)
         {
             _window = window;
-
-            //Whether or not to force use of DXVK on platforms where native DirectX implementations are available
-            const bool forceDxvk = false;
 
             _compiler = D3DCompiler.GetApi();
 
             // Create our D3D11 logical device.
-            _d3d11Api = D3D11.GetApi(_window, forceDxvk);
+#pragma warning disable CS0618 // Type or member is obsolete
+            _d3d11Api = D3D11.GetApi(DXSwapchainProvider.Win32, forceDxvk);
+#pragma warning restore CS0618 // Type or member is obsolete
 
             InitDevice(_d3d11Api);
 
@@ -80,11 +87,13 @@ namespace PetitMoteur3D
             SilkMarshal.ThrowHResult(_device.CreateRasterizerState(in rsWireDesc, ref _wireFrameCullBackRS));
             _deviceContext.RSSetState(_solidCullBackRS);
 
-            RenderDoc.Load(out _renderDoc);
+#if USE_RENDERDOC
+            Evergine.Bindings.RenderDoc.RenderDoc.Load(out _renderDoc);
             _renderDoc.API.SetActiveWindow(new IntPtr(_device.Handle), _window.Native!.DXHandle!.Value);
             _renderDoc.API.SetActiveWindow(new IntPtr(_device.Handle), _window.Native!.Win32!.Value.Hwnd);
-            _renderDoc.API.SetCaptureFilePathTemplate(Path.Combine(Directory.GetCurrentDirectory(), "capture"));
+            _renderDoc.API.SetCaptureFilePathTemplate(System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "capture"));
             System.Console.WriteLine("Render doc file path : " + _renderDoc.API.GetCaptureFilePathTemplate());
+#endif
         }
 
         unsafe ~DeviceD3D11()
@@ -120,7 +129,7 @@ namespace PetitMoteur3D
             );
         }
 
-        public unsafe void Resize(ref readonly Vector2D<int> size)
+        public unsafe void Resize(ref readonly Vector2 size)
         {
             if (size.X == _window.Size.X && size.Y == _window.Size.Y)
             {
@@ -131,7 +140,7 @@ namespace PetitMoteur3D
             _renderTargetView.Dispose();
             _depthTexture.Dispose();
             _depthStencilView.Dispose();
-            
+
             SilkMarshal.ThrowHResult(
                 _swapchain.ResizeBuffers(0, 0, 0, Format.FormatB8G8R8A8Unorm, (uint)SwapChainFlag.AllowModeSwitch)
             );
@@ -139,6 +148,7 @@ namespace PetitMoteur3D
             InitView(size.X, size.Y);
         }
 
+#if USE_RENDERDOC
         public bool IsFrameCapturing()
         {
             return _renderDoc.API.IsFrameCapturing() == 1;
@@ -159,6 +169,7 @@ namespace PetitMoteur3D
                 System.Console.WriteLine("EndFrameCapture fail to capture");
             }
         }
+#endif
 
         public void GetBackgroundColour(out Vector4D<float> backgroundColour)
         {
@@ -221,19 +232,19 @@ namespace PetitMoteur3D
             }
 #endif
         }
-        
+
         private unsafe void InitSwapChain(IWindow window, bool forceDxvk)
         {
-            InitSwapChain(window.Size.X, window.Size.Y, window.Native!.DXHandle!.Value, forceDxvk);
+            InitSwapChain((uint)window.Size.X, (uint)window.Size.Y, window.NativeHandle!.Value, forceDxvk);
         }
 
-        private unsafe void InitSwapChain(int width, int heigth, nint windowPtr, bool forceDxvk)
+        private unsafe void InitSwapChain(uint width, uint heigth, nint windowPtr, bool forceDxvk)
         {
             // Create our swapchain description.
             SwapChainDesc1 swapChainDesc = new()
             {
-                Width = (uint)width,
-                Height = (uint)heigth,
+                Width = width,
+                Height = heigth,
                 BufferCount = 1,
                 Format = Format.FormatB8G8R8A8Unorm,
                 BufferUsage = DXGI.UsageRenderTargetOutput,
@@ -247,7 +258,9 @@ namespace PetitMoteur3D
             };
 
             // Create our DXGI factory to allow us to create a swapchain. 
-            DXGI dxgi = DXGI.GetApi(_window, forceDxvk);
+#pragma warning disable CS0618 // Type or member is obsolete
+            DXGI dxgi = DXGI.GetApi(DXSwapchainProvider.Win32, forceDxvk);
+#pragma warning restore CS0618 // Type or member is obsolete
             ComPtr<IDXGIFactory2> factory = dxgi.CreateDXGIFactory<IDXGIFactory2>();
             dxgi.Dispose();
 
@@ -273,14 +286,14 @@ namespace PetitMoteur3D
             InitView(window.Size.X, window.Size.Y);
         }
 
-        private unsafe void InitView(int width, int height)
+        private unsafe void InitView(float width, float height)
         {
             // Create « render target view » 
             // Obtain the framebuffer for the swapchain's backbuffer.
             InitRenderTargetView();
 
             // Create de depth stenci view
-            InitDepthBuffer(width, height);
+            InitDepthBuffer((uint)width, (uint)height);
 
             SetRenderTarget();
 
@@ -299,15 +312,16 @@ namespace PetitMoteur3D
 
         private unsafe void InitDepthBuffer(IWindow window)
         {
-            InitDepthBuffer(window.Size.X, window.Size.Y);
+
+            InitDepthBuffer((uint)window.Size.X, (uint)window.Size.Y);
         }
 
-        private unsafe void InitDepthBuffer(int width, int height)
+        private unsafe void InitDepthBuffer(uint width, uint height)
         {
             Texture2DDesc depthTextureDesc = new()
             {
-                Width = (uint)width,
-                Height = (uint)height,
+                Width = width,
+                Height = height,
                 MipLevels = 1,
                 ArraySize = 1,
                 Format = Format.FormatD24UnormS8Uint,

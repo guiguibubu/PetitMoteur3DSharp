@@ -4,13 +4,12 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.Metrics;
-using System.Drawing;
 using System.Numerics;
 using ImGuiNET;
 using OpenTelemetry.Metrics;
+using PetitMoteur3D.Window;
 using Silk.NET.Input;
 using Silk.NET.Maths;
-using Silk.NET.Windowing;
 
 namespace PetitMoteur3D.DebugGui
 {
@@ -23,16 +22,15 @@ namespace PetitMoteur3D.DebugGui
     internal class ImGuiController : IDisposable
     {
         private readonly IImGuiBackendRenderer _backendRenderer;
-        private readonly IView _view;
+        private readonly IWindow _view;
         private readonly IInputContext _input;
         private bool _frameBegun;
         private readonly List<char> _pressedChars = new();
         private readonly IKeyboard _keyboard;
+        private float _windowWidth;
+        private float _windowHeight;
 
-        private int _windowWidth;
-        private int _windowHeight;
-
-        public IntPtr Context;
+        public IntPtr ContextPtr;
 
         #region Telemetry
         // Define a meter
@@ -49,14 +47,14 @@ namespace PetitMoteur3D.DebugGui
         /// <summary>
         /// Constructs a new ImGuiController.
         /// </summary>
-        public ImGuiController(IImGuiBackendRenderer backendRenderer, IView view, IInputContext input) : this(backendRenderer, view, input, null)
+        public ImGuiController(IImGuiBackendRenderer backendRenderer, IWindow view, IInputContext input) : this(backendRenderer, view, input, null)
         {
         }
 
         /// <summary>
         /// Constructs a new ImGuiController.
         /// </summary>
-        public ImGuiController(DeviceD3D11 renderDevice, GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, GraphicPipelineFactory pipelineFactory, IView view, IInputContext input)
+        public ImGuiController(DeviceD3D11 renderDevice, GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, GraphicPipelineFactory pipelineFactory, IWindow view, IInputContext input)
             : this(new ImGuiImplDX11(renderDevice, graphicDeviceRessourceFactory, pipelineFactory), view, input, null)
         {
         }
@@ -64,7 +62,7 @@ namespace PetitMoteur3D.DebugGui
         /// <summary>
         /// Constructs a new ImGuiController with font configuration and onConfigure Action.
         /// </summary>
-        public ImGuiController(IImGuiBackendRenderer backendRenderer, IView view, IInputContext input, Action? onConfigureIO)
+        public ImGuiController(IImGuiBackendRenderer backendRenderer, IWindow view, IInputContext input, Action? onConfigureIO)
         {
             _backendRenderer = backendRenderer;
             _view = view;
@@ -72,8 +70,8 @@ namespace PetitMoteur3D.DebugGui
             _windowWidth = view.Size.X;
             _windowHeight = view.Size.Y;
 
-            Context = ImGuiNET.ImGui.CreateContext();
-            ImGuiNET.ImGui.SetCurrentContext(Context);
+            ContextPtr = ImGuiNET.ImGui.CreateContext();
+            ImGuiNET.ImGui.SetCurrentContext(ContextPtr);
             // Setup Dear ImGui style
             ImGuiNET.ImGui.StyleColorsDark();
 
@@ -107,7 +105,7 @@ namespace PetitMoteur3D.DebugGui
 
         public void MakeCurrent()
         {
-            ImGuiNET.ImGui.SetCurrentContext(Context);
+            ImGuiNET.ImGui.SetCurrentContext(ContextPtr);
         }
 
         private void InitCallbacks()
@@ -174,7 +172,7 @@ namespace PetitMoteur3D.DebugGui
             _pressedChars.Add(arg2);
         }
 
-        private void WindowResized(Vector2D<int> size)
+        private void WindowResized(Vector2 size)
         {
             _windowWidth = size.X;
             _windowHeight = size.Y;
@@ -196,9 +194,9 @@ namespace PetitMoteur3D.DebugGui
 
             nint oldCtx = ImGuiNET.ImGui.GetCurrentContext();
 
-            if (oldCtx != Context)
+            if (oldCtx != ContextPtr)
             {
-                ImGuiNET.ImGui.SetCurrentContext(Context);
+                ImGuiNET.ImGui.SetCurrentContext(ContextPtr);
             }
 
             if (autoCloseFrame)
@@ -240,7 +238,7 @@ namespace PetitMoteur3D.DebugGui
             TotalVtxCounter.Record(drawDataPtr.TotalVtxCount);
             */
 
-            if (oldCtx != Context)
+            if (oldCtx != ContextPtr)
             {
                 ImGuiNET.ImGui.SetCurrentContext(oldCtx);
             }
@@ -259,15 +257,15 @@ namespace PetitMoteur3D.DebugGui
 
             nint oldCtx = ImGuiNET.ImGui.GetCurrentContext();
 
-            if (oldCtx != Context)
+            if (oldCtx != ContextPtr)
             {
-                ImGuiNET.ImGui.SetCurrentContext(Context);
+                ImGuiNET.ImGui.SetCurrentContext(ContextPtr);
             }
 
             SetPerFrameImGuiData(deltaSeconds);
             UpdateImGuiInput();
 
-            if (oldCtx != Context)
+            if (oldCtx != ContextPtr)
             {
                 ImGuiNET.ImGui.SetCurrentContext(oldCtx);
             }
@@ -512,7 +510,7 @@ namespace PetitMoteur3D.DebugGui
                 _view.Resize -= WindowResized;
                 _keyboard.KeyChar -= OnKeyChar;
 
-                ImGuiNET.ImGui.DestroyContext(Context);
+                ImGuiNET.ImGui.DestroyContext(ContextPtr);
 
                 // Note disposing has been done.
                 _disposed = true;
