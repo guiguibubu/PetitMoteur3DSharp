@@ -1,12 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Numerics;
+﻿using System.Numerics;
 
-namespace PetitMoteur3D.Window
+namespace PetitMoteur3D.Window.SilkNet
 {
-    internal interface ISilkWindow
+    public static class SilkWindow
     {
-        Silk.NET.Windowing.IWindow SilkWindow { get; }
+
+        public static IWindow Create(WindowOptions options)
+        {
+            Silk.NET.Windowing.WindowOptions silkOptions = options.ToSilkNet();
+            return new SilkWindowImpl(Silk.NET.Windowing.Window.Create(silkOptions));
+        }
     }
 
     internal class SilkWindowImpl : IWindow, ISilkWindow

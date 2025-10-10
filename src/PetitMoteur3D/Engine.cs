@@ -60,25 +60,20 @@ namespace PetitMoteur3D
             _onNativeDxPlatform = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
         }
 
-        public void Run(params string[] args)
+        public void Run(IWindow window)
         {
             System.Console.WriteLine("Memory created at statup = {0} kB", _memoryAtStartUp / 1000);
             System.Console.WriteLine("Memory created at Main begin = {0} kB", _currentProcess.WorkingSet64 / 1000);
             try
             {
-                using (_window = WindowManager.Create())
-                {
-                    // Assign events.
-                    _window.Load += OnLoad;
-                    _window.Closing += OnClosing;
-                    _window.Resize += OnResize;
+                _window = window;
+                // Assign events.
+                _window.Load += OnLoad;
+                _window.Closing += OnClosing;
+                _window.Resize += OnResize;
 
-                    // Run the window.
-                    _window.Run(MainLoop);
-
-                    //dispose the window, and its internal resources
-                    _window.Dispose();
-                }
+                // Run the window.
+                _window.Run(MainLoop);
             }
             catch (Exception ex)
             {
@@ -346,7 +341,7 @@ namespace PetitMoteur3D
         {
             if (_window is not ISilkWindow silkWindow)
             {
-                System.Console.WriteLine("InitInput Onnly Silk.Net input supported. No input will be initialized");
+                System.Console.WriteLine("InitInput Only Silk.Net input supported. No input will be initialized");
                 return;
             }
             _inputContext = silkWindow.SilkWindow.CreateInput();
@@ -382,7 +377,6 @@ namespace PetitMoteur3D
         private void InitDebugTools()
         {
             _imGuiController = new ImGuiController(_deviceD3D11, _graphicDeviceRessourceFactory, _graphicPipelineFactory, _window, _inputContext);
-            //_imGuiController = new ImGuiController(new NoOpImGuiBackendRenderer(), _window, _inputContext);
         }
 
         private void AnimeScene(float tempsEcoule)

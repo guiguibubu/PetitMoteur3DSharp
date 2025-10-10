@@ -43,4 +43,8 @@
     </Content>
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\PetitMoteur3D.Window\PetitMoteur3D.Window.csproj" />
+  </ItemGroup>
+
 </Project>
