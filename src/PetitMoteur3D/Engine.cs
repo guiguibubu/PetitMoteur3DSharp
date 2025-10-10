@@ -9,13 +9,15 @@ using PetitMoteur3D.Camera;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
 using PetitMoteur3D.Window;
-using System.Numerics;
 using System.Runtime.InteropServices;
+using System.Drawing;
 
 namespace PetitMoteur3D
 {
     public class Engine
     {
+        public DeviceD3D11 DeviceD3D11 => _deviceD3D11;
+
         private IWindow _window = default!;
         private IInputContext _inputContext = default!;
         private ImGuiController _imGuiController = default!;
@@ -54,21 +56,30 @@ namespace PetitMoteur3D
         private Process _currentProcess = Process.GetCurrentProcess();
         private bool _onNativeDxPlatform;
 
-        public Engine()
+        public event Action? Initialized; 
+
+        public Engine(IWindow window)
         {
             _memoryAtStartUp = _currentProcess.WorkingSet64;
             _onNativeDxPlatform = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+            _window = window;
         }
 
-        public void Run(IWindow window)
+        public void Run()
         {
             System.Console.WriteLine("Memory created at statup = {0} kB", _memoryAtStartUp / 1000);
             System.Console.WriteLine("Memory created at Main begin = {0} kB", _currentProcess.WorkingSet64 / 1000);
             try
             {
-                _window = window;
                 // Assign events.
-                _window.Load += OnLoad;
+                if (_window.IsInitialized)
+                {
+                    OnLoad();
+                }
+                else
+                {
+                    _window.Load += OnLoad;
+                }
                 _window.Closing += OnClosing;
                 _window.Resize += OnResize;
 
@@ -114,6 +125,7 @@ namespace PetitMoteur3D
             InitDebugTools();
             System.Console.WriteLine("OnLoad InitDebugTools Finished");
             System.Console.WriteLine("Memory created after init = {0} kB", _currentProcess.WorkingSet64 / 1000);
+            Initialized?.Invoke();
         }
 
         private void OnClosing()
@@ -243,15 +255,15 @@ namespace PetitMoteur3D
             }
         }
 
-        private void OnResize(Vector2 newSize)
+        private void OnResize(Size newSize)
         {
             // If the window resizes, we need to be sure to update the swapchain's back buffers.
             _deviceD3D11.Resize(in newSize);
 
             // Update projection matrix
-            float largeurEcran = newSize.X;
-            float hauteurEcran = newSize.Y;
-            float aspectRatio = largeurEcran / hauteurEcran;
+            float windowWidth = newSize.Width;
+            float windowHeight = newSize.Height;
+            float aspectRatio = windowWidth / windowHeight;
             float planRapproche = 2.0f;
             float planEloigne = 100.0f;
             _matProj = CreatePerspectiveFieldOfViewLH(
@@ -314,9 +326,9 @@ namespace PetitMoteur3D
             // Initialisation des matrices View et Proj
             // Dans notre cas, ces matrices sont fixes
             _camera.GetViewMatrix(out _matView);
-            float largeurEcran = _window.Size.X;
-            float hauteurEcran = _window.Size.Y;
-            float aspectRatio = largeurEcran / hauteurEcran;
+            float windowWidth = _window.Size.Width;
+            float windowHeight = _window.Size.Height;
+            float aspectRatio = windowWidth / windowHeight;
             float planRapproche = 2.0f;
             float planEloigne = 100.0f;
             _matProj = CreatePerspectiveFieldOfViewLH(

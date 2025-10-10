@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.Metrics;
+using System.Drawing;
 using System.Numerics;
 using ImGuiNET;
 using OpenTelemetry.Metrics;
@@ -23,10 +24,10 @@ namespace PetitMoteur3D.DebugGui
     {
         private readonly IImGuiBackendRenderer _backendRenderer;
         private readonly IWindow _view;
-        private readonly IInputContext _input;
+        private readonly IInputContext? _input;
         private bool _frameBegun;
         private readonly List<char> _pressedChars = new();
-        private readonly IKeyboard _keyboard;
+        private readonly IKeyboard? _keyboard;
         private float _windowWidth;
         private float _windowHeight;
 
@@ -47,14 +48,14 @@ namespace PetitMoteur3D.DebugGui
         /// <summary>
         /// Constructs a new ImGuiController.
         /// </summary>
-        public ImGuiController(IImGuiBackendRenderer backendRenderer, IWindow view, IInputContext input) : this(backendRenderer, view, input, null)
+        public ImGuiController(IImGuiBackendRenderer backendRenderer, IWindow view, IInputContext? input) : this(backendRenderer, view, input, null)
         {
         }
 
         /// <summary>
         /// Constructs a new ImGuiController.
         /// </summary>
-        public ImGuiController(DeviceD3D11 renderDevice, GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, GraphicPipelineFactory pipelineFactory, IWindow view, IInputContext input)
+        public ImGuiController(DeviceD3D11 renderDevice, GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, GraphicPipelineFactory pipelineFactory, IWindow view, IInputContext? input)
             : this(new ImGuiImplDX11(renderDevice, graphicDeviceRessourceFactory, pipelineFactory), view, input, null)
         {
         }
@@ -62,13 +63,13 @@ namespace PetitMoteur3D.DebugGui
         /// <summary>
         /// Constructs a new ImGuiController with font configuration and onConfigure Action.
         /// </summary>
-        public ImGuiController(IImGuiBackendRenderer backendRenderer, IWindow view, IInputContext input, Action? onConfigureIO)
+        public ImGuiController(IImGuiBackendRenderer backendRenderer, IWindow view, IInputContext? input, Action? onConfigureIO)
         {
             _backendRenderer = backendRenderer;
             _view = view;
             _input = input;
-            _windowWidth = view.Size.X;
-            _windowHeight = view.Size.Y;
+            _windowWidth = view.Size.Width;
+            _windowHeight = view.Size.Height;
 
             ContextPtr = ImGuiNET.ImGui.CreateContext();
             ImGuiNET.ImGui.SetCurrentContext(ContextPtr);
@@ -86,7 +87,10 @@ namespace PetitMoteur3D.DebugGui
 
             SetPerFrameImGuiData(1f / 60f);
 
-            _keyboard = _input.Keyboards[0];
+            if (_input is not null)
+            {
+                _keyboard = _input.Keyboards[0];
+            }
             InitCallbacks();
 
             _backendRenderer.Init(in io);
@@ -111,9 +115,12 @@ namespace PetitMoteur3D.DebugGui
         private void InitCallbacks()
         {
             _view.Resize += WindowResized;
-            _keyboard.KeyDown += OnKeyDown;
-            _keyboard.KeyUp += OnKeyUp;
-            _keyboard.KeyChar += OnKeyChar;
+            if (_keyboard is not null)
+            {
+                _keyboard.KeyDown += OnKeyDown;
+                _keyboard.KeyUp += OnKeyUp;
+                _keyboard.KeyChar += OnKeyChar;
+            }
         }
 
         /// <summary>
@@ -172,10 +179,10 @@ namespace PetitMoteur3D.DebugGui
             _pressedChars.Add(arg2);
         }
 
-        private void WindowResized(Vector2 size)
+        private void WindowResized(Size size)
         {
-            _windowWidth = size.X;
-            _windowHeight = size.Y;
+            _windowWidth = size.Width;
+            _windowHeight = size.Height;
         }
 
 #if DEBUG && DEBUG_LOG_DRAW_COMMANDS
@@ -283,8 +290,8 @@ namespace PetitMoteur3D.DebugGui
 
             if (_windowWidth > 0 && _windowHeight > 0)
             {
-                io.DisplayFramebufferScale.X = _view.FramebufferSize.X / _windowWidth;
-                io.DisplayFramebufferScale.Y = _view.FramebufferSize.Y / _windowHeight;
+                io.DisplayFramebufferScale.X = _view.FramebufferSize.Width / _windowWidth;
+                io.DisplayFramebufferScale.Y = _view.FramebufferSize.Height / _windowHeight;
             }
 
             io.DeltaTime = deltaSeconds; // DeltaTime is in seconds.
@@ -292,6 +299,11 @@ namespace PetitMoteur3D.DebugGui
 
         private void UpdateImGuiInput()
         {
+            if(_input is null)
+            {
+                return;
+            }
+
             ImGuiIOPtr io = ImGuiNET.ImGui.GetIO();
 
             IMouse mouseState = _input.Mice[0];
@@ -314,10 +326,13 @@ namespace PetitMoteur3D.DebugGui
 
             _pressedChars.Clear();
 
-            io.KeyCtrl = _keyboard.IsKeyPressed(Key.ControlLeft) || _keyboard.IsKeyPressed(Key.ControlRight);
-            io.KeyAlt = _keyboard.IsKeyPressed(Key.AltLeft) || _keyboard.IsKeyPressed(Key.AltRight);
-            io.KeyShift = _keyboard.IsKeyPressed(Key.ShiftLeft) || _keyboard.IsKeyPressed(Key.ShiftRight);
-            io.KeySuper = _keyboard.IsKeyPressed(Key.SuperLeft) || _keyboard.IsKeyPressed(Key.SuperRight);
+            if (_keyboard is not null)
+            {
+                io.KeyCtrl = _keyboard.IsKeyPressed(Key.ControlLeft) || _keyboard.IsKeyPressed(Key.ControlRight);
+                io.KeyAlt = _keyboard.IsKeyPressed(Key.AltLeft) || _keyboard.IsKeyPressed(Key.AltRight);
+                io.KeyShift = _keyboard.IsKeyPressed(Key.ShiftLeft) || _keyboard.IsKeyPressed(Key.ShiftRight);
+                io.KeySuper = _keyboard.IsKeyPressed(Key.SuperLeft) || _keyboard.IsKeyPressed(Key.SuperRight);
+            }
         }
 
         internal void PressChar(char keyChar)
@@ -508,7 +523,10 @@ namespace PetitMoteur3D.DebugGui
                 // If disposing is false,
                 // only the following code is executed.
                 _view.Resize -= WindowResized;
-                _keyboard.KeyChar -= OnKeyChar;
+                if (_keyboard is not null)
+                {
+                    _keyboard.KeyChar -= OnKeyChar;
+                }
 
                 ImGuiNET.ImGui.DestroyContext(ContextPtr);
 

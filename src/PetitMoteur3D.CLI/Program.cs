@@ -15,8 +15,8 @@ options.Title = "PetitMoteur3D";
 
 using (IWindow window = SilkWindow.Create(options))
 {
-    Engine engine = new();
-    engine.Run(window);
+    Engine engine = new(window);
+    engine.Run();
 
     //dispose the window, and its internal resources
     window.Dispose();

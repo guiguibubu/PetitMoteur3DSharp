@@ -11,11 +11,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PetitMoteur3D.CLI", "src\Pe
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PetitMoteur3D.Application", "src\PetitMoteur3D.Application\PetitMoteur3D.Application.csproj", "{EB7E8191-FCF6-4E47-A0F3-88E24DC72928}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PetitMoteur3D.Window.SilkNet", "PetitMoteur3D.Window.SilkNet\PetitMoteur3D.Window.SilkNet.csproj", "{77706747-B163-49FF-86C4-854377441B9F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PetitMoteur3D.Window.SilkNet", "src\PetitMoteur3D.Window.SilkNet\PetitMoteur3D.Window.SilkNet.csproj", "{77706747-B163-49FF-86C4-854377441B9F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PetitMoteur3D.Window", "PetitMoteur3D.Window\PetitMoteur3D.Window.csproj", "{2BB4B687-A602-4A53-8342-7D717B5F48D8}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PetitMoteur3D.Window", "src\PetitMoteur3D.Window\PetitMoteur3D.Window.csproj", "{2BB4B687-A602-4A53-8342-7D717B5F48D8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PetitMoteur3D.Window.WinUI", "PetitMoteur3D.Window.WinUI\PetitMoteur3D.Window.WinUI.csproj", "{9427A045-1276-4414-B74E-843FE4DDB6C7}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PetitMoteur3D.Window.WinUI", "src\PetitMoteur3D.Window.WinUI\PetitMoteur3D.Window.WinUI.csproj", "{9427A045-1276-4414-B74E-843FE4DDB6C7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -1,10 +1,9 @@
-﻿using System.Numerics;
+﻿using System.Drawing;
 
 namespace PetitMoteur3D.Window.SilkNet
 {
     public static class SilkWindow
     {
-
         public static IWindow Create(WindowOptions options)
         {
             Silk.NET.Windowing.WindowOptions silkOptions = options.ToSilkNet();
@@ -25,17 +24,17 @@ namespace PetitMoteur3D.Window.SilkNet
         public nint? NativeHandle => SilkWindow.Native!.DXHandle;
 
         /// <inheritdoc/>
-        public Vector2 Size
+        public Size Size
         {
-            get => new Vector2(SilkWindow.Size.X, SilkWindow.Size.Y);
-            set => SilkWindow.Size = new Silk.NET.Maths.Vector2D<int>((int)value.X, (int)value.Y);
+            get => new Size(SilkWindow.Size.X, SilkWindow.Size.Y);
+            set => SilkWindow.Size = new Silk.NET.Maths.Vector2D<int>(value.Width, value.Height);
         }
 
         /// <inheritdoc/>
-        public Vector2 FramebufferSize
+        public Size FramebufferSize
         {
-            get => new Vector2(SilkWindow.FramebufferSize.X, SilkWindow.FramebufferSize.Y);
-            set => SilkWindow.Size = new Silk.NET.Maths.Vector2D<int>((int)value.X, (int)value.Y);
+            get => new Size(SilkWindow.FramebufferSize.X, SilkWindow.FramebufferSize.Y);
+            set => SilkWindow.Size = new Silk.NET.Maths.Vector2D<int>(value.Width, value.Height);
         }
 
         /// <inheritdoc/>
@@ -62,17 +61,17 @@ namespace PetitMoteur3D.Window.SilkNet
         }
 
         /// <inheritdoc/>
-        public event Action<Vector2>? Resize
+        public event Action<Size>? Resize
         {
             add { bool emptyAction = _resizeActions.Count == 0; _resizeActions.Add(value); if (emptyAction) SilkWindow.Resize += ResizeHandle; }
             remove { bool lastAction = _resizeActions.Count == 1; _resizeActions.Remove(value); if (lastAction) SilkWindow.Resize -= ResizeHandle; }
         }
-        private List<Action<Vector2>?> _resizeActions = new();
+        private List<Action<Size>?> _resizeActions = new();
         private void ResizeHandle(Silk.NET.Maths.Vector2D<int> x)
         {
-            foreach (Action<Vector2>? action in _resizeActions)
+            foreach (Action<Size>? action in _resizeActions)
             {
-                action?.Invoke(new Vector2(x.X, x.Y));
+                action?.Invoke(new Size(x.X, x.Y));
             }
         }
 

@@ -8,6 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK.WinUI" Version="1.8.250906003" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\PetitMoteur3D.Window\PetitMoteur3D.Window.csproj" />
   </ItemGroup>
 

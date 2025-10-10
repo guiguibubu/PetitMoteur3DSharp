@@ -46,6 +46,7 @@
         <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.250916003" />
     </ItemGroup>
     <ItemGroup>
+      <ProjectReference Include="..\PetitMoteur3D.Window.WinUI\PetitMoteur3D.Window.WinUI.csproj" />
       <ProjectReference Include="..\PetitMoteur3D\PetitMoteur3D.csproj" />
     </ItemGroup>
 

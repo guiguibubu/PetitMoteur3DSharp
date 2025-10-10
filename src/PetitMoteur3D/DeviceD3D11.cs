@@ -5,14 +5,13 @@ using Silk.NET.Direct3D11;
 using Silk.NET.DXGI;
 using Silk.NET.Maths;
 using System;
-using System.Numerics;
+using System.Drawing;
 using System.Runtime.CompilerServices;
 using IWindow = PetitMoteur3D.Window.IWindow;
-//using IWindow = Silk.NET.Windowing.IWindow;
 
 namespace PetitMoteur3D
 {
-    internal class DeviceD3D11
+    public class DeviceD3D11
     {
         public ref ComPtr<ID3D11Device> Device { get { return ref _device; } }
         public ref ComPtr<ID3D11DeviceContext> DeviceContext { get { return ref _deviceContext; } }
@@ -129,9 +128,9 @@ namespace PetitMoteur3D
             );
         }
 
-        public unsafe void Resize(ref readonly Vector2 size)
+        public unsafe void Resize(ref readonly Size size)
         {
-            if (size.X == _window.Size.X && size.Y == _window.Size.Y)
+            if (size.Width == _window.Size.Width && size.Height == _window.Size.Height)
             {
                 return;
             }
@@ -145,7 +144,7 @@ namespace PetitMoteur3D
                 _swapchain.ResizeBuffers(0, 0, 0, Format.FormatB8G8R8A8Unorm, (uint)SwapChainFlag.AllowModeSwitch)
             );
 
-            InitView(size.X, size.Y);
+            InitView(size.Width, size.Height);
         }
 
 #if USE_RENDERDOC
@@ -235,7 +234,7 @@ namespace PetitMoteur3D
 
         private unsafe void InitSwapChain(IWindow window, bool forceDxvk)
         {
-            InitSwapChain((uint)window.Size.X, (uint)window.Size.Y, window.NativeHandle!.Value, forceDxvk);
+            InitSwapChain((uint)window.Size.Width, (uint)window.Size.Height, window.NativeHandle!.Value, forceDxvk);
         }
 
         private unsafe void InitSwapChain(uint width, uint heigth, nint windowPtr, bool forceDxvk)
@@ -283,7 +282,7 @@ namespace PetitMoteur3D
 
         private unsafe void InitView(IWindow window)
         {
-            InitView(window.Size.X, window.Size.Y);
+            InitView(window.Size.Width, window.Size.Height);
         }
 
         private unsafe void InitView(float width, float height)
@@ -313,7 +312,7 @@ namespace PetitMoteur3D
         private unsafe void InitDepthBuffer(IWindow window)
         {
 
-            InitDepthBuffer((uint)window.Size.X, (uint)window.Size.Y);
+            InitDepthBuffer((uint)window.Size.Width, (uint)window.Size.Height);
         }
 
         private unsafe void InitDepthBuffer(uint width, uint height)

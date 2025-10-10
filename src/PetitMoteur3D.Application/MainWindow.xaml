@@ -9,9 +9,9 @@
     mc:Ignorable="d"
     Title="PetitMoteur3D.Application">
 
-    <Window.SystemBackdrop>
-        <MicaBackdrop />
-    </Window.SystemBackdrop>
+    <!--<Window.SystemBackdrop>-->
+        <!--<MicaBackdrop />-->
+    <!--</Window.SystemBackdrop>-->
 
     <Grid>
         <SwapChainPanel x:Name="DXSwapChainPanel" Loaded="DXSwapChainPanel_Loaded"/>

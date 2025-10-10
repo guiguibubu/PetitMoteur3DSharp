@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using Microsoft.UI.Xaml;
 using Windows.Win32.System.Com;
 
@@ -22,19 +23,22 @@ namespace PetitMoteur3D.Application
 
         private void DXSwapChainPanel_Loaded(object sender, RoutedEventArgs e)
         {
-            nint swapChainPtr = ABI.Microsoft.UI.Xaml.Controls.SwapChainPanel.FromManaged(DXSwapChainPanel);
-            unsafe
+            this.AppWindow.AssociateWithDispatcherQueue(this.DispatcherQueue);
+            PetitMoteur3D.Window.WinUIWindow window = new(this.AppWindow);
+            Engine engine = new(window);
+            engine.Initialized += () =>
             {
-                ref IUnknown comUnknown = ref Unsafe.AsRef<IUnknown>(swapChainPtr.ToPointer());
-                comUnknown.QueryInterface<ISwapChainPanelNative>(out ISwapChainPanelNative* swapChainPanelNativePtr);
-                ref ISwapChainPanelNative swapChainPanelNative = ref Unsafe.AsRef<ISwapChainPanelNative>(swapChainPanelNativePtr);
-                //swapChainPanelNative.SetSwapChain();
-            }
-
-            nint appWindowId = nint.CreateChecked(this.AppWindow.Id.Value);
-
-            Engine engine = new();
-            engine.Run();
+                nint swapChainPtr = ABI.Microsoft.UI.Xaml.Controls.SwapChainPanel.FromManaged(DXSwapChainPanel);
+                unsafe
+                {
+                    ref IUnknown comUnknown = ref Unsafe.AsRef<IUnknown>(swapChainPtr.ToPointer());
+                    comUnknown.QueryInterface<ISwapChainPanelNative>(out ISwapChainPanelNative* swapChainPanelNativePtr);
+                    ref ISwapChainPanelNative swapChainPanelNative = ref Unsafe.AsRef<ISwapChainPanelNative>(swapChainPanelNativePtr);
+                    swapChainPanelNative.SetSwapChain((Windows.Win32.Graphics.Dxgi.IDXGISwapChain*)engine.DeviceD3D11.Swapchain.Handle);
+                }
+            };
+            Thread engineThread = new Thread(engine.Run);
+            engineThread.Start();
         }
     }
 }

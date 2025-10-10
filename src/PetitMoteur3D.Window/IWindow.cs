@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Numerics;
+using System.Drawing;
 
 namespace PetitMoteur3D.Window
 {
@@ -13,12 +13,12 @@ namespace PetitMoteur3D.Window
         /// <summary>
         /// The size of the window in pixels.
         /// </summary>
-        Vector2 Size { get; set; }
+        Size Size { get; set; }
 
         /// <summary>
         /// The size of the framebuffer. May differ from the window size.
         /// </summary>
-        Vector2 FramebufferSize { get; set; }
+        Size FramebufferSize { get; set; }
 
         /// <summary>
         /// Determines whether the underlying platform has requested the window to close.
@@ -48,7 +48,7 @@ namespace PetitMoteur3D.Window
         /// <summary>
         /// Raised when the window is resized.
         /// </summary>
-        event Action<Vector2>? Resize;
+        event Action<Size>? Resize;
 
         /// <summary>
         /// Creates the window on the underlying platform.
