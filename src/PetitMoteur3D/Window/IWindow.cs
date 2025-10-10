@@ -3,7 +3,7 @@ using System.Numerics;
 
 namespace PetitMoteur3D.Window
 {
-    internal interface IWindow : IDisposable
+    public interface IWindow : IDisposable
     {
         /// <summary>
         /// The underlying native window handle
