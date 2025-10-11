@@ -163,7 +163,7 @@ namespace PetitMoteur3D
             {
                 if (compilationErrors.Handle is not null)
                 {
-                    System.Console.WriteLine(SilkMarshal.PtrToString((nint)compilationErrors.GetBufferPointer()));
+                    System.Diagnostics.Debug.WriteLine(SilkMarshal.PtrToString((nint)compilationErrors.GetBufferPointer()));
                 }
 
                 hr.Throw();

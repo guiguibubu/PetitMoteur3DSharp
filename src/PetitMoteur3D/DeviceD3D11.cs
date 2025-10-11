@@ -1,4 +1,5 @@
 ﻿//#define USE_RENDERDOC
+using PetitMoteur3D.Window;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D.Compilers;
 using Silk.NET.Direct3D11;
@@ -30,6 +31,8 @@ namespace PetitMoteur3D
         private ComPtr<ID3D11Texture2D> _depthTexture;
         private ComPtr<ID3D11RasterizerState> _solidCullBackRS;
         private ComPtr<ID3D11RasterizerState> _wireFrameCullBackRS;
+
+        private SwapChainDesc1 _swapchainDescription;
 
         private readonly D3DCompiler _compiler;
         private readonly D3D11 _d3d11Api;
@@ -91,7 +94,7 @@ namespace PetitMoteur3D
             _renderDoc.API.SetActiveWindow(new IntPtr(_device.Handle), _window.Native!.DXHandle!.Value);
             _renderDoc.API.SetActiveWindow(new IntPtr(_device.Handle), _window.Native!.Win32!.Value.Hwnd);
             _renderDoc.API.SetCaptureFilePathTemplate(System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "capture"));
-            System.Console.WriteLine("Render doc file path : " + _renderDoc.API.GetCaptureFilePathTemplate());
+            System.Diagnostics.Debug.WriteLine("Render doc file path : " + _renderDoc.API.GetCaptureFilePathTemplate());
 #endif
         }
 
@@ -118,13 +121,18 @@ namespace PetitMoteur3D
 
         public unsafe void BeforePresent()
         {
+            if (_swapchainDescription.SwapEffect == SwapEffect.FlipSequential)
+            {
+                SetRenderTarget();
+            }
             ClearRenderTarget();
         }
 
         public void Present()
         {
+            uint syncInterval = _swapchainDescription.SwapEffect == SwapEffect.FlipSequential ? 1u : 0u;
             SilkMarshal.ThrowHResult(
-                _swapchain.Present(0, 0)
+                _swapchain.Present(syncInterval, 0)
             );
         }
 
@@ -155,17 +163,17 @@ namespace PetitMoteur3D
 
         public unsafe void StartFrameCapture()
         {
-            System.Console.WriteLine("StartFrameCapture");
+            System.Diagnostics.Debug.WriteLine("StartFrameCapture");
             _renderDoc.API.StartFrameCapture((nint)_device.Handle, _window.Native!.DXHandle!.Value);
         }
 
         public unsafe void EndFrameCapture()
         {
-            System.Console.WriteLine("EndFrameCapture");
+            System.Diagnostics.Debug.WriteLine("EndFrameCapture");
             uint errorCode = _renderDoc.API.EndFrameCapture((nint)_device.Handle, _window.Native!.DXHandle!.Value);
             if (errorCode == 0)
             {
-                System.Console.WriteLine("EndFrameCapture fail to capture");
+                System.Diagnostics.Debug.WriteLine("EndFrameCapture fail to capture");
             }
         }
 #endif
@@ -200,7 +208,9 @@ namespace PetitMoteur3D
 
         private unsafe void InitDevice(D3D11 d3d11Api)
         {
-            uint createDeviceFlags = 0;
+            uint createDeviceFlags = (uint)CreateDeviceFlag.BgraSupport;
+            createDeviceFlags |= (uint)CreateDeviceFlag.Singlethreaded;
+            createDeviceFlags |= (uint)CreateDeviceFlag.PreventInternalThreadingOptimizations;
 #if DEBUG
             createDeviceFlags |= (uint)CreateDeviceFlag.Debug;
 #endif
@@ -227,14 +237,33 @@ namespace PetitMoteur3D
             if (OperatingSystem.IsWindows())
             {
                 // Log debug messages for this device (given that we've enabled the debug flag). Don't do this in release code!
-                _device.SetInfoQueueCallback(msg => Console.WriteLine(SilkMarshal.PtrToString((nint)msg.PDescription)));
+                _device.SetInfoQueueCallback(msg =>
+                {
+                    string? msgStr = SilkMarshal.PtrToString((nint)msg.PDescription);
+                    System.Diagnostics.Debug.WriteLine(msgStr);
+                    System.Diagnostics.Debugger.Break();
+                });
             }
 #endif
         }
 
         private unsafe void InitSwapChain(IWindow window, bool forceDxvk)
         {
-            InitSwapChain((uint)window.Size.Width, (uint)window.Size.Height, window.NativeHandle!.Value, forceDxvk);
+            if (window is IWinUiWindow)
+            {
+                InitSwapChain((uint)window.Size.Width, (uint)window.Size.Height, windowPtr: 0, forceDxvk);
+                // Ensure that DXGI does not queue more than one frame at a time. This both reduces 
+                // latency and ensures that the application will only render after each VSync, minimizing 
+                // power consumption.
+                ComPtr<IDXGIDevice1> dxgiDevice = Device.QueryInterface<IDXGIDevice1>();
+                dxgiDevice.SetMaximumFrameLatency(1);
+            }
+            else
+            {
+                InitSwapChain((uint)window.Size.Width, (uint)window.Size.Height, window.NativeHandle!.Value, forceDxvk);
+            }
+            _swapchainDescription = new();
+            _swapchain.GetDesc1(ref _swapchainDescription);
         }
 
         private unsafe void InitSwapChain(uint width, uint heigth, nint windowPtr, bool forceDxvk)
@@ -264,18 +293,44 @@ namespace PetitMoteur3D
             dxgi.Dispose();
 
             // Create the swapchain.
-            SilkMarshal.ThrowHResult
-            (
-                factory.CreateSwapChainForHwnd
+            if (windowPtr != IntPtr.Zero)
+            {
+                SilkMarshal.ThrowHResult
                 (
-                    _device,
-                    windowPtr,
-                    in swapChainDesc,
-                    in swapChainFullscreenDesc,
-                    ref Unsafe.NullRef<IDXGIOutput>(),
-                    ref _swapchain
-                )
-            );
+                    factory.CreateSwapChainForHwnd
+                    (
+                        _device,
+                        windowPtr,
+                        in swapChainDesc,
+                        in swapChainFullscreenDesc,
+                        ref Unsafe.NullRef<IDXGIOutput>(),
+                        ref _swapchain
+                    )
+                );
+            }
+            else
+            {
+                // https://learn.microsoft.com/en-us/windows/win32/api/dxgi1_2/nf-dxgi1_2-idxgifactory2-createswapchainforcomposition
+                // You must specify the DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL value in the SwapEffect member of DXGI_SWAP_CHAIN_DESC1 because CreateSwapChainForComposition supports only flip presentation model.
+                // You must also specify the DXGI_SCALING_STRETCH value in the Scaling member of DXGI_SWAP_CHAIN_DESC1.
+                swapChainDesc.SwapEffect = SwapEffect.FlipSequential;
+                swapChainDesc.Scaling = Scaling.Stretch;
+                // https://learn.microsoft.com/en-us/windows/win32/api/dxgi1_2/ns-dxgi1_2-dxgi_swap_chain_desc1
+                // A value that describes the number of buffers in the swap chain. When you create a full-screen swap chain, you typically include the front buffer in this value.
+                swapChainDesc.BufferCount = 2;
+                //swapChainDesc.Flags = 0;
+                //swapChainDesc.AlphaMode = AlphaMode.Premultiplied;
+                SilkMarshal.ThrowHResult
+                (
+                    factory.CreateSwapChainForComposition
+                    (
+                        _device,
+                        in swapChainDesc,
+                        ref Unsafe.NullRef<IDXGIOutput>(),
+                        ref _swapchain
+                    )
+                );
+            }
 
             factory.Dispose();
         }

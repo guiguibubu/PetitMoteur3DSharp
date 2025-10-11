@@ -2,13 +2,17 @@
 
 namespace PetitMoteur3D.Window
 {
-    public class WinUIWindow : IWindow
+    public class WinUIWindow : IWindow, IWinUiWindow
     {
-        private Microsoft.UI.Windowing.AppWindow _nativeWindow;
+        private readonly Microsoft.UI.Windowing.AppWindow _nativeWindow;
+        private readonly Microsoft.UI.Xaml.Window _window;
+        private readonly Microsoft.UI.Xaml.Controls.SwapChainPanel _swapchainPanel;
 
-        public WinUIWindow(Microsoft.UI.Windowing.AppWindow nativeWindow)
+        public WinUIWindow(Microsoft.UI.Xaml.Window window, Microsoft.UI.Xaml.Controls.SwapChainPanel swapchainPanel)
         {
-            _nativeWindow = nativeWindow;
+            _window = window;
+            _nativeWindow = window.AppWindow;
+            _swapchainPanel = swapchainPanel;
             _nativeWindow.Closing += OnClosing;
             _isInitialized = true;
         }
@@ -44,8 +48,16 @@ namespace PetitMoteur3D.Window
         /// <inheritdoc/>
         public event Action? Load
         {
-            add { }
-            remove { }
+            add { bool emptyAction = _loadActions.Count == 0; _loadActions.Add(value); if (emptyAction) _swapchainPanel.Loaded += OnLoad; }
+            remove { bool lastAction = _loadActions.Count == 1; _loadActions.Remove(value); if (lastAction) _swapchainPanel.Loaded -= OnLoad; }
+        }
+        private List<Action?> _loadActions = new();
+        private void OnLoad(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
+        {
+            foreach (Action? action in _loadActions)
+            {
+                action?.Invoke();
+            }
         }
 
         /// <inheritdoc/>
@@ -112,8 +124,8 @@ namespace PetitMoteur3D.Window
         {
             while (!IsClosing)
             {
-                onFrame.Invoke();
-                //_nativeWindow.DispatcherQueue.TryEnqueue(onFrame.Invoke);
+                //onFrame.Invoke();
+                _window.DispatcherQueue.TryEnqueue(onFrame.Invoke);
             }
         }
     }

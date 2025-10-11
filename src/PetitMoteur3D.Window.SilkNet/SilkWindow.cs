@@ -7,7 +7,8 @@ namespace PetitMoteur3D.Window.SilkNet
         public static IWindow Create(WindowOptions options)
         {
             Silk.NET.Windowing.WindowOptions silkOptions = options.ToSilkNet();
-            return new SilkWindowImpl(Silk.NET.Windowing.Window.Create(silkOptions));
+            Silk.NET.Windowing.IWindow silkWindow = Silk.NET.Windowing.Window.Create(silkOptions);
+            return new SilkWindowImpl(silkWindow);
         }
     }
 
@@ -17,6 +18,7 @@ namespace PetitMoteur3D.Window.SilkNet
 
         public SilkWindowImpl(Silk.NET.Windowing.IWindow window)
         {
+            ArgumentNullException.ThrowIfNull(window);
             SilkWindow = window;
         }
 

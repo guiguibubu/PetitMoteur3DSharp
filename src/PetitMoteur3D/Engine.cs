@@ -56,32 +56,57 @@ namespace PetitMoteur3D
         private Process _currentProcess = Process.GetCurrentProcess();
         private bool _onNativeDxPlatform;
 
-        public event Action? Initialized; 
+        private bool _isInitializing = false;
+        private bool _isInitialized = false;
+        public event Action? Initialized;
 
         public Engine(IWindow window)
         {
             _memoryAtStartUp = _currentProcess.WorkingSet64;
             _onNativeDxPlatform = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
             _window = window;
+            // Assign events.
+            _window.Load += OnLoad;
+            _window.Closing += OnClosing;
+            _window.Resize += OnResize;
+        }
+
+        public void Initialize()
+        {
+            if (_window.IsClosing)
+            {
+                System.Diagnostics.Debug.WriteLine("Initialize called window is closing");
+                return;
+            }
+            if (!_window.IsInitialized)
+            {
+                System.Diagnostics.Debug.WriteLine("Initialize called but window not initialized");
+                return;
+            }
+            OnLoad();
         }
 
         public void Run()
         {
-            System.Console.WriteLine("Memory created at statup = {0} kB", _memoryAtStartUp / 1000);
-            System.Console.WriteLine("Memory created at Main begin = {0} kB", _currentProcess.WorkingSet64 / 1000);
+            System.Diagnostics.Debug.WriteLine("Memory created at statup = {0} kB", _memoryAtStartUp / 1000);
+            System.Diagnostics.Debug.WriteLine("Memory created at Main begin = {0} kB", _currentProcess.WorkingSet64 / 1000);
             try
             {
-                // Assign events.
-                if (_window.IsInitialized)
+                if (!_isInitialized)
                 {
-                    OnLoad();
+                    System.Diagnostics.Debug.WriteLine("Run called but engine not initialized. Initialize before calling Run.");
+                    return;
                 }
-                else
+                if (_window.IsClosing)
                 {
-                    _window.Load += OnLoad;
+                    System.Diagnostics.Debug.WriteLine("Run called window is closing");
+                    return;
                 }
-                _window.Closing += OnClosing;
-                _window.Resize += OnResize;
+                if (!_window.IsInitialized)
+                {
+                    System.Diagnostics.Debug.WriteLine("Run called but window not initialized");
+                    return;
+                }
 
                 // Run the window.
                 _window.Run(MainLoop);
@@ -92,8 +117,8 @@ namespace PetitMoteur3D
                 bool logFinished = false;
                 do
                 {
-                    System.Console.WriteLine(ex.Message);
-                    System.Console.WriteLine(ex.StackTrace);
+                    System.Diagnostics.Debug.WriteLine(ex.Message);
+                    System.Diagnostics.Debug.WriteLine(ex.StackTrace);
                     if (currentEx.InnerException is not null)
                     {
                         currentEx = currentEx.InnerException;
@@ -112,39 +137,47 @@ namespace PetitMoteur3D
 
         private void OnLoad()
         {
-            System.Console.WriteLine("Memory created before init = {0} kB", _currentProcess.WorkingSet64 / 1000);
-            System.Console.WriteLine("OnLoad");
+            System.Diagnostics.Debug.WriteLine("OnLoad");
+            if (_isInitialized || _isInitializing)
+            {
+                System.Diagnostics.Debug.WriteLine("OnLoad Engine already initialized or initializing. No action will be performed");
+                return;
+            }
+            _isInitializing = true;
+            System.Diagnostics.Debug.WriteLine("Memory created before init = {0} kB", _currentProcess.WorkingSet64 / 1000);
             InitRendering();
-            System.Console.WriteLine("OnLoad InitRendering Finished");
+            System.Diagnostics.Debug.WriteLine("OnLoad InitRendering Finished");
             InitScene();
-            System.Console.WriteLine("OnLoad InitScene Finished");
+            System.Diagnostics.Debug.WriteLine("OnLoad InitScene Finished");
             InitAnimation();
-            System.Console.WriteLine("OnLoad InitAnimation Finished");
+            System.Diagnostics.Debug.WriteLine("OnLoad InitAnimation Finished");
             InitInput();
-            System.Console.WriteLine("OnLoad InitInput Finished");
+            System.Diagnostics.Debug.WriteLine("OnLoad InitInput Finished");
             InitDebugTools();
-            System.Console.WriteLine("OnLoad InitDebugTools Finished");
-            System.Console.WriteLine("Memory created after init = {0} kB", _currentProcess.WorkingSet64 / 1000);
+            System.Diagnostics.Debug.WriteLine("OnLoad InitDebugTools Finished");
+            System.Diagnostics.Debug.WriteLine("Memory created after init = {0} kB", _currentProcess.WorkingSet64 / 1000);
+            _isInitializing = false;
+            _isInitialized = true;
             Initialized?.Invoke();
         }
 
         private void OnClosing()
         {
-            System.Console.WriteLine("OnClosing");
+            System.Diagnostics.Debug.WriteLine("OnClosing");
             _imGuiController.Dispose();
-            System.Console.WriteLine("OnClosing ImGuiController.Dispose Finished");
+            System.Diagnostics.Debug.WriteLine("OnClosing ImGuiController.Dispose Finished");
         }
 
         private unsafe void MainLoop()
         {
             if (_window.IsClosing)
             {
-                System.Console.WriteLine("Main loop called window is closing");
+                System.Diagnostics.Debug.WriteLine("Main loop called window is closing");
                 return;
             }
             if (!_window.IsInitialized)
             {
-                System.Console.WriteLine("Main loop called but window not initialized");
+                System.Diagnostics.Debug.WriteLine("Main loop called but window not initialized");
                 return;
             }
             double tempsEcouleEngine = _horlogeEngine.ElapsedMilliseconds;
@@ -353,7 +386,7 @@ namespace PetitMoteur3D
         {
             if (_window is not ISilkWindow silkWindow)
             {
-                System.Console.WriteLine("InitInput Only Silk.Net input supported. No input will be initialized");
+                System.Diagnostics.Debug.WriteLine("InitInput Only Silk.Net input supported. No input will be initialized");
                 return;
             }
             _inputContext = silkWindow.SilkWindow.CreateInput();

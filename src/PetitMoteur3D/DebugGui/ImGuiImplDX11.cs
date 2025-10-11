@@ -164,8 +164,8 @@ namespace PetitMoteur3D.DebugGui
             {
                 int vertexBufferSize = _backendRendererUserData.VertexBufferSize * sizeof(ImDrawVert);
                 int indexBufferSize = _backendRendererUserData.IndexBufferSize * sizeof(ImDrawIdx);
-                System.Console.WriteLine("vertexBufferSize = " + vertexBufferSize);
-                System.Console.WriteLine("indexBufferSize = " + indexBufferSize);
+                System.Diagnostics.Debug.WriteLine("vertexBufferSize = " + vertexBufferSize);
+                System.Diagnostics.Debug.WriteLine("indexBufferSize = " + indexBufferSize);
                 int remainingVertexBufferSpace = _backendRendererUserData.VertexBufferSize;
                 int remainingIndexBufferSpace = _backendRendererUserData.IndexBufferSize;
                 byte[] debugBufferVertex = new byte[vertexBufferSize];
@@ -226,8 +226,8 @@ namespace PetitMoteur3D.DebugGui
                     }
                 }
 
-                System.Console.WriteLine("totalVertex = " + totalVertex);
-                System.Console.WriteLine("totalIndex = " + totalIndex);
+                System.Diagnostics.Debug.WriteLine("totalVertex = " + totalVertex);
+                System.Diagnostics.Debug.WriteLine("totalIndex = " + totalIndex);
                 System.Diagnostics.Debug.Assert(cmdListVertex.Count == serializedVertex.Count);
                 System.Diagnostics.Debug.Assert(cmdListIndex.Count == serializedIndex.Count);
                 for (int i = 0; i < totalVertex; i++)

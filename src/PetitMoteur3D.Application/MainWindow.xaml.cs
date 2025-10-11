@@ -23,22 +23,37 @@ namespace PetitMoteur3D.Application
 
         private void DXSwapChainPanel_Loaded(object sender, RoutedEventArgs e)
         {
-            this.AppWindow.AssociateWithDispatcherQueue(this.DispatcherQueue);
-            PetitMoteur3D.Window.WinUIWindow window = new(this.AppWindow);
+            //this.AppWindow.AssociateWithDispatcherQueue(this.DispatcherQueue);
+            PetitMoteur3D.Window.WinUIWindow window = new(this, DXSwapChainPanel);
             Engine engine = new(window);
             engine.Initialized += () =>
             {
-                nint swapChainPtr = ABI.Microsoft.UI.Xaml.Controls.SwapChainPanel.FromManaged(DXSwapChainPanel);
-                unsafe
+                bool success = DXSwapChainPanel.DispatcherQueue.TryEnqueue(() =>
                 {
-                    ref IUnknown comUnknown = ref Unsafe.AsRef<IUnknown>(swapChainPtr.ToPointer());
-                    comUnknown.QueryInterface<ISwapChainPanelNative>(out ISwapChainPanelNative* swapChainPanelNativePtr);
-                    ref ISwapChainPanelNative swapChainPanelNative = ref Unsafe.AsRef<ISwapChainPanelNative>(swapChainPanelNativePtr);
-                    swapChainPanelNative.SetSwapChain((Windows.Win32.Graphics.Dxgi.IDXGISwapChain*)engine.DeviceD3D11.Swapchain.Handle);
-                }
+                    SetSwapwhain(engine);
+                });
             };
-            Thread engineThread = new Thread(engine.Run);
-            engineThread.Start();
+            engine.Initialize();
+            //Thread engineThread = new Thread(engine.Run);
+            //engineThread.Start();
+            //engine.Run();
+        }
+
+        private void SetSwapwhain(Engine engine)
+        {
+            nint swapChainPtr = ABI.Microsoft.UI.Xaml.Controls.SwapChainPanel.FromManaged(DXSwapChainPanel);
+            unsafe
+            {
+                ref IUnknown comUnknown = ref Unsafe.AsRef<IUnknown>(swapChainPtr.ToPointer());
+                comUnknown.QueryInterface<ISwapChainPanelNative>(out ISwapChainPanelNative* swapChainPanelNativePtr);
+                ref ISwapChainPanelNative swapChainPanelNative = ref Unsafe.AsRef<ISwapChainPanelNative>(swapChainPanelNativePtr);
+                swapChainPanelNative.SetSwapChain((Windows.Win32.Graphics.Dxgi.IDXGISwapChain*)engine.DeviceD3D11.Swapchain.Handle);
+            }
+        }
+
+        private void Window_Activated(object sender, WindowActivatedEventArgs args)
+        {
+            PetitMoteur3D.Window.WinUIWindow window = new(this, DXSwapChainPanel);
         }
     }
 }
