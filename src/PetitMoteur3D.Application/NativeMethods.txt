@@ -1,2 +1,3 @@
 ﻿IUnknown
 ISwapChainPanelNative
+microsoft.ui.xaml.media.dxinterop.h

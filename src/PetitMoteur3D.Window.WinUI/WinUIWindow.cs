@@ -125,7 +125,7 @@ namespace PetitMoteur3D.Window
             while (!IsClosing)
             {
                 //onFrame.Invoke();
-                _window.DispatcherQueue.TryEnqueue(onFrame.Invoke);
+                _swapchainPanel.DispatcherQueue.TryEnqueue(onFrame.Invoke);
             }
         }
     }
