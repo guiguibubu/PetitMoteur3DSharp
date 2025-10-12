@@ -241,7 +241,7 @@ namespace PetitMoteur3D
                 {
                     string? msgStr = SilkMarshal.PtrToString((nint)msg.PDescription);
                     System.Diagnostics.Debug.WriteLine(msgStr);
-                    System.Diagnostics.Debugger.Break();
+                    //System.Diagnostics.Debugger.Break();
                 });
             }
 #endif

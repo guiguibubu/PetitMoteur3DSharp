@@ -60,7 +60,7 @@ namespace PetitMoteur3D
 
             if (string.IsNullOrEmpty(name))
             {
-                _name = this.GetType().Name + Guid.NewGuid().ToString();
+                _name = this.GetType().Name + "_" + Guid.NewGuid().ToString();
             }
             else
             {

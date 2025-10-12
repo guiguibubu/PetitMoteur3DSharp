@@ -223,8 +223,8 @@ namespace PetitMoteur3D
                         ImGuiIOPtr io = ImGui.GetIO();
 
                         float f = 0.0f;
-                        ImGui.Begin("Title : Hello, world!");
-                        ImGui.Text("Hello, world!");
+                        ImGui.Begin("Title : PetitMoteur3D (DebugTools)!");
+                        ImGui.Text("Window : " + _window.GetType().Name);
                         ImGui.SliderFloat("float", ref f, 0.0f, 1.0f);
                         ImGui.Text(string.Format("Application average {0} ms/frame ({1} FPS)", (1000.0f / io.Framerate).ToString("F3", System.Globalization.CultureInfo.InvariantCulture), io.Framerate.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)));
                         ImGui.Text(string.Format("Application memory usage {0} kB", _currentProcess.WorkingSet64 / 1000));
