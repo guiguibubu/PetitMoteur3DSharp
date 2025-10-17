@@ -164,7 +164,7 @@ namespace PetitMoteur3D
         private void OnClosing()
         {
             System.Diagnostics.Debug.WriteLine("OnClosing");
-            _imGuiController.Dispose();
+            _imGuiController?.Dispose();
             System.Diagnostics.Debug.WriteLine("OnClosing ImGuiController.Dispose Finished");
         }
 

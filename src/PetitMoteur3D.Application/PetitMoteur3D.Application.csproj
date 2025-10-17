@@ -2,7 +2,8 @@
     <PropertyGroup>
         <OutputType>WinExe</OutputType>
         <TargetFramework>net8.0-windows10.0.26100.0</TargetFramework>
-        <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+        <SupportedOSPlatformVersion>10.0.26100.0</SupportedOSPlatformVersion>
+        <PlatformTarget>AnyCPU</PlatformTarget>
         <RootNamespace>PetitMoteur3D.Application</RootNamespace>
         <ApplicationManifest>app.manifest</ApplicationManifest>
         <Platforms>x86;x64;ARM64</Platforms>
@@ -11,8 +12,10 @@
         <UseWinUI>true</UseWinUI>
         <EnableMsixTooling>true</EnableMsixTooling>
         <Nullable>enable</Nullable>
+        <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
         <WindowsPackageType>None</WindowsPackageType>
         <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+        <CsWinRTAotOptimizerEnabled>false</CsWinRTAotOptimizerEnabled>
     </PropertyGroup>
 
     <ItemGroup>
@@ -38,18 +41,17 @@
         <ProjectCapability Include="Msix" />
     </ItemGroup>
     <ItemGroup>
-        <PackageReference Include="Microsoft.Windows.CsWin32" Version="0.3.205">
-          <PrivateAssets>all</PrivateAssets>
-          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-        </PackageReference>
         <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.6584" />
-        <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.250916003" />
+        <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.251003001" />
         <PackageReference Include="System.Runtime.InteropServices" Version="4.3.0" />
     </ItemGroup>
     <ItemGroup>
       <ProjectReference Include="..\PetitMoteur3D.Window.WinUI\PetitMoteur3D.Window.WinUI.csproj" />
       <ProjectReference Include="..\PetitMoteur3D\PetitMoteur3D.csproj" />
     </ItemGroup>
+    <PropertyGroup Label="Globals">
+      <WebView2EnableCsWinRTProjection>False</WebView2EnableCsWinRTProjection>
+    </PropertyGroup>
 
     <!--
     Defining the "HasPackageAndPublishMenuAddedByProject" property here allows the Solution
@@ -66,5 +68,14 @@
         <PublishReadyToRun Condition="'$(Configuration)' != 'Debug'">True</PublishReadyToRun>
         <PublishTrimmed Condition="'$(Configuration)' == 'Debug'">False</PublishTrimmed>
         <PublishTrimmed Condition="'$(Configuration)' != 'Debug'">True</PublishTrimmed>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x86'">
+      <Optimize>False</Optimize>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      <Optimize>False</Optimize>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
+      <Optimize>False</Optimize>
     </PropertyGroup>
 </Project>
