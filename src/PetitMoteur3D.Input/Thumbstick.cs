@@ -1,11 +1,9 @@
-using System;
-
 namespace PetitMoteur3D.Input
 {
     /// <summary>
     /// A thumbstick on an <see cref="IGamepad"/>
     /// </summary>
-    public  struct Thumbstick
+    public struct Thumbstick
     {
         /// <summary>
         /// The index of this stick.
@@ -25,12 +23,12 @@ namespace PetitMoteur3D.Input
         /// <summary>
         /// The current position of the stick, from 0.0 to 1.0.
         /// </summary>
-        public float Position => (float) Math.Sqrt(X * X + Y * Y);
+        public float Position => (float)Math.Sqrt(X * X + Y * Y);
 
         /// <summary>
         /// The current direction of the stick, from -π to π.
         /// </summary>
-        public float Direction => (float) Math.Atan2(Y, X);
+        public float Direction => (float)Math.Atan2(Y, X);
 
         /// <summary>
         /// Creates a new instance of the Thumbstick struct.

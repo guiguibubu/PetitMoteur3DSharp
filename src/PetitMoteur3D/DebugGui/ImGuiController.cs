@@ -10,7 +10,6 @@ using ImGuiNET;
 using OpenTelemetry.Metrics;
 using PetitMoteur3D.Window;
 using Silk.NET.Input;
-using Silk.NET.Maths;
 
 namespace PetitMoteur3D.DebugGui
 {
@@ -299,7 +298,7 @@ namespace PetitMoteur3D.DebugGui
 
         private void UpdateImGuiInput()
         {
-            if(_input is null)
+            if (_input is null)
             {
                 return;
             }

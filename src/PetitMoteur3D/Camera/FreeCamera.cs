@@ -20,7 +20,7 @@ namespace PetitMoteur3D.Camera
 
         private Vector3D<float> _position;
         private Vector3D<float> _rotation;
-        
+
         /// <summary>
         /// Constructeur par defaut
         /// </summary>

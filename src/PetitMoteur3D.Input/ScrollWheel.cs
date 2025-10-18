@@ -1,4 +1,3 @@
-using System;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -8,7 +7,7 @@ namespace PetitMoteur3D.Input
     /// <summary>
     /// Represents a scroll wheel.
     /// </summary>
-    public  struct ScrollWheel : IEquatable<ScrollWheel>
+    public struct ScrollWheel : IEquatable<ScrollWheel>
     {
         /// <summary>
         /// The X position of the scroll wheel.

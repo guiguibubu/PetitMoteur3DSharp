@@ -58,17 +58,17 @@ namespace PetitMoteur3D.Input
         /// Omni-directional resize/move cursor.
         /// </summary>
         ResizeAll,
-        
+
         /// <summary>
         /// Operation not allowed cursor.
         /// </summary>
         NotAllowed,
-        
+
         /// <summary>
         /// Hourglass/waiting cursor.
         /// </summary>
         Wait,
-        
+
         /// <summary>
         /// Regular arrow but with an hourglass/waiting icon cursor.
         /// </summary>

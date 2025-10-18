@@ -1,13 +1,13 @@
 ﻿//#define USE_RENDERDOC
+using System;
+using System.Drawing;
+using System.Runtime.CompilerServices;
 using PetitMoteur3D.Window;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D.Compilers;
 using Silk.NET.Direct3D11;
 using Silk.NET.DXGI;
 using Silk.NET.Maths;
-using System;
-using System.Drawing;
-using System.Runtime.CompilerServices;
 using IWindow = PetitMoteur3D.Window.IWindow;
 
 namespace PetitMoteur3D

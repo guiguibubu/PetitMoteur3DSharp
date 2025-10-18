@@ -3,7 +3,7 @@ namespace PetitMoteur3D.Input
     /// <summary>
     /// Represents a joystick hat.
     /// </summary>
-    public  struct Hat
+    public struct Hat
     {
         /// <summary>
         /// The index of this hat.

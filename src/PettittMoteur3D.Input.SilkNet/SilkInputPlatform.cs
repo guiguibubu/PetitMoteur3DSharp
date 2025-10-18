@@ -14,7 +14,7 @@ namespace PetitMoteur3D.Input.SilkNet
         /// <inheritdoc/>
         public IInputContext CreateInput(IWindow window)
         {
-            if(IsApplicable(window))
+            if (IsApplicable(window))
             {
                 throw new NotSupportedException($"Window must be a {nameof(ISilkWindow)}");
             }

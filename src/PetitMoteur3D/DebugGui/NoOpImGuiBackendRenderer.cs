@@ -1,5 +1,4 @@
-﻿using System;
-using ImGuiNET;
+﻿using ImGuiNET;
 
 namespace PetitMoteur3D.DebugGui
 {
@@ -7,7 +6,7 @@ namespace PetitMoteur3D.DebugGui
     {
         public void Dispose()
         {
-            
+
         }
 
         public bool Init(ref readonly ImGuiIOPtr io)
@@ -18,7 +17,7 @@ namespace PetitMoteur3D.DebugGui
 
         public void NewFrame()
         {
-            
+
         }
 
         public void RenderDrawData(ref readonly ImDrawDataPtr drawData)

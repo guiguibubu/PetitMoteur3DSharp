@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-
 namespace PetitMoteur3D.Input
 {
     /// <summary>
@@ -12,7 +9,7 @@ namespace PetitMoteur3D.Input
         /// The keys this keyboard has available.
         /// </summary>
         IReadOnlyList<Key> SupportedKeys { get; }
-        
+
         /// <summary>
         /// The text currently in the clipboard.
         /// </summary>

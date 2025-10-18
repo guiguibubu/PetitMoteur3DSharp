@@ -15,6 +15,6 @@ namespace PetitMoteur3D
 
         public BoundingBox()
         : this(new Vector3D<float>(float.MinValue, float.MinValue, float.MinValue), new Vector3D<float>(float.MaxValue, float.MaxValue, float.MaxValue))
-        {}
+        { }
     }
 }

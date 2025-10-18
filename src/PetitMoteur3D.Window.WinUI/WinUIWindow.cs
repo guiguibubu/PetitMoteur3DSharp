@@ -104,7 +104,7 @@ namespace PetitMoteur3D.Window
         /// <inheritdoc/>
         public void Dispose()
         {
-            
+
         }
 
         /// <inheritdoc/>

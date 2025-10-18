@@ -3,7 +3,7 @@ namespace PetitMoteur3D.Input
     /// <summary>
     /// Represents a joystick button.
     /// </summary>
-    public  struct Button
+    public struct Button
     {
         /// <summary>
         /// The name of this button. Only guaranteed to be valid if this comes from an <see cref="IGamepad"/>.

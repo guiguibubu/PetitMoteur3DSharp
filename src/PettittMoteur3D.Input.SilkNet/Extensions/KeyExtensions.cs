@@ -1,6 +1,4 @@
-﻿using System.Reflection.Metadata.Ecma335;
-
-namespace PetitMoteur3D.Input.SilkNet
+﻿namespace PetitMoteur3D.Input.SilkNet
 {
     internal static class KeyExtensions
     {
