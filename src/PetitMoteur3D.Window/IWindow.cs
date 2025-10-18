@@ -35,11 +35,6 @@ namespace PetitMoteur3D.Window
         bool IsInitialized { get; }
 
         /// <summary>
-        /// Raised when the window first begins to run.
-        /// </summary>
-        event Action? Load;
-
-        /// <summary>
         /// Raised when the window is about to close.
         /// </summary>
         event Action? Closing;

@@ -2,6 +2,8 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using PetitMoteur3D;
+using PetitMoteur3D.Input;
+using PetitMoteur3D.Input.SilkNet;
 using PetitMoteur3D.Window;
 using PetitMoteur3D.Window.SilkNet;
 
@@ -17,10 +19,13 @@ WindowOptions options = WindowOptions.Default;
 options.WindowState = WindowState.Maximized;
 options.Title = "PetitMoteur3D";
 
+SilkInputPlatform platform = new SilkInputPlatform();
 using (IWindow window = SilkWindow.Create(options))
 {
-    Engine engine = new(window);
     window.Initialize();
+    IInputContext inputContext = platform.CreateInput(window);
+
+    Engine engine = new(window, inputContext);
     engine.Initialize();
     engine.Run();
 

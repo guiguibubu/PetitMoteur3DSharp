@@ -18,8 +18,8 @@ public class Engine
 {
     public DeviceD3D11 DeviceD3D11 => _deviceD3D11;
 
-    private IWindow _window = default!;
-    private IInputContext _inputContext = default!;
+    private readonly IWindow _window = default!;
+    private readonly IInputContext? _inputContext = default!;
     private ImGuiController _imGuiController = default!;
     private DeviceD3D11 _deviceD3D11 = default!;
     private GraphicDeviceRessourceFactory _graphicDeviceRessourceFactory = default!;
@@ -60,15 +60,12 @@ public class Engine
     private bool _isInitialized = false;
     public event Action? Initialized;
 
-    public Engine(IWindow window)
+    public Engine(IWindow window, IInputContext? inputContext = null)
     {
         _memoryAtStartUp = _currentProcess.WorkingSet64;
         _onNativeDxPlatform = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
         _window = window;
-        // Assign events.
-        _window.Load += OnLoad;
-        _window.Closing += OnClosing;
-        _window.Resize += OnResize;
+        _inputContext = inputContext;
     }
 
     public void Initialize()
@@ -83,6 +80,9 @@ public class Engine
             System.Diagnostics.Debug.WriteLine("Initialize called but window not initialized");
             return;
         }
+        // Assign events.
+        _window.Closing += OnClosing;
+        _window.Resize += OnResize;
         OnLoad();
     }
 
@@ -384,12 +384,11 @@ public class Engine
 
     private void InitInput()
     {
-        if (_window is not ISilkWindow silkWindow)
+        if (_inputContext is null)
         {
-            System.Diagnostics.Debug.WriteLine("InitInput Only Silk.Net input supported. No input will be initialized");
+            System.Diagnostics.Debug.WriteLine("InputContext not initialized. Inputs will not be catched.");
             return;
         }
-        _inputContext = silkWindow.SilkWindow.CreateInput();
         IKeyboard keyboard = _inputContext.Keyboards[0];
         keyboard.KeyDown += (_, key, i) =>
         {

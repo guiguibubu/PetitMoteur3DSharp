@@ -2,7 +2,7 @@
 {
     public static class SilkInputDevice
     {
-        public static IInputDevice FromSilk(Silk.NET.Input.IInputDevice inputDevice)
+        internal static IInputDevice FromSilk(Silk.NET.Input.IInputDevice inputDevice)
         {
             if (inputDevice is Silk.NET.Input.IGamepad gamepad)
             {

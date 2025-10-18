@@ -31,7 +31,7 @@ namespace PetitMoteur3D.Application
         {
             ArgumentNullException.ThrowIfNull(window);
             Thread.CurrentThread.Name = "EngineThread";
-            Engine engine = new(window);
+            Engine engine = new(window, null);
             engine.Initialized += () =>
             {
                 bool success = DXSwapChainPanel.DispatcherQueue.TryEnqueue(DispatcherQueuePriority.High, () =>

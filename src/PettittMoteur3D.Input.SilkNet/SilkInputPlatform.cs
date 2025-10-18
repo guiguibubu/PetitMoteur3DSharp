@@ -1,4 +1,5 @@
 ﻿using PetitMoteur3D.Window;
+using PetitMoteur3D.Window.SilkNet;
 using Silk.NET.Input;
 
 namespace PetitMoteur3D.Input.SilkNet

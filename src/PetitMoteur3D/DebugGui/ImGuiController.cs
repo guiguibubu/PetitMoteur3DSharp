@@ -8,8 +8,8 @@ using System.Drawing;
 using System.Numerics;
 using ImGuiNET;
 using OpenTelemetry.Metrics;
+using PetitMoteur3D.Input;
 using PetitMoteur3D.Window;
-using Silk.NET.Input;
 
 namespace PetitMoteur3D.DebugGui
 {

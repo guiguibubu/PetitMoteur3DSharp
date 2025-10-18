@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\PetitMoteur3D.Input\PetitMoteur3D.Input.csproj" />
+    <ProjectReference Include="..\PetitMoteur3D.Window.SilkNet\PetitMoteur3D.Window.SilkNet.csproj" />
   </ItemGroup>
 
 </Project>
