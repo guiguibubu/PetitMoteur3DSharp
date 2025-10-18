@@ -5,7 +5,7 @@ namespace PetitMoteur3D.Input
     /// <summary>
     /// A thumbstick on an <see cref="IGamepad"/>
     /// </summary>
-    public struct Thumbstick
+    public  struct Thumbstick
     {
         /// <summary>
         /// The index of this stick.

@@ -3,7 +3,7 @@ namespace PetitMoteur3D.Input
     /// <summary>
     /// Represents a trigger.
     /// </summary>
-    public struct Trigger
+    public  struct Trigger
     {
         /// <summary>
         /// The index of this trigger.
