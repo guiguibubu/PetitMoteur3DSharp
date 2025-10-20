@@ -402,3 +402,6 @@ FodyWeavers.xsd
 
 # OBJ Models
 !src/PetitMoteur3D/models/**/*.obj
+
+# Our Custom build and intermediare output
+build/*
