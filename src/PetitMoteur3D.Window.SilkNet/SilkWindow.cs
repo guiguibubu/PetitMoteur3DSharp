@@ -102,7 +102,7 @@ namespace PetitMoteur3D.Window.SilkNet
         }
 
         /// <inheritdoc/>
-        public void Run(Action onFrame)
+        public void Run(Action onFrame, object? _ = null)
         {
             SilkWindow.Render += _ => onFrame?.Invoke();
             Silk.NET.Windowing.WindowExtensions.Run(SilkWindow);

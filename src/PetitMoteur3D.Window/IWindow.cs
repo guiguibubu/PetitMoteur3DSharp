@@ -1,4 +1,5 @@
 ﻿using System.Drawing;
+using System.Xml.Schema;
 
 namespace PetitMoteur3D.Window
 {
@@ -63,6 +64,7 @@ namespace PetitMoteur3D.Window
         /// Initiates a render loop in which the given callback is called as fast as the underlying platform can manage.
         /// </summary>
         /// <param name="onFrame">The callback to run each frame.</param>
-        void Run(Action onFrame);
+        /// <param name="frameArgs">The arguments for the frame.</param>
+        void Run(Action onFrame, object? frameArgs = null);
     }
 }

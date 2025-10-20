@@ -16,8 +16,12 @@
         <WindowsPackageType>None</WindowsPackageType>
         <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
         <CsWinRTAotOptimizerEnabled>false</CsWinRTAotOptimizerEnabled>
+        <EnableGeneratedComInterfaceComImportInterop>true</EnableGeneratedComInterfaceComImportInterop>
     </PropertyGroup>
 
+    <!--
+    Graphic assets.
+  -->
     <ItemGroup>
         <Content Include="Assets\SplashScreen.scale-200.png" />
         <Content Include="Assets\LockScreenLogo.scale-200.png" />
@@ -26,6 +30,15 @@
         <Content Include="Assets\Square44x44Logo.targetsize-24_altform-unplated.png" />
         <Content Include="Assets\StoreLogo.png" />
         <Content Include="Assets\Wide310x150Logo.scale-200.png" />
+    </ItemGroup>
+
+    <!--
+    Native dlls.
+  -->
+    <ItemGroup>
+        <Content Include="$(BaseOutputPath)$(Configuration)\native\*">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Content>
     </ItemGroup>
 
     <ItemGroup>
@@ -46,11 +59,13 @@
         <PackageReference Include="System.Runtime.InteropServices" Version="4.3.0" />
     </ItemGroup>
     <ItemGroup>
-      <ProjectReference Include="..\PetitMoteur3D.Window.WinUI\PetitMoteur3D.Window.WinUI.csproj" />
-      <ProjectReference Include="..\PetitMoteur3D\PetitMoteur3D.csproj" />
+        <ProjectReference Include="..\PetitMoteur3D.Application.Native\PetitMoteur3D.Application.Native.vcxproj" />
+        <ProjectReference Include="..\PetitMoteur3D.Window.WinUI\PetitMoteur3D.Window.WinUI.csproj" />
+        <ProjectReference Include="..\PetitMoteur3D\PetitMoteur3D.csproj" />
     </ItemGroup>
     <PropertyGroup Label="Globals">
-      <WebView2EnableCsWinRTProjection>False</WebView2EnableCsWinRTProjection>
+        <WebView2EnableCsWinRTProjection>False</WebView2EnableCsWinRTProjection>
+        <WebView2LoaderPreference>Dynamic</WebView2LoaderPreference>
     </PropertyGroup>
 
     <!--
@@ -69,13 +84,7 @@
         <PublishTrimmed Condition="'$(Configuration)' == 'Debug'">False</PublishTrimmed>
         <PublishTrimmed Condition="'$(Configuration)' != 'Debug'">True</PublishTrimmed>
     </PropertyGroup>
-    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x86'">
-      <Optimize>False</Optimize>
-    </PropertyGroup>
-    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-      <Optimize>False</Optimize>
-    </PropertyGroup>
-    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
-      <Optimize>False</Optimize>
+    <PropertyGroup Condition="'$(Configuration)'=='Debug'">
+        <Optimize>False</Optimize>
     </PropertyGroup>
 </Project>

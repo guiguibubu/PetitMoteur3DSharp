@@ -94,7 +94,7 @@ namespace PetitMoteur3D
             _renderDoc.API.SetActiveWindow(new IntPtr(_device.Handle), _window.Native!.DXHandle!.Value);
             _renderDoc.API.SetActiveWindow(new IntPtr(_device.Handle), _window.Native!.Win32!.Value.Hwnd);
             _renderDoc.API.SetCaptureFilePathTemplate(System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "capture"));
-            System.Diagnostics.Debug.WriteLine("Render doc file path : " + _renderDoc.API.GetCaptureFilePathTemplate());
+            System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] Render doc file path : " + _renderDoc.API.GetCaptureFilePathTemplate());
 #endif
         }
 
@@ -163,17 +163,17 @@ namespace PetitMoteur3D
 
         public unsafe void StartFrameCapture()
         {
-            System.Diagnostics.Debug.WriteLine("StartFrameCapture");
+            System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] StartFrameCapture");
             _renderDoc.API.StartFrameCapture((nint)_device.Handle, _window.Native!.DXHandle!.Value);
         }
 
         public unsafe void EndFrameCapture()
         {
-            System.Diagnostics.Debug.WriteLine("EndFrameCapture");
+            System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] EndFrameCapture");
             uint errorCode = _renderDoc.API.EndFrameCapture((nint)_device.Handle, _window.Native!.DXHandle!.Value);
             if (errorCode == 0)
             {
-                System.Diagnostics.Debug.WriteLine("EndFrameCapture fail to capture");
+                System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] EndFrameCapture fail to capture");
             }
         }
 #endif
@@ -240,7 +240,7 @@ namespace PetitMoteur3D
                 _device.SetInfoQueueCallback(msg =>
                 {
                     string? msgStr = SilkMarshal.PtrToString((nint)msg.PDescription);
-                    System.Diagnostics.Debug.WriteLine(msgStr);
+                    System.Diagnostics.Trace.WriteLine(msgStr);
                     //System.Diagnostics.Debugger.Break();
                 });
             }

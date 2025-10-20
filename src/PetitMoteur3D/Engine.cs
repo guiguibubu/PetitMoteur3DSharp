@@ -7,6 +7,7 @@ using ImGuiNET;
 using PetitMoteur3D.Camera;
 using PetitMoteur3D.DebugGui;
 using PetitMoteur3D.Input;
+using PetitMoteur3D.Logging;
 using PetitMoteur3D.Window;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
@@ -60,6 +61,8 @@ public class Engine
     private bool _isInitialized = false;
     public event Action? Initialized;
 
+    public ulong CurrentFrameCount = 0;
+
     public Engine(IWindow window, IInputContext? inputContext = null)
     {
         _memoryAtStartUp = _currentProcess.WorkingSet64;
@@ -72,12 +75,12 @@ public class Engine
     {
         if (_window.IsClosing)
         {
-            System.Diagnostics.Debug.WriteLine("Initialize called window is closing");
+            System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] Initialize called window is closing");
             return;
         }
         if (!_window.IsInitialized)
         {
-            System.Diagnostics.Debug.WriteLine("Initialize called but window not initialized");
+            System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] Initialize called but window not initialized");
             return;
         }
         // Assign events.
@@ -88,48 +91,35 @@ public class Engine
 
     public void Run()
     {
-        System.Diagnostics.Debug.WriteLine("Memory created at statup = {0} kB", _memoryAtStartUp / 1000);
-        System.Diagnostics.Debug.WriteLine("Memory created at Main begin = {0} kB", _currentProcess.WorkingSet64 / 1000);
+        System.Diagnostics.Trace.WriteLine(string.Format("[PetitMoteur3D] Memory created at statup = {0} kB", _memoryAtStartUp / 1000));
+        System.Diagnostics.Trace.WriteLine(string.Format("[PetitMoteur3D] Memory created at Main begin = {0} kB", _currentProcess.WorkingSet64 / 1000));
         try
         {
             if (!_isInitialized)
             {
-                System.Diagnostics.Debug.WriteLine("Run called but engine not initialized. Initialize before calling Run.");
+                System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] Run called but engine not initialized. Initialize before calling Run.");
                 return;
             }
             if (_window.IsClosing)
             {
-                System.Diagnostics.Debug.WriteLine("Run called window is closing");
+                System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] Run called window is closing");
                 return;
             }
             if (!_window.IsInitialized)
             {
-                System.Diagnostics.Debug.WriteLine("Run called but window not initialized");
+                System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] Run called but window not initialized");
                 return;
             }
 
             // Run the window.
-            _window.Run(MainLoop);
+            _window.Run(MainLoop, this);
         }
         catch (Exception ex)
         {
-            Exception currentEx = ex;
-            bool logFinished = false;
-            do
-            {
-                System.Diagnostics.Debug.WriteLine(ex.Message);
-                System.Diagnostics.Debug.WriteLine(ex.StackTrace);
-                if (currentEx.InnerException is not null)
-                {
-                    currentEx = currentEx.InnerException;
-                }
-                else
-                {
-                    logFinished = true;
-                }
-            } while (!logFinished);
+            LogHelper.Log(ex);
             if (System.Diagnostics.Debugger.IsAttached)
             {
+                System.Diagnostics.Debugger.Break();
                 throw;
             }
         }
@@ -137,25 +127,25 @@ public class Engine
 
     private void OnLoad()
     {
-        System.Diagnostics.Debug.WriteLine("OnLoad");
+        System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] OnLoad");
         if (_isInitialized || _isInitializing)
         {
-            System.Diagnostics.Debug.WriteLine("OnLoad Engine already initialized or initializing. No action will be performed");
+            System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] OnLoad Engine already initialized or initializing. No action will be performed");
             return;
         }
         _isInitializing = true;
-        System.Diagnostics.Debug.WriteLine("Memory created before init = {0} kB", _currentProcess.WorkingSet64 / 1000);
+        System.Diagnostics.Trace.WriteLine(string.Format("[PetitMoteur3D] Memory created before init = {0} kB", _currentProcess.WorkingSet64 / 1000));
         InitRendering();
-        System.Diagnostics.Debug.WriteLine("OnLoad InitRendering Finished");
+        System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] OnLoad InitRendering Finished");
         InitScene();
-        System.Diagnostics.Debug.WriteLine("OnLoad InitScene Finished");
+        System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] OnLoad InitScene Finished");
         InitAnimation();
-        System.Diagnostics.Debug.WriteLine("OnLoad InitAnimation Finished");
+        System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] OnLoad InitAnimation Finished");
         InitInput();
-        System.Diagnostics.Debug.WriteLine("OnLoad InitInput Finished");
+        System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] OnLoad InitInput Finished");
         InitDebugTools();
-        System.Diagnostics.Debug.WriteLine("OnLoad InitDebugTools Finished");
-        System.Diagnostics.Debug.WriteLine("Memory created after init = {0} kB", _currentProcess.WorkingSet64 / 1000);
+        System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] OnLoad InitDebugTools Finished");
+        System.Diagnostics.Trace.WriteLine(string.Format("[PetitMoteur3D] Memory created after init = {0} kB", _currentProcess.WorkingSet64 / 1000));
         _isInitializing = false;
         _isInitialized = true;
         Initialized?.Invoke();
@@ -163,127 +153,140 @@ public class Engine
 
     private void OnClosing()
     {
-        System.Diagnostics.Debug.WriteLine("OnClosing");
+        System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] OnClosing");
         _imGuiController?.Dispose();
-        System.Diagnostics.Debug.WriteLine("OnClosing ImGuiController.Dispose Finished");
+        System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] OnClosing ImGuiController.Dispose Finished");
     }
 
     private unsafe void MainLoop()
     {
         if (_window.IsClosing)
         {
-            System.Diagnostics.Debug.WriteLine("Main loop called window is closing");
+            System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] Main loop called window is closing");
             return;
         }
         if (!_window.IsInitialized)
         {
-            System.Diagnostics.Debug.WriteLine("Main loop called but window not initialized");
+            System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] Main loop called but window not initialized");
             return;
         }
+        CurrentFrameCount++;
         double tempsEcouleEngine = _horlogeEngine.ElapsedMilliseconds;
-
-        // Est-il temps de rendre l’image ?
-        if (tempsEcouleEngine > ECART_TEMPS_ENGINE)
+        try
         {
-            // Affichage optimisé
-            _deviceD3D11.Present();
-            // On relance l'horloge pour être certain de garder la fréquence d'affichage
-            _horlogeEngine.Restart();
-            // On prépare la prochaine image
-            AnimeScene((float)tempsEcouleEngine);
-            if (_showScene)
+            // Est-il temps de rendre l’image ?
+            if (tempsEcouleEngine > ECART_TEMPS_ENGINE)
             {
-                double tempsEcouleScene = _horlogeScene.ElapsedMilliseconds;
-                if (tempsEcouleScene > ECART_TEMPS_SCENE)
+                // Affichage optimisé
+                _deviceD3D11.Present();
+                // On relance l'horloge pour être certain de garder la fréquence d'affichage
+                _horlogeEngine.Restart();
+                // On prépare la prochaine image
+                AnimeScene((float)tempsEcouleEngine);
+                if (_showScene)
                 {
-                    _horlogeScene.Restart();
-                    // On rend l’image sur la surface de travail
-                    // (tampon d’arrière plan)
-                    RenderScene();
-                }
-            }
-            else
-            {
-                BeginRender();
-            }
-
-            if (_showDebugTool)
-            {
-                double tempsEcouleDebugTool = _horlogeDebugTool.ElapsedMilliseconds;
-                // We create a new frame or reuse the last one
-                if (tempsEcouleDebugTool > ECART_TEMPS_DEBUGTOOL)
-                {
-                    _imGuiController.CloseFrame();
-                    _imGuiController.Update((float)tempsEcouleEngine / 1000.0f);
-                    _imGuiController.NewFrame();
-
-                    // On relance l'horloge pour être certain de garder la fréquence d'affichage
-                    _horlogeDebugTool.Restart();
-
-                    ImGuiIOPtr io = ImGui.GetIO();
-
-                    float f = 0.0f;
-                    ImGui.Begin("Title : PetitMoteur3D (DebugTools)!");
-                    ImGui.Text("Window : " + _window.GetType().Name);
-                    ImGui.SliderFloat("float", ref f, 0.0f, 1.0f);
-                    ImGui.Text(string.Format("Application average {0} ms/frame ({1} FPS)", (1000.0f / io.Framerate).ToString("F3", System.Globalization.CultureInfo.InvariantCulture), io.Framerate.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)));
-                    ImGui.Text(string.Format("Application memory usage {0} kB", _currentProcess.WorkingSet64 / 1000));
-                    ImGui.Text(string.Format("Application (managed) heap usage {0} kB", GC.GetTotalMemory(false) / 1000));
-                    bool runGc = ImGui.Button("Run GC");
-                    bool colorChanged = ImGui.ColorEdit4("Background Color", ref _backgroundColour);     // Edit 4 floats representing a color
-                    bool wireFrameChanged = ImGui.Checkbox("WireFrame", ref _showWireFrame);     // Edit bool
-                    ImGui.Checkbox("Show Demo", ref _imGuiShowDemo);     // Edit bool
-                    ImGui.Checkbox("Show Debug Logs", ref _imGuiShowDebugLogs);     // Edit bool
-                    ImGui.Checkbox("Show Metrics", ref _imGuiShowMetrics);     // Edit bool
-                    ImGui.Checkbox("Show Scene", ref _showScene);     // Edit bool
-                    ImGui.End();
-
-                    // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
-                    if (_imGuiShowDemo)
-                        ImGui.ShowDemoWindow(ref _imGuiShowDemo);
-
-                    if (_imGuiShowDebugLogs)
-                        ImGui.ShowDebugLogWindow();
-
-                    if (_imGuiShowMetrics)
-                        ImGui.ShowMetricsWindow();
-
-                    _imGuiController.Render(false);
-
-                    if (colorChanged)
+                    double tempsEcouleScene = _horlogeScene.ElapsedMilliseconds;
+                    if (tempsEcouleScene > ECART_TEMPS_SCENE)
                     {
-                        _deviceD3D11.SetBackgroundColour(_backgroundColour.X / _backgroundColour.W, _backgroundColour.Y / _backgroundColour.W, _backgroundColour.Z / _backgroundColour.W, _backgroundColour.W);
-                    }
-
-                    if (wireFrameChanged)
-                    {
-                        if (_showWireFrame)
-                        {
-                            _deviceD3D11.GetRasterizerState(out ComPtr<ID3D11RasterizerState> rasterizerState);
-                            if (rasterizerState.Handle != _deviceD3D11.WireFrameCullBackRS.Handle)
-                            {
-                                _deviceD3D11.SetRasterizerState(in _deviceD3D11.WireFrameCullBackRS);
-                            }
-                        }
-                        if (!_showWireFrame)
-                        {
-                            _deviceD3D11.GetRasterizerState(out ComPtr<ID3D11RasterizerState> rasterizerState);
-                            if (rasterizerState.Handle != _deviceD3D11.SolidCullBackRS.Handle)
-                            {
-                                _deviceD3D11.SetRasterizerState(in _deviceD3D11.SolidCullBackRS);
-                            }
-                        }
-                    }
-
-                    if (runGc)
-                    {
-                        GC.Collect();
+                        _horlogeScene.Restart();
+                        // On rend l’image sur la surface de travail
+                        // (tampon d’arrière plan)
+                        RenderScene();
                     }
                 }
                 else
                 {
-                    _imGuiController.Render(false);
+                    BeginRender();
                 }
+
+                if (_showDebugTool)
+                {
+                    double tempsEcouleDebugTool = _horlogeDebugTool.ElapsedMilliseconds;
+                    // We create a new frame or reuse the last one
+                    if (tempsEcouleDebugTool > ECART_TEMPS_DEBUGTOOL)
+                    {
+                        _imGuiController.CloseFrame();
+                        _imGuiController.Update((float)tempsEcouleEngine / 1000.0f);
+                        _imGuiController.NewFrame();
+
+                        // On relance l'horloge pour être certain de garder la fréquence d'affichage
+                        _horlogeDebugTool.Restart();
+
+                        ImGuiIOPtr io = ImGui.GetIO();
+
+                        float f = 0.0f;
+                        ImGui.Begin("Title : PetitMoteur3D (DebugTools)!");
+                        ImGui.Text("Window : " + _window.GetType().Name);
+                        ImGui.SliderFloat("float", ref f, 0.0f, 1.0f);
+                        ImGui.Text(string.Format("Application average {0} ms/frame ({1} FPS)", (1000.0f / io.Framerate).ToString("F3", System.Globalization.CultureInfo.InvariantCulture), io.Framerate.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)));
+                        ImGui.Text(string.Format("Application memory usage {0} kB", _currentProcess.WorkingSet64 / 1000));
+                        ImGui.Text(string.Format("Application (managed) heap usage {0} kB", GC.GetTotalMemory(false) / 1000));
+                        bool runGc = ImGui.Button("Run GC");
+                        bool colorChanged = ImGui.ColorEdit4("Background Color", ref _backgroundColour);     // Edit 4 floats representing a color
+                        bool wireFrameChanged = ImGui.Checkbox("WireFrame", ref _showWireFrame);     // Edit bool
+                        ImGui.Checkbox("Show Demo", ref _imGuiShowDemo);     // Edit bool
+                        ImGui.Checkbox("Show Debug Logs", ref _imGuiShowDebugLogs);     // Edit bool
+                        ImGui.Checkbox("Show Metrics", ref _imGuiShowMetrics);     // Edit bool
+                        ImGui.Checkbox("Show Scene", ref _showScene);     // Edit bool
+                        ImGui.End();
+
+                        // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
+                        if (_imGuiShowDemo)
+                            ImGui.ShowDemoWindow(ref _imGuiShowDemo);
+
+                        if (_imGuiShowDebugLogs)
+                            ImGui.ShowDebugLogWindow();
+
+                        if (_imGuiShowMetrics)
+                            ImGui.ShowMetricsWindow();
+
+                        _imGuiController.Render(false);
+
+                        if (colorChanged)
+                        {
+                            _deviceD3D11.SetBackgroundColour(_backgroundColour.X / _backgroundColour.W, _backgroundColour.Y / _backgroundColour.W, _backgroundColour.Z / _backgroundColour.W, _backgroundColour.W);
+                        }
+
+                        if (wireFrameChanged)
+                        {
+                            if (_showWireFrame)
+                            {
+                                _deviceD3D11.GetRasterizerState(out ComPtr<ID3D11RasterizerState> rasterizerState);
+                                if (rasterizerState.Handle != _deviceD3D11.WireFrameCullBackRS.Handle)
+                                {
+                                    _deviceD3D11.SetRasterizerState(in _deviceD3D11.WireFrameCullBackRS);
+                                }
+                            }
+                            if (!_showWireFrame)
+                            {
+                                _deviceD3D11.GetRasterizerState(out ComPtr<ID3D11RasterizerState> rasterizerState);
+                                if (rasterizerState.Handle != _deviceD3D11.SolidCullBackRS.Handle)
+                                {
+                                    _deviceD3D11.SetRasterizerState(in _deviceD3D11.SolidCullBackRS);
+                                }
+                            }
+                        }
+
+                        if (runGc)
+                        {
+                            GC.Collect();
+                        }
+                    }
+                    else
+                    {
+                        _imGuiController.Render(false);
+                    }
+                }
+            }
+
+        }
+        catch (Exception ex)
+        {
+            LogHelper.Log(ex);
+            if (System.Diagnostics.Debugger.IsAttached)
+            {
+                System.Diagnostics.Debugger.Break();
+                throw;
             }
         }
     }
@@ -386,7 +389,7 @@ public class Engine
     {
         if (_inputContext is null)
         {
-            System.Diagnostics.Debug.WriteLine("InputContext not initialized. Inputs will not be catched.");
+            System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] InputContext not initialized. Inputs will not be catched.");
             return;
         }
         IKeyboard keyboard = _inputContext.Keyboards[0];

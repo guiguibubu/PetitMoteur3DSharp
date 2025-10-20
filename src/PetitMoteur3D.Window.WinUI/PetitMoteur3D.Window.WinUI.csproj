@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\PetitMoteur3D.Window\PetitMoteur3D.Window.csproj" />
+    <ProjectReference Include="..\PetitMoteur3D\PetitMoteur3D.csproj" />
   </ItemGroup>
 
 </Project>
