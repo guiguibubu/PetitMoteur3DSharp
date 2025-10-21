@@ -44,8 +44,10 @@ namespace PetitMoteur3D
 
 
         private readonly IWindow _window;
+        private Size _currentSize = new();
         private readonly float[] _backgroundColour = new[] { 0.0f, 0.5f, 0.0f, 1.0f };
 
+        private bool _isSwapChainComposition = false;
 #if USE_RENDERDOC
         private readonly Evergine.Bindings.RenderDoc.RenderDoc _renderDoc;
 #endif
@@ -138,7 +140,7 @@ namespace PetitMoteur3D
 
         public unsafe void Resize(ref readonly Size size)
         {
-            if (size.Width == _window.Size.Width && size.Height == _window.Size.Height)
+            if (size.Width == _currentSize.Width && size.Height == _currentSize.Height)
             {
                 return;
             }
@@ -148,11 +150,22 @@ namespace PetitMoteur3D
             _depthTexture.Dispose();
             _depthStencilView.Dispose();
 
-            SilkMarshal.ThrowHResult(
-                _swapchain.ResizeBuffers(0, 0, 0, Format.FormatB8G8R8A8Unorm, (uint)SwapChainFlag.AllowModeSwitch)
-            );
+            if (_isSwapChainComposition)
+            {
+                SilkMarshal.ThrowHResult(
+                    _swapchain.ResizeBuffers(_swapchainDescription.BufferCount, (uint)size.Width, (uint)size.Height, Format.FormatB8G8R8A8Unorm, (uint)SwapChainFlag.AllowModeSwitch)
+                );
+            }
+            else
+            {
+                SilkMarshal.ThrowHResult(
+                    _swapchain.ResizeBuffers(_swapchainDescription.BufferCount, 0, 0, Format.FormatB8G8R8A8Unorm, (uint)SwapChainFlag.AllowModeSwitch)
+                );
+            }
 
             InitView(size.Width, size.Height);
+
+            _currentSize = size;
         }
 
 #if USE_RENDERDOC
@@ -249,8 +262,9 @@ namespace PetitMoteur3D
 
         private unsafe void InitSwapChain(IWindow window, bool forceDxvk)
         {
-            if (window is IWinUiWindow)
+            if (window is ICompositionWindow)
             {
+                _isSwapChainComposition = true;
                 InitSwapChain((uint)window.Size.Width, (uint)window.Size.Height, windowPtr: 0, forceDxvk);
                 // Ensure that DXGI does not queue more than one frame at a time. This both reduces 
                 // latency and ensures that the application will only render after each VSync, minimizing 

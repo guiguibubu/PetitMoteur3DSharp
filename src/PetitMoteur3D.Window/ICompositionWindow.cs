@@ -1,5 +1,5 @@
 ﻿namespace PetitMoteur3D.Window;
 
-public interface IWinUiWindow
+public interface ICompositionWindow
 {
 }

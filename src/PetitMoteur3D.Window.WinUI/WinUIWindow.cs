@@ -2,7 +2,7 @@
 
 namespace PetitMoteur3D.Window;
 
-public class WinUIWindow : IWindow, IWinUiWindow
+public class WinUIWindow : IWindow, ICompositionWindow
 {
     private readonly Microsoft.UI.Windowing.AppWindow _nativeWindow;
     private readonly Microsoft.UI.Xaml.Window _window;
@@ -79,19 +79,15 @@ public class WinUIWindow : IWindow, IWinUiWindow
     /// <inheritdoc/>
     public event Action<Size>? Resize
     {
-        add { bool emptyAction = _resizeActions.Count == 0; _resizeActions.Add(value); if (emptyAction) _nativeWindow.Changed += OnResize; }
-        remove { bool lastAction = _resizeActions.Count == 1; _resizeActions.Remove(value); if (lastAction) _nativeWindow.Changed -= OnResize; }
+        add { bool emptyAction = _resizeActions.Count == 0; _resizeActions.Add(value); if (emptyAction) _swapchainPanel.SizeChanged += OnResizeSwapchain; }
+        remove { bool lastAction = _resizeActions.Count == 1; _resizeActions.Remove(value); if (lastAction) _swapchainPanel.SizeChanged -= OnResizeSwapchain; }
     }
     private List<Action<Size>?> _resizeActions = new();
-    private void OnResize(Microsoft.UI.Windowing.AppWindow sender, Microsoft.UI.Windowing.AppWindowChangedEventArgs args)
+    private void OnResizeSwapchain(object? sender, Microsoft.UI.Xaml.SizeChangedEventArgs args)
     {
-        if (!args.DidSizeChange)
-        {
-            return;
-        }
         foreach (Action<Size>? action in _resizeActions)
         {
-            action?.Invoke(new Size(_nativeWindow.Size.Width, _nativeWindow.Size.Height));
+            action?.Invoke(new Size((int)args.NewSize.Width, (int)args.NewSize.Height));
         }
     }
 
@@ -140,10 +136,10 @@ public class WinUIWindow : IWindow, IWinUiWindow
             if (runFrame)
             {
                 _lastFramePushed++;
-                System.Diagnostics.Trace.WriteLine($"[PetitMoteur3D] WinUiWindow Run called runFrame {_lastFramePushed}");
-                System.Diagnostics.Trace.WriteLine($"[PetitMoteur3D] WinUiWindow Run Ennqueue frame");
+                //System.Diagnostics.Trace.WriteLine($"[PetitMoteur3D] WinUiWindow Run called runFrame {_lastFramePushed}");
+                //System.Diagnostics.Trace.WriteLine($"[PetitMoteur3D] WinUiWindow Run Ennqueue frame");
                 _swapchainPanel.DispatcherQueue.TryEnqueue(onFrame.Invoke);
-                System.Diagnostics.Trace.WriteLine($"[PetitMoteur3D] WinUiWindow Run Ennqueue frame finished");
+                //System.Diagnostics.Trace.WriteLine($"[PetitMoteur3D] WinUiWindow Run Ennqueue frame finished");
             }
         }
     }
