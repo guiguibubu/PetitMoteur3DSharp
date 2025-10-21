@@ -12,7 +12,7 @@
 
   <!-- Default settings that are used by other settings -->
   <PropertyGroup>
-    <BaseArtifactsPath>$(MSBuildThisFileDirectory)build/</BaseArtifactsPath>
+    <BaseArtifactsPath>$(MSBuildThisFileDirectory)build\</BaseArtifactsPath>
     <BaseArtifactsPathSuffix>$(MSBuildProjectName)</BaseArtifactsPathSuffix>
 	<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
 	<AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
@@ -21,9 +21,18 @@
 
   <!-- Default settings that explicitly differ from the Sdk.targets defaults-->
   <PropertyGroup>
-    <BaseOutputPath>$(BaseArtifactsPath)bin/</BaseOutputPath>
-	<BaseIntermediateOutputPath>$(BaseArtifactsPath)int/$(BaseArtifactsPathSuffix)/$(Configuration)/</BaseIntermediateOutputPath>
-    <PackageOutputPath>$(BaseArtifactsPath)pkg/$(Configuration)/</PackageOutputPath>
+    <PackageOutputPath>$(BaseArtifactsPath)pkg\$(Configuration)\</PackageOutputPath>
+	
+	<!-- Inspired by Microsoft.Commmon.CurrentVersion.targets - Begin-->
+	<BaseOutputPath>$(BaseArtifactsPath)bin\</BaseOutputPath>
+    <OutputPath Condition="'$(PlatformName)' == 'AnyCPU'">$(BaseOutputPath)$(Configuration)\</OutputPath>
+    <OutputPath Condition="'$(PlatformName)' != 'AnyCPU'">$(BaseOutputPath)$(PlatformName)\$(Configuration)\</OutputPath>
+
+    <BaseIntermediateOutputPath>$(BaseArtifactsPath)int\$(BaseArtifactsPathSuffix)\$(Configuration)</BaseIntermediateOutputPath>
+    <IntermediateOutputPath Condition="'$(PlatformName)' != 'AnyCPU'">$(BaseIntermediateOutputPath)$(PlatformName)</IntermediateOutputPath>
+    <IntermediateOutputPath Condition="'$(PlatformName)' == 'AnyCPU'">$(BaseIntermediateOutputPath)</IntermediateOutputPath>
+	<!-- Inspired by Microsoft.Commmon.CurrentVersion.targets - End-->
+	
 	<PublishRelease>true</PublishRelease>
 	<PublishTrimmed>true</PublishTrimmed>
 	<SuppressTrimAnalysisWarnings>false</SuppressTrimAnalysisWarnings>

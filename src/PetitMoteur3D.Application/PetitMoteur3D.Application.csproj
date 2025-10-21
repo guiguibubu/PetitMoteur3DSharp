@@ -32,15 +32,6 @@
         <Content Include="Assets\Wide310x150Logo.scale-200.png" />
     </ItemGroup>
 
-    <!--
-    Native dlls.
-  -->
-    <ItemGroup>
-        <Content Include="$(BaseOutputPath)$(Configuration)\native\*">
-            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-        </Content>
-    </ItemGroup>
-
     <ItemGroup>
         <Manifest Include="$(ApplicationManifest)" />
     </ItemGroup>
@@ -59,7 +50,7 @@
         <PackageReference Include="System.Runtime.InteropServices" Version="4.3.0" />
     </ItemGroup>
     <ItemGroup>
-        <ProjectReference Include="..\PetitMoteur3D.Application.Native\PetitMoteur3D.Application.Native.vcxproj" />
+        <ProjectReference Include="..\PetitMoteur3D.Application.ABI\PetitMoteur3D.Application.ABI.csproj" />
         <ProjectReference Include="..\PetitMoteur3D.Window.WinUI\PetitMoteur3D.Window.WinUI.csproj" />
         <ProjectReference Include="..\PetitMoteur3D\PetitMoteur3D.csproj" />
     </ItemGroup>

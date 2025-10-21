@@ -1,0 +1,24 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    </PropertyGroup>
+
+    <!--
+    Native dlls.
+  -->
+    <ItemGroup>
+        <Content Include="$(OutputPath)native\*">
+            <Link>native\%(RecursiveDir)%(Filename)%(Extension)</Link>
+            <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+        </Content>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\PetitMoteur3D.Application.Native\PetitMoteur3D.Application.Native.vcxproj" />
+    </ItemGroup>
+
+</Project>

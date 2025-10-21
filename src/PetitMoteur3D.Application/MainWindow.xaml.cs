@@ -85,7 +85,7 @@ namespace PetitMoteur3D.Application
             System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] SetSwapwhain Begin");
             IObjectReference nativeReference = ((IWinRTObject)DXSwapChainPanel).NativeObject;
             //WinUIDesktopInterop.ISwapChainPanelNative swapChainPanelNative = nativeReference.AsInterface<WinUIDesktopInterop.ISwapChainPanelNative>();
-            Guid iid = typeof(WinUIDesktopInterop.ISwapChainPanelNative).GUID;
+            Guid iid = typeof(ABI.WinUIDesktopInterop.ISwapChainPanelNative).GUID;
             //int errorCode2 = System.Runtime.InteropServices.Marshal.QueryInterface(((IWinRTObject)DXSwapChainPanel).NativeObject.ThisPtr, WinRT.Interop.IID.IID_IUnknown, out var ppv2);
             int errorCode = nativeReference.TryAs(iid, out nint ppv);
             System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] SetSwapwhain errorCode = " + errorCode);
@@ -93,7 +93,7 @@ namespace PetitMoteur3D.Application
 
             int a = 1;
             int b = 2;
-            int c = WinUIDesktopInterop.Add(a, b);
+            int c = ABI.WinUIDesktopInterop.Add(a, b);
 
             try
             {
@@ -101,9 +101,9 @@ namespace PetitMoteur3D.Application
                 //object iunknnown = System.Runtime.InteropServices.Marshal.GetObjectForIUnknown(ppv);
                 unsafe
                 {
-                    WinUIDesktopInterop.ISwapChainPanelNative* swapChainPanelNativePtr = (WinUIDesktopInterop.ISwapChainPanelNative*)(ppv.ToPointer());
+                    ABI.WinUIDesktopInterop.ISwapChainPanelNative* swapChainPanelNativePtr = (ABI.WinUIDesktopInterop.ISwapChainPanelNative*)(ppv.ToPointer());
                     swapChainPanelNativePtr->SetSwapChain((nint)engine.DeviceD3D11.Swapchain.Handle);
-                    WinUIDesktopInterop.ISwapChainPanelNative swapChainPanelNative = Unsafe.AsRef<WinUIDesktopInterop.ISwapChainPanelNative>(ppv.ToPointer());
+                    ABI.WinUIDesktopInterop.ISwapChainPanelNative swapChainPanelNative = Unsafe.AsRef<ABI.WinUIDesktopInterop.ISwapChainPanelNative>(ppv.ToPointer());
                     //object ttest = (WinUIDesktopInterop.ISwapChainPanelNative)System.Runtime.InteropServices.Marshal.GetObjectForIUnknown(ppv);
                     System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] SetSwapwhain cast interface finished");
                     System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] SetSwapwhain SwapChainPanelNative.SetSwapChain");
@@ -128,36 +128,6 @@ namespace PetitMoteur3D.Application
         private void Window_Activated(object sender, Microsoft.UI.Xaml.WindowActivatedEventArgs args)
         {
 
-        }
-
-        internal static partial class WinUIDesktopInterop
-        {
-            /// <summary>
-            /// Interface from microsoft.ui.xaml.media.dxinterop.h
-            /// </summary>
-            [System.Runtime.InteropServices.ComImport]
-            [System.Runtime.InteropServices.InterfaceType(System.Runtime.InteropServices.ComInterfaceType.InterfaceIsIUnknown)]
-            [System.Runtime.InteropServices.Guid("63aad0b8-7c24-40ff-85a8-640d944cc325")]
-            public partial interface ISwapChainPanelNative
-            {
-                //public static readonly Guid IID = Guid.Parse("63aad0b8-7c24-40ff-85a8-640d944cc325");
-
-                //[System.Runtime.InteropServices.PreserveSig] 
-                int SetSwapChain([System.Runtime.InteropServices.In] IntPtr swapChain);
-            }
-#if PM3D_USEITEROP_LIBRARY_IMPORT
-            [System.Runtime.InteropServices.LibraryImport(
-            "PetitMoteur3D.Application.Native",
-            EntryPoint = "SwapchainPanelNativeWrapper_Add", StringMarshalling = System.Runtime.InteropServices.StringMarshalling.Utf8)]
-            [System.Runtime.InteropServices.UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
-            internal static partial Int32 Add(Int32 a, Int32 b);
-#else
-            [System.Runtime.InteropServices.DllImport(
-                "PetitMoteur3D.Application.Native",
-                EntryPoint = "SwapchainPanelNativeWrapper_Add",
-                CharSet = System.Runtime.InteropServices.CharSet.Unicode, ExactSpelling = true, CallingConvention = System.Runtime.InteropServices.CallingConvention.Cdecl)]
-            internal static extern Int32 Add(Int32 a, Int32 b);
-#endif
         }
     }
 }
