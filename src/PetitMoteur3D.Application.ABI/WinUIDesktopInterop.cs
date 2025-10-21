@@ -14,6 +14,9 @@ public static partial class WinUIDesktopInterop
     private const string DirectorySeparator = "/";
 #endif
 
+    private const string NativeLibraryPath = "native" + DirectorySeparator + "PetitMoteur3D.Application.Native";
+    private const string SwapchainPanelNativeWrapper_Add_Name = "SwapchainPanelNativeWrapper_Add";
+
     /// <summary>
     /// Interface from microsoft.ui.xaml.media.dxinterop.h
     /// </summary>
@@ -29,14 +32,14 @@ public static partial class WinUIDesktopInterop
     }
 #if PM3D_USEITEROP_LIBRARY_IMPORT
             [LibraryImport(
-            "native" + DirectorySeparator + "PetitMoteur3D.Application.Native",
-            EntryPoint = "SwapchainPanelNativeWrapper_Add", StringMarshalling = StringMarshalling.Utf8)]
+            NativeLibraryPath,
+            EntryPoint = SwapchainPanelNativeWrapper_Add_Name, StringMarshalling = StringMarshalling.Utf8)]
             [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
     public static partial Int32 Add(Int32 a, Int32 b);
 #else
     [DllImport(
-        "PetitMoteur3D.Application.Native",
-        EntryPoint = "SwapchainPanelNativeWrapper_Add",
+        NativeLibraryPath,
+        EntryPoint = SwapchainPanelNativeWrapper_Add_Name,
         CharSet = CharSet.Unicode, ExactSpelling = true, CallingConvention = CallingConvention.Cdecl)]
     public static extern Int32 Add(Int32 a, Int32 b);
 #endif
