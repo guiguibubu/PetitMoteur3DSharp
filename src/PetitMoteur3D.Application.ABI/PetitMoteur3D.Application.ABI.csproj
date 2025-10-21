@@ -35,12 +35,9 @@
     <ItemGroup>
         <Content Include="$(OutputPath)native\*">
             <Link>native\%(RecursiveDir)%(Filename)%(Extension)</Link>
-            <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+            <CopyToPublishDirectory>Always</CopyToPublishDirectory>
         </Content>
-    </ItemGroup>
-
-    <ItemGroup>
-        <ProjectReference Include="..\PetitMoteur3D.Application.Native\PetitMoteur3D.Application.Native.vcxproj" />
     </ItemGroup>
 
 </Project>

@@ -27,6 +27,7 @@
 	<BaseOutputPath>$(BaseArtifactsPath)bin\</BaseOutputPath>
     <OutputPath Condition="'$(PlatformName)' == 'AnyCPU'">$(BaseOutputPath)$(Configuration)\</OutputPath>
     <OutputPath Condition="'$(PlatformName)' != 'AnyCPU'">$(BaseOutputPath)$(PlatformName)\$(Configuration)\</OutputPath>
+	<OutputDir>$(OutputPath)</OutputDir>
 
     <BaseIntermediateOutputPath>$(BaseArtifactsPath)int\$(BaseArtifactsPathSuffix)\$(Configuration)</BaseIntermediateOutputPath>
     <IntermediateOutputPath Condition="'$(PlatformName)' != 'AnyCPU'">$(BaseIntermediateOutputPath)$(PlatformName)</IntermediateOutputPath>

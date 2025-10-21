@@ -21,8 +21,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PetitMoteur3D.Input", "src\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PetitMoteur3D.Input.SilkNet", "src\PetitMoteur3D.Input.SilkNet\PetitMoteur3D.Input.SilkNet.csproj", "{51B487BA-CE53-4DD0-9333-47D85A0AA489}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PetitMoteur3D.Application.Native", "src\PetitMoteur3D.Application.Native\PetitMoteur3D.Application.Native.vcxproj", "{9AA14744-634A-4671-9E74-0F8F0DB90357}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PetitMoteur3D.Application.ABI", "src\PetitMoteur3D.Application.ABI\PetitMoteur3D.Application.ABI.csproj", "{3DCAC0F9-4C2E-479E-A0EF-5AF5DF933CB9}"
 EndProject
 Global
@@ -147,18 +145,6 @@ Global
 		{51B487BA-CE53-4DD0-9333-47D85A0AA489}.Release|x64.Build.0 = Release|Any CPU
 		{51B487BA-CE53-4DD0-9333-47D85A0AA489}.Release|x86.ActiveCfg = Release|Any CPU
 		{51B487BA-CE53-4DD0-9333-47D85A0AA489}.Release|x86.Build.0 = Release|Any CPU
-		{9AA14744-634A-4671-9E74-0F8F0DB90357}.Debug|Any CPU.ActiveCfg = Debug|x64
-		{9AA14744-634A-4671-9E74-0F8F0DB90357}.Debug|Any CPU.Build.0 = Debug|x64
-		{9AA14744-634A-4671-9E74-0F8F0DB90357}.Debug|x64.ActiveCfg = Debug|x64
-		{9AA14744-634A-4671-9E74-0F8F0DB90357}.Debug|x64.Build.0 = Debug|x64
-		{9AA14744-634A-4671-9E74-0F8F0DB90357}.Debug|x86.ActiveCfg = Debug|Win32
-		{9AA14744-634A-4671-9E74-0F8F0DB90357}.Debug|x86.Build.0 = Debug|Win32
-		{9AA14744-634A-4671-9E74-0F8F0DB90357}.Release|Any CPU.ActiveCfg = Release|x64
-		{9AA14744-634A-4671-9E74-0F8F0DB90357}.Release|Any CPU.Build.0 = Release|x64
-		{9AA14744-634A-4671-9E74-0F8F0DB90357}.Release|x64.ActiveCfg = Release|x64
-		{9AA14744-634A-4671-9E74-0F8F0DB90357}.Release|x64.Build.0 = Release|x64
-		{9AA14744-634A-4671-9E74-0F8F0DB90357}.Release|x86.ActiveCfg = Release|Win32
-		{9AA14744-634A-4671-9E74-0F8F0DB90357}.Release|x86.Build.0 = Release|Win32
 		{3DCAC0F9-4C2E-479E-A0EF-5AF5DF933CB9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{3DCAC0F9-4C2E-479E-A0EF-5AF5DF933CB9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3DCAC0F9-4C2E-479E-A0EF-5AF5DF933CB9}.Debug|x64.ActiveCfg = Debug|x64
