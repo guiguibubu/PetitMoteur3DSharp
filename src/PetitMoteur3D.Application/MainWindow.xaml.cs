@@ -1,11 +1,9 @@
+//#define PM3D_USE_RUNTIME_INTEROP
 using System;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
-using Microsoft.Windows.AppNotifications;
 using WinRT;
-using WinRT.Interop;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -66,7 +64,7 @@ namespace PetitMoteur3D.Application
                 //m_coreInput.DispatcherQueue.RunEventLoop();
 
                 System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] EngineAction Engine Run");
-                //engine.Run();
+                engine.Run();
                 System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] EngineAction Engine Run Finished");
             }
             catch (Exception)
@@ -84,44 +82,27 @@ namespace PetitMoteur3D.Application
         {
             System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] SetSwapwhain Begin");
             IObjectReference nativeReference = ((IWinRTObject)DXSwapChainPanel).NativeObject;
-            //WinUIDesktopInterop.ISwapChainPanelNative swapChainPanelNative = nativeReference.AsInterface<WinUIDesktopInterop.ISwapChainPanelNative>();
-            Guid iid = typeof(ABI.WinUIDesktopInterop.ISwapChainPanelNative).GUID;
-            //int errorCode2 = System.Runtime.InteropServices.Marshal.QueryInterface(((IWinRTObject)DXSwapChainPanel).NativeObject.ThisPtr, WinRT.Interop.IID.IID_IUnknown, out var ppv2);
-            int errorCode = nativeReference.TryAs(iid, out nint ppv);
-            System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] SetSwapwhain errorCode = " + errorCode);
-            System.Runtime.InteropServices.Marshal.ThrowExceptionForHR(errorCode);
-
-            int a = 1;
-            int b = 2;
-            int c = ABI.WinUIDesktopInterop.Add(a, b);
-
             try
             {
-                //object iunknnown2 = System.Runtime.InteropServices.Marshal.GetTypedObjectForIUnknown(ppv, typeof(WinUIDesktopInterop.ISwapChainPanelNative));
-                //object iunknnown = System.Runtime.InteropServices.Marshal.GetObjectForIUnknown(ppv);
                 unsafe
                 {
-                    ABI.WinUIDesktopInterop.ISwapChainPanelNative* swapChainPanelNativePtr = (ABI.WinUIDesktopInterop.ISwapChainPanelNative*)(ppv.ToPointer());
-                    swapChainPanelNativePtr->SetSwapChain((nint)engine.DeviceD3D11.Swapchain.Handle);
-                    ABI.WinUIDesktopInterop.ISwapChainPanelNative swapChainPanelNative = Unsafe.AsRef<ABI.WinUIDesktopInterop.ISwapChainPanelNative>(ppv.ToPointer());
-                    //object ttest = (WinUIDesktopInterop.ISwapChainPanelNative)System.Runtime.InteropServices.Marshal.GetObjectForIUnknown(ppv);
-                    System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] SetSwapwhain cast interface finished");
-                    System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] SetSwapwhain SwapChainPanelNative.SetSwapChain");
-                    swapChainPanelNative.SetSwapChain((nint)engine.DeviceD3D11.Swapchain.Handle);
-                    System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] SetSwapwhain SwapChainPanelNative.SetSwapChain finished");
+#if PM3D_USE_RUNTIME_INTEROP
+                    ABI.WinUIDesktopInterop.ISwapChainPanelNative swapChainPanelNative = nativeReference.AsInterface<ABI.WinUIDesktopInterop.ISwapChainPanelNative>();
+                    int errorCode = swapChainPanelNative.SetSwapChain((nint)engine.DeviceD3D11.Swapchain.Handle);
+#else
+                    int errorCode = ABI.WinUIDesktopInterop.SetSwapchain(nativeReference.ThisPtr, (nint)engine.DeviceD3D11.Swapchain.Handle);
+#endif
+                    System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] SetSwapwhain errorCode = " + errorCode);
+                    System.Runtime.InteropServices.Marshal.ThrowExceptionForHR(errorCode);
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 if (System.Diagnostics.Debugger.IsAttached)
                 {
                     System.Diagnostics.Debugger.Break();
                 }
                 throw;
-            }
-            finally
-            {
-                System.Runtime.InteropServices.Marshal.Release(ppv);
             }
         }
 
