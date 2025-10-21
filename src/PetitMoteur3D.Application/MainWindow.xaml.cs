@@ -111,7 +111,7 @@ namespace PetitMoteur3D.Application
                     System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] SetSwapwhain SwapChainPanelNative.SetSwapChain finished");
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 if (System.Diagnostics.Debugger.IsAttached)
                 {
@@ -145,17 +145,19 @@ namespace PetitMoteur3D.Application
                 //[System.Runtime.InteropServices.PreserveSig] 
                 int SetSwapChain([System.Runtime.InteropServices.In] IntPtr swapChain);
             }
-
-            //[System.Runtime.InteropServices.LibraryImport(
-            //"PetitMoteur3D.Application.Native",
-            //EntryPoint = "SwapchainPanelNativeWrapper_Add", StringMarshalling = System.Runtime.InteropServices.StringMarshalling.Utf8)]
-            //[System.Runtime.InteropServices.UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
-            //internal static partial Int32 Add(Int32 a, Int32 b);
+#if PM3D_USEITEROP_LIBRARY_IMPORT
+            [System.Runtime.InteropServices.LibraryImport(
+            "PetitMoteur3D.Application.Native",
+            EntryPoint = "SwapchainPanelNativeWrapper_Add", StringMarshalling = System.Runtime.InteropServices.StringMarshalling.Utf8)]
+            [System.Runtime.InteropServices.UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
+            internal static partial Int32 Add(Int32 a, Int32 b);
+#else
             [System.Runtime.InteropServices.DllImport(
-    "PetitMoteur3D.Application.Native",
-    EntryPoint = "SwapchainPanelNativeWrapper_Add",
-    CharSet = System.Runtime.InteropServices.CharSet.Unicode, ExactSpelling = true, CallingConvention = System.Runtime.InteropServices.CallingConvention.Cdecl)]
+                "PetitMoteur3D.Application.Native",
+                EntryPoint = "SwapchainPanelNativeWrapper_Add",
+                CharSet = System.Runtime.InteropServices.CharSet.Unicode, ExactSpelling = true, CallingConvention = System.Runtime.InteropServices.CallingConvention.Cdecl)]
             internal static extern Int32 Add(Int32 a, Int32 b);
+#endif
         }
     }
 }
