@@ -1,4 +1,8 @@
-﻿namespace PetitMoteur3D.Input.SilkNet
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace PetitMoteur3D.Input.SilkNet
 {
     internal class SilkInputContext : IInputContext
     {

@@ -22,7 +22,7 @@ namespace PetitMoteur3D.Input
         /// Mode of the cursor.
         /// </summary>
         /// <remarks>
-        /// See <see cref="CursorMode"/> for details.
+        /// See <see cref="PetitMoteur3D.Input.CursorMode"/> for details.
         /// </remarks>
         CursorMode CursorMode { get; set; }
 

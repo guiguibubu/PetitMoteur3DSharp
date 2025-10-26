@@ -11,11 +11,6 @@ namespace PetitMoteur3D.Input
         string Name { get; }
 
         /// <summary>
-        /// The index of this device.
-        /// </summary>
-        int Index { get; }
-
-        /// <summary>
         /// Whether or not this device is currently connected.
         /// </summary>
         bool IsConnected { get; }

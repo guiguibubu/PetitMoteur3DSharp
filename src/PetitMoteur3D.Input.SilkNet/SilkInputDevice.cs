@@ -64,8 +64,6 @@
         }
         public string Name => _silkInputDevice.Name;
 
-        public int Index => _silkInputDevice.Index;
-
         public bool IsConnected => _silkInputDevice.IsConnected;
     }
 }

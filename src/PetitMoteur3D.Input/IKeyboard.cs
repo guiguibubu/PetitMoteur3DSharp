@@ -13,7 +13,13 @@ namespace PetitMoteur3D.Input
         /// <summary>
         /// The text currently in the clipboard.
         /// </summary>
-        string ClipboardText { get; set; }
+        /// <returns>Text value in the clipboard. Empty string if no text in clipboard</returns>
+        Task<string> GetClipboardTextAsync();
+
+        /// <summary>
+        /// Set text in the clipboard.
+        /// </summary>
+        Task SetClipboardTextAsync(string text);
 
         /// <summary>
         /// Checks if a specific key is pressed.

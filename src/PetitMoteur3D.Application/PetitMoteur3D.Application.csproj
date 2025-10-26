@@ -50,6 +50,7 @@
     </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\PetitMoteur3D.Application.ABI\PetitMoteur3D.Application.ABI.csproj" />
+        <ProjectReference Include="..\PetitMoteur3D.Input.WinUI\PetitMoteur3D.Input.WinUI.csproj" />
         <ProjectReference Include="..\PetitMoteur3D.Window.WinUI\PetitMoteur3D.Window.WinUI.csproj" />
         <ProjectReference Include="..\PetitMoteur3D\PetitMoteur3D.csproj" />
     </ItemGroup>

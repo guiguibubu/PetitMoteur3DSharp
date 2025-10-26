@@ -4,17 +4,17 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="using:PetitMoteur3D.Application"
+    xmlns:winui="using:PetitMoteur3D.Window.WinUI"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
     Title="PetitMoteur3D.Application"
-    Activated="Window_Activated">
+    Activated="Window_Activated"
+    Closed="Window_Closed">
 
     <!--<Window.SystemBackdrop>-->
-        <!--<MicaBackdrop />-->
+    <!--<MicaBackdrop />-->
     <!--</Window.SystemBackdrop>-->
 
-    <Grid>
-        <SwapChainPanel x:Name="DXSwapChainPanel" Loaded="DXSwapChainPanel_Loaded"/>
-    </Grid>
+    <winui:DXPanel x:Name="DXSwapChainPanel" Loaded="DXSwapChainPanel_Loaded" GettingFocus="DXSwapChainPanel_GettingFocus"/>
 </Window>

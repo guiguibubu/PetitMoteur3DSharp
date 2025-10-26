@@ -1,4 +1,7 @@
 ﻿
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using PetitMoteur3D.Input.SilkNet.Extensions;
 
 namespace PetitMoteur3D.Input.SilkNet

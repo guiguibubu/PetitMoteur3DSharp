@@ -1,4 +1,7 @@
-﻿
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace PetitMoteur3D.Input.SilkNet
 {
@@ -10,7 +13,16 @@ namespace PetitMoteur3D.Input.SilkNet
 
         public IReadOnlyList<Key> SupportedKeys => _silkInputDevice.SupportedKeys.Select(k => k.FromSilk()).ToArray();
 
-        public string ClipboardText { get => _silkInputDevice.ClipboardText; set => _silkInputDevice.ClipboardText = value; }
+        public Task<string> GetClipboardTextAsync()
+        {
+            return Task.FromResult(_silkInputDevice.ClipboardText);
+        }
+
+        public Task SetClipboardTextAsync(string text)
+        {
+            _silkInputDevice.ClipboardText = text;
+            return Task.CompletedTask;
+        }
 
         public event Action<IKeyboard, Key, int>? KeyDown
         {
@@ -27,8 +39,8 @@ namespace PetitMoteur3D.Input.SilkNet
         }
         public event Action<IKeyboard, Key, int>? KeyUp
         {
-            add { bool emptyAction = _keyUpActions.Count == 0; _keyUpActions.Add(value); if (emptyAction) _silkInputDevice.KeyDown += OnKeyUp; }
-            remove { bool lastAction = _keyUpActions.Count == 1; _keyUpActions.Remove(value); if (lastAction) _silkInputDevice.KeyDown -= OnKeyUp; }
+            add { bool emptyAction = _keyUpActions.Count == 0; _keyUpActions.Add(value); if (emptyAction) _silkInputDevice.KeyUp += OnKeyUp; }
+            remove { bool lastAction = _keyUpActions.Count == 1; _keyUpActions.Remove(value); if (lastAction) _silkInputDevice.KeyUp -= OnKeyUp; }
         }
         private List<Action<IKeyboard, Key, int>?> _keyUpActions = new();
         private void OnKeyUp(Silk.NET.Input.IKeyboard keyboard, Silk.NET.Input.Key keycode, int scancode)

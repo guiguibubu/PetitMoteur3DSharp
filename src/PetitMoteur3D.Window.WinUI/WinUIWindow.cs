@@ -1,24 +1,38 @@
 ﻿using System.Drawing;
+using Microsoft.UI.Input;
 
-namespace PetitMoteur3D.Window;
+namespace PetitMoteur3D.Window.WinUI;
 
 public class WinUIWindow : IWindow, ICompositionWindow
 {
     private readonly Microsoft.UI.Windowing.AppWindow _nativeWindow;
-    private readonly Microsoft.UI.Xaml.Window _window;
-    private readonly Microsoft.UI.Xaml.Controls.SwapChainPanel _swapchainPanel;
+    private readonly DXPanel _dxPanel;
 
-    public WinUIWindow(Microsoft.UI.Xaml.Window window, Microsoft.UI.Xaml.Controls.SwapChainPanel swapchainPanel)
+    private InputPointerSource? _inputPointerSource;
+    public InputPointerSource InputPointerSource
     {
-        _window = window;
-        _nativeWindow = window.AppWindow;
-        _swapchainPanel = swapchainPanel;
+        get
+        {
+            if (_inputPointerSource == null)
+            {
+                _inputPointerSource = _dxPanel.SwapChainPanel.CreateCoreIndependentInputSource(InputPointerSourceDeviceKinds.Mouse);
+            }
+            return _inputPointerSource;
+        }
+    }
+
+    public WinUIWindow(Microsoft.UI.Windowing.AppWindow window, DXPanel dxPanel)
+    {
+        _nativeWindow = window;
+        _dxPanel = dxPanel;
         _nativeWindow.Closing += OnClosing;
         _isInitialized = true;
     }
 
     /// <inheritdoc/>
     public nint? NativeHandle => nint.CreateChecked(_nativeWindow.Id.Value);
+
+    public DXPanel DirectXPanel => _dxPanel;
 
     /// <inheritdoc/>
     public Size Size
@@ -48,8 +62,8 @@ public class WinUIWindow : IWindow, ICompositionWindow
     /// <inheritdoc/>
     public event Action? Load
     {
-        add { bool emptyAction = _loadActions.Count == 0; _loadActions.Add(value); if (emptyAction) _swapchainPanel.Loaded += OnLoad; }
-        remove { bool lastAction = _loadActions.Count == 1; _loadActions.Remove(value); if (lastAction) _swapchainPanel.Loaded -= OnLoad; }
+        add { bool emptyAction = _loadActions.Count == 0; _loadActions.Add(value); if (emptyAction) _dxPanel.Loaded += OnLoad; }
+        remove { bool lastAction = _loadActions.Count == 1; _loadActions.Remove(value); if (lastAction) _dxPanel.Loaded -= OnLoad; }
     }
     private List<Action?> _loadActions = new();
     private void OnLoad(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
@@ -79,8 +93,8 @@ public class WinUIWindow : IWindow, ICompositionWindow
     /// <inheritdoc/>
     public event Action<Size>? Resize
     {
-        add { bool emptyAction = _resizeActions.Count == 0; _resizeActions.Add(value); if (emptyAction) _swapchainPanel.SizeChanged += OnResizeSwapchain; }
-        remove { bool lastAction = _resizeActions.Count == 1; _resizeActions.Remove(value); if (lastAction) _swapchainPanel.SizeChanged -= OnResizeSwapchain; }
+        add { bool emptyAction = _resizeActions.Count == 0; _resizeActions.Add(value); if (emptyAction) _dxPanel.SizeChanged += OnResizeSwapchain; }
+        remove { bool lastAction = _resizeActions.Count == 1; _resizeActions.Remove(value); if (lastAction) _dxPanel.SizeChanged -= OnResizeSwapchain; }
     }
     private List<Action<Size>?> _resizeActions = new();
     private void OnResizeSwapchain(object? sender, Microsoft.UI.Xaml.SizeChangedEventArgs args)
@@ -94,6 +108,7 @@ public class WinUIWindow : IWindow, ICompositionWindow
     /// <inheritdoc/>
     public void Close()
     {
+        _inputPointerSource?.DispatcherQueue.EnqueueEventLoopExit();
         _nativeWindow.Destroy();
     }
 
@@ -138,7 +153,8 @@ public class WinUIWindow : IWindow, ICompositionWindow
                 _lastFramePushed++;
                 //System.Diagnostics.Trace.WriteLine($"[PetitMoteur3D] WinUiWindow Run called runFrame {_lastFramePushed}");
                 //System.Diagnostics.Trace.WriteLine($"[PetitMoteur3D] WinUiWindow Run Ennqueue frame");
-                _swapchainPanel.DispatcherQueue.TryEnqueue(onFrame.Invoke);
+                _dxPanel.SwapChainPanel.DispatcherQueue.TryEnqueue(onFrame.Invoke);
+                //_inputPointerSource?.DispatcherQueue.TryEnqueue(onFrame.Invoke);
                 //System.Diagnostics.Trace.WriteLine($"[PetitMoteur3D] WinUiWindow Run Ennqueue frame finished");
             }
         }

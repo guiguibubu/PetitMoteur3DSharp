@@ -1,0 +1,39 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0-windows10.0.26100.0</TargetFramework>
+        <ImplicitUsings>disable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <SupportedOSPlatformVersion>10.0.22621.0</SupportedOSPlatformVersion>
+        <DisableRuntimeMarshalling>true</DisableRuntimeMarshalling>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(Configuration)'=='Debug'">
+        <IsTrimmable>False</IsTrimmable>
+        <IsAotCompatible>False</IsAotCompatible>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(Configuration)'=='Release'">
+        <IsTrimmable>True</IsTrimmable>
+        <IsAotCompatible>True</IsAotCompatible>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <AdditionalFiles Include="NativeMethods.json" />
+      <AdditionalFiles Include="NativeMethods.txt" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Microsoft.Windows.CsWin32" Version="0.3.228">
+        <PrivateAssets>all</PrivateAssets>
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      </PackageReference>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\PetitMoteur3D.Input\PetitMoteur3D.Input.csproj" />
+        <ProjectReference Include="..\PetitMoteur3D.Window.WinUI\PetitMoteur3D.Window.WinUI.csproj" />
+    </ItemGroup>
+
+</Project>

@@ -1,25 +1,25 @@
-﻿using PetitMoteur3D.Window;
+﻿using System;
+using PetitMoteur3D.Window;
 using PetitMoteur3D.Window.SilkNet;
 using Silk.NET.Input;
 
-namespace PetitMoteur3D.Input.SilkNet
-{
-    public class SilkInputPlatform : IInputPlatform
-    {
-        /// <inheritdoc/>
-        public bool IsApplicable(IWindow window)
-        {
-            return window is not ISilkWindow;
-        }
+namespace PetitMoteur3D.Input.SilkNet;
 
-        /// <inheritdoc/>
-        public IInputContext CreateInput(IWindow window)
+public class SilkInputPlatform : IInputPlatform
+{
+    /// <inheritdoc/>
+    public bool IsApplicable(IWindow window)
+    {
+        return window is ISilkWindow;
+    }
+
+    /// <inheritdoc/>
+    public IInputContext CreateInput(IWindow window)
+    {
+        if (!IsApplicable(window))
         {
-            if (IsApplicable(window))
-            {
-                throw new NotSupportedException($"Window must be a {nameof(ISilkWindow)}");
-            }
-            return new SilkInputContext(((ISilkWindow)window).SilkWindow.CreateInput());
+            throw new NotSupportedException($"Window must be a {nameof(ISilkWindow)}");
         }
+        return new SilkInputContext(((ISilkWindow)window).SilkWindow.CreateInput());
     }
 }

@@ -8,6 +8,7 @@
             {
                 case Silk.NET.Input.MouseButton.Unknown: return MouseButton.Unknown;
                 case Silk.NET.Input.MouseButton.Left: return MouseButton.Left;
+                case Silk.NET.Input.MouseButton.Right: return MouseButton.Right;
                 case Silk.NET.Input.MouseButton.Middle: return MouseButton.Middle;
                 case Silk.NET.Input.MouseButton.Button4: return MouseButton.Button4;
                 case Silk.NET.Input.MouseButton.Button5: return MouseButton.Button5;
@@ -29,6 +30,7 @@
             {
                 case MouseButton.Unknown: return Silk.NET.Input.MouseButton.Unknown;
                 case MouseButton.Left: return Silk.NET.Input.MouseButton.Left;
+                case MouseButton.Right: return Silk.NET.Input.MouseButton.Right;
                 case MouseButton.Middle: return Silk.NET.Input.MouseButton.Middle;
                 case MouseButton.Button4: return Silk.NET.Input.MouseButton.Button4;
                 case MouseButton.Button5: return Silk.NET.Input.MouseButton.Button5;
