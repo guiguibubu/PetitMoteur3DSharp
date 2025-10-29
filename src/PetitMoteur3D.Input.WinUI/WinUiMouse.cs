@@ -13,13 +13,20 @@ namespace PetitMoteur3D.Input.WinUI;
 
 internal class WinUiMouse : IMouse
 {
-    private readonly InputPointerSource _inputPointerSource;
     private readonly DXPanel _dxPanel;
     public WinUiMouse(WinUIWindow window, string? name = null)
     {
-        _inputPointerSource = window.InputPointerSource;
         _dxPanel = window.DirectXPanel;
         Name = name ?? "PetitMoteur3D - WinUiMouse";
+
+        _mouseDownActions = new List<Action<IMouse, MouseButton>?>();
+        MouseDown += OnMouseDown_UpdateButtonStatus;
+        _mouseUpActions = new List<Action<IMouse, MouseButton>?>();
+        MouseUp += OnMouseUp_UpdateButtonStatus;
+        _mouseMoveActions = new List<Action<IMouse, Vector2>?>();
+        MouseMove += OnMouseMove_UpdatePosition;
+        _scrollActions = new List<Action<IMouse, ScrollWheel>?>();
+        Scroll += OnScroll_UpdateScrollWheel;
     }
 
     #region IInputDevice implementation
@@ -52,7 +59,7 @@ internal class WinUiMouse : IMouse
         add { bool emptyAction = _mouseDownActions.Count == 0; _mouseDownActions.Add(value); if (emptyAction) _dxPanel.PointerPressed += OnMouseDown; }
         remove { bool lastAction = _mouseDownActions.Count == 1; _mouseDownActions.Remove(value); if (lastAction) _dxPanel.PointerPressed -= OnMouseDown; }
     }
-    private List<Action<IMouse, MouseButton>?> _mouseDownActions = new();
+    private List<Action<IMouse, MouseButton>?> _mouseDownActions;
     private void OnMouseDown(object sender, PointerRoutedEventArgs e)
     {
         PointerPoint pointerPoint = e.GetCurrentPoint(_dxPanel);
@@ -61,19 +68,22 @@ internal class WinUiMouse : IMouse
             return;
         }
         MouseButton button = pointerPoint.Properties.PointerUpdateKind.FromWinUi();
-        _btnPressedCache.AddOrUpdate(button, true, (MouseButton _, bool _) => true);
         foreach (Action<IMouse, MouseButton>? action in _mouseDownActions)
         {
             action?.Invoke(this, button);
         }
         e.Handled = true;
     }
+    private void OnMouseDown_UpdateButtonStatus(IMouse _, MouseButton button)
+    {
+        UpdateButtonStatus(button, true);
+    }
     public event Action<IMouse, MouseButton> MouseUp
     {
         add { bool emptyAction = _mouseUpActions.Count == 0; _mouseUpActions.Add(value); if (emptyAction) _dxPanel.PointerReleased += OnMouseUp; }
         remove { bool lastAction = _mouseUpActions.Count == 1; _mouseUpActions.Remove(value); if (lastAction) _dxPanel.PointerReleased -= OnMouseUp; }
     }
-    private List<Action<IMouse, MouseButton>?> _mouseUpActions = new();
+    private List<Action<IMouse, MouseButton>?> _mouseUpActions;
     private void OnMouseUp(object sender, PointerRoutedEventArgs e)
     {
         PointerPoint pointerPoint = e.GetCurrentPoint(_dxPanel);
@@ -82,12 +92,19 @@ internal class WinUiMouse : IMouse
             return;
         }
         MouseButton button = pointerPoint.Properties.PointerUpdateKind.FromWinUi();
-        _btnPressedCache.AddOrUpdate(button, true, (MouseButton _, bool _) => false);
         foreach (Action<IMouse, MouseButton>? action in _mouseUpActions)
         {
             action?.Invoke(this, button);
         }
         e.Handled = true;
+    }
+    private void OnMouseUp_UpdateButtonStatus(IMouse _, MouseButton button)
+    {
+        UpdateButtonStatus(button, false);
+    }
+    private void UpdateButtonStatus(MouseButton button, bool isPressed)
+    {
+        _btnPressedCache.AddOrUpdate(button, isPressed, (MouseButton _, bool _) => isPressed);
     }
     public event Action<IMouse, MouseButton, Vector2> Click
     {
@@ -142,7 +159,7 @@ internal class WinUiMouse : IMouse
         add { bool emptyAction = _mouseMoveActions.Count == 0; _mouseMoveActions.Add(value); if (emptyAction) _dxPanel.PointerMoved += OnMouseMove; }
         remove { bool lastAction = _mouseMoveActions.Count == 1; _mouseMoveActions.Remove(value); if (lastAction) _dxPanel.PointerMoved -= OnMouseMove; }
     }
-    private List<Action<IMouse, Vector2>?> _mouseMoveActions = new();
+    private List<Action<IMouse, Vector2>?> _mouseMoveActions;
     private void OnMouseMove(object sender, PointerRoutedEventArgs e)
     {
         PointerPoint pointerPoint = e.GetCurrentPoint(_dxPanel);
@@ -150,19 +167,23 @@ internal class WinUiMouse : IMouse
         {
             return;
         }
-        _position = pointerPoint.Position.ToVector2();
+        Vector2 newPosition = pointerPoint.Position.ToVector2();
         foreach (Action<IMouse, Vector2>? action in _mouseMoveActions)
         {
-            action?.Invoke(this, _position);
+            action?.Invoke(this, newPosition);
         }
         e.Handled = true;
+    }
+    private void OnMouseMove_UpdatePosition(IMouse _, Vector2 newPosition)
+    {
+        _position = newPosition;
     }
     public event Action<IMouse, ScrollWheel> Scroll
     {
         add { bool emptyAction = _scrollActions.Count == 0; _scrollActions.Add(value); if (emptyAction) _dxPanel.PointerWheelChanged += OnScroll; }
         remove { bool lastAction = _scrollActions.Count == 1; _scrollActions.Remove(value); if (lastAction) _dxPanel.PointerWheelChanged -= OnScroll; }
     }
-    private List<Action<IMouse, ScrollWheel>?> _scrollActions = new();
+    private List<Action<IMouse, ScrollWheel>?> _scrollActions;
     private void OnScroll(object sender, PointerRoutedEventArgs e)
     {
         PointerPoint pointerPoint = e.GetCurrentPoint(_dxPanel);
@@ -171,12 +192,15 @@ internal class WinUiMouse : IMouse
             return;
         }
         ScrollWheel scrollWheel = new ScrollWheel(x: 0, y: pointerPoint.Properties.MouseWheelDelta);
-        _scrollWheels[0] = scrollWheel;
         foreach (Action<IMouse, ScrollWheel>? action in _scrollActions)
         {
             action?.Invoke(this, scrollWheel);
         }
         e.Handled = true;
+    }
+    private void OnScroll_UpdateScrollWheel(IMouse _, ScrollWheel scrollWheel)
+    {
+        _scrollWheels[0] = scrollWheel;
     }
 
     ConcurrentDictionary<MouseButton, bool> _btnPressedCache = new();

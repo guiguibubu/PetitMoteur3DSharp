@@ -8,19 +8,6 @@ public class WinUIWindow : IWindow, ICompositionWindow
     private readonly Microsoft.UI.Windowing.AppWindow _nativeWindow;
     private readonly DXPanel _dxPanel;
 
-    private InputPointerSource? _inputPointerSource;
-    public InputPointerSource InputPointerSource
-    {
-        get
-        {
-            if (_inputPointerSource == null)
-            {
-                _inputPointerSource = _dxPanel.SwapChainPanel.CreateCoreIndependentInputSource(InputPointerSourceDeviceKinds.Mouse);
-            }
-            return _inputPointerSource;
-        }
-    }
-
     public WinUIWindow(Microsoft.UI.Windowing.AppWindow window, DXPanel dxPanel)
     {
         _nativeWindow = window;
@@ -108,7 +95,6 @@ public class WinUIWindow : IWindow, ICompositionWindow
     /// <inheritdoc/>
     public void Close()
     {
-        _inputPointerSource?.DispatcherQueue.EnqueueEventLoopExit();
         _nativeWindow.Destroy();
     }
 

@@ -30,6 +30,7 @@ namespace PetitMoteur3D.Application
             System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] DXSwapChainPanel_Loaded Begin");
             Thread.CurrentThread.Name = "UiThread";
             PetitMoteur3D.Window.WinUI.WinUIWindow window = new(this.AppWindow, DXSwapChainPanel);
+            DXSwapChainPanel.Focus(FocusState.Programmatic);
             _dispatcherQueueController.DispatcherQueue.TryEnqueue(() => EngineAction(window));
             System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] DXSwapChainPanel_Loaded End");
         }
@@ -53,21 +54,6 @@ namespace PetitMoteur3D.Application
                 System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] EngineAction Engine Initialzation");
                 engine.Initialize();
                 System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] EngineAction Engine Initialzation Finished");
-
-                // IMPLEMENTATION POUR LA SOURIE A FAIRE PLUS TARD
-                // The CoreIndependentInputSource will raise pointer events for the specified device types on whichever thread it's created on.
-                //InputPointerSource m_coreInput = DXSwapChainPanel.CreateCoreIndependentInputSource(
-                //    InputPointerSourceDeviceKinds.Mouse
-                //    );
-
-                //// Register for pointer events, which will be raised on the background thread.
-                //m_coreInput.PointerPressed += ref new TypedEventHandler<Object^, PointerEventArgs ^> (this, &DrawingPanel::OnPointerPressed);
-                //m_coreInput.PointerMoved += ref new TypedEventHandler<Object^, PointerEventArgs ^> (this, &DrawingPanel::OnPointerMoved);
-                //m_coreInput.PointerReleased += ref new TypedEventHandler<Object^, PointerEventArgs ^> (this, &DrawingPanel::OnPointerReleased);
-
-                //// Begin processing input messages as they're delivered.
-                //m_coreInput.DispatcherQueue.RunEventLoop();
-                window.InputPointerSource.DispatcherQueue.RunEventLoop();
 
                 System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] EngineAction Engine Run");
                 engine.Run();
