@@ -68,9 +68,9 @@ public readonly struct RawImage : IEquatable<RawImage>
     }
 
     /// <inheritdoc />
-    public override bool Equals(object obj)
+    public override bool Equals(object? obj)
     {
-        return obj is RawImage other && Equals(other);
+        return obj is not null && obj is RawImage other && Equals(other);
     }
 
     /// <inheritdoc />
