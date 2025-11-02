@@ -21,6 +21,7 @@ public class Engine
 
     private readonly IWindow _window = default!;
     private readonly IInputContext? _inputContext = default!;
+
     private ImGuiController _imGuiController = default!;
     private DeviceD3D11 _deviceD3D11 = default!;
     private GraphicDeviceRessourceFactory _graphicDeviceRessourceFactory = default!;
@@ -34,6 +35,7 @@ public class Engine
 
     private bool _imGuiShowDemo = false;
     private bool _imGuiShowDebugLogs = false;
+    private bool _imGuiShowEngineLogs = false;
     private bool _imGuiShowMetrics = false;
     private bool _debugToolKeyPressed = false;
     private bool _showDebugTool = false;
@@ -63,24 +65,24 @@ public class Engine
 
     public ulong CurrentFrameCount = 0;
 
-    public Engine(IWindow window, IInputContext? inputContext = null)
+    public Engine(ref readonly EngineConfiguration conf)
     {
         _memoryAtStartUp = _currentProcess.WorkingSet64;
         _onNativeDxPlatform = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
-        _window = window;
-        _inputContext = inputContext;
+        _window = conf.Window;
+        _inputContext = conf.InputContext;
     }
 
     public void Initialize()
     {
         if (_window.IsClosing)
         {
-            System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] Initialize called window is closing");
+            Log.Information("[PetitMoteur3D] Initialize called window is closing");
             return;
         }
         if (!_window.IsInitialized)
         {
-            System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] Initialize called but window not initialized");
+            Log.Information("[PetitMoteur3D] Initialize called but window not initialized");
             return;
         }
         // Assign events.
@@ -91,23 +93,23 @@ public class Engine
 
     public void Run()
     {
-        System.Diagnostics.Trace.WriteLine(string.Format("[PetitMoteur3D] Memory created at statup = {0} kB", _memoryAtStartUp / 1000));
-        System.Diagnostics.Trace.WriteLine(string.Format("[PetitMoteur3D] Memory created at Main begin = {0} kB", _currentProcess.WorkingSet64 / 1000));
+        Log.Information(string.Format("[PetitMoteur3D] Memory created at statup = {0} kB", _memoryAtStartUp / 1000));
+        Log.Information(string.Format("[PetitMoteur3D] Memory created at Main begin = {0} kB", _currentProcess.WorkingSet64 / 1000));
         try
         {
             if (!_isInitialized)
             {
-                System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] Run called but engine not initialized. Initialize before calling Run.");
+                Log.Information("[PetitMoteur3D] Run called but engine not initialized. Initialize before calling Run.");
                 return;
             }
             if (_window.IsClosing)
             {
-                System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] Run called window is closing");
+                Log.Information("[PetitMoteur3D] Run called window is closing");
                 return;
             }
             if (!_window.IsInitialized)
             {
-                System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] Run called but window not initialized");
+                Log.Information("[PetitMoteur3D] Run called but window not initialized");
                 return;
             }
 
@@ -116,7 +118,7 @@ public class Engine
         }
         catch (Exception ex)
         {
-            LogHelper.Log(ex);
+            Log.Fatal(ex);
             if (System.Diagnostics.Debugger.IsAttached)
             {
                 System.Diagnostics.Debugger.Break();
@@ -127,25 +129,25 @@ public class Engine
 
     private void OnLoad()
     {
-        System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] OnLoad");
+        Log.Information("[PetitMoteur3D] OnLoad");
         if (_isInitialized || _isInitializing)
         {
-            System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] OnLoad Engine already initialized or initializing. No action will be performed");
+            Log.Information("[PetitMoteur3D] OnLoad Engine already initialized or initializing. No action will be performed");
             return;
         }
         _isInitializing = true;
-        System.Diagnostics.Trace.WriteLine(string.Format("[PetitMoteur3D] Memory created before init = {0} kB", _currentProcess.WorkingSet64 / 1000));
+        Log.Information(string.Format("[PetitMoteur3D] Memory created before init = {0} kB", _currentProcess.WorkingSet64 / 1000));
         InitRendering();
-        System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] OnLoad InitRendering Finished");
+        Log.Information("[PetitMoteur3D] OnLoad InitRendering Finished");
         InitScene();
-        System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] OnLoad InitScene Finished");
+        Log.Information("[PetitMoteur3D] OnLoad InitScene Finished");
         InitAnimation();
-        System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] OnLoad InitAnimation Finished");
+        Log.Information("[PetitMoteur3D] OnLoad InitAnimation Finished");
         InitInput();
-        System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] OnLoad InitInput Finished");
+        Log.Information("[PetitMoteur3D] OnLoad InitInput Finished");
         InitDebugTools();
-        System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] OnLoad InitDebugTools Finished");
-        System.Diagnostics.Trace.WriteLine(string.Format("[PetitMoteur3D] Memory created after init = {0} kB", _currentProcess.WorkingSet64 / 1000));
+        Log.Information("[PetitMoteur3D] OnLoad InitDebugTools Finished");
+        Log.Information(string.Format("[PetitMoteur3D] Memory created after init = {0} kB", _currentProcess.WorkingSet64 / 1000));
         _isInitializing = false;
         _isInitialized = true;
         Initialized?.Invoke();
@@ -153,21 +155,21 @@ public class Engine
 
     private void OnClosing()
     {
-        System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] OnClosing");
+        Log.Information("[PetitMoteur3D] OnClosing");
         _imGuiController?.Dispose();
-        System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] OnClosing ImGuiController.Dispose Finished");
+        Log.Information("[PetitMoteur3D] OnClosing ImGuiController.Dispose Finished");
     }
 
     private unsafe void MainLoop()
     {
         if (_window.IsClosing)
         {
-            System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] Main loop called window is closing");
+            Log.Information("[PetitMoteur3D] Main loop called window is closing");
             return;
         }
         if (!_window.IsInitialized)
         {
-            System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] Main loop called but window not initialized");
+            Log.Information("[PetitMoteur3D] Main loop called but window not initialized");
             return;
         }
         CurrentFrameCount++;
@@ -228,6 +230,7 @@ public class Engine
                         ImGui.Checkbox("Show Debug Logs", ref _imGuiShowDebugLogs);     // Edit bool
                         ImGui.Checkbox("Show Metrics", ref _imGuiShowMetrics);     // Edit bool
                         ImGui.Checkbox("Show Scene", ref _showScene);     // Edit bool
+                        ImGui.Checkbox("Show Logs", ref _imGuiShowEngineLogs);     // Edit bool
                         ImGui.End();
 
                         // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
@@ -240,6 +243,12 @@ public class Engine
                         if (_imGuiShowMetrics)
                             ImGui.ShowMetricsWindow();
 
+                        if (_imGuiShowEngineLogs)
+                        {
+                            ImGui.Begin("PetitMoteur3D Logs");
+                            ImGui.TextUnformatted("Bonjour !");
+                            ImGui.End();
+                        }
                         _imGuiController.Render(false);
 
                         if (colorChanged)
@@ -282,7 +291,7 @@ public class Engine
         }
         catch (Exception ex)
         {
-            LogHelper.Log(ex);
+            Log.Fatal(ex);
             if (System.Diagnostics.Debugger.IsAttached)
             {
                 System.Diagnostics.Debugger.Break();
@@ -389,7 +398,7 @@ public class Engine
     {
         if (_inputContext is null)
         {
-            System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] InputContext not initialized. Inputs will not be catched.");
+            Log.Information("[PetitMoteur3D] InputContext not initialized. Inputs will not be catched.");
             return;
         }
         IKeyboard keyboard = _inputContext.Keyboards[0];

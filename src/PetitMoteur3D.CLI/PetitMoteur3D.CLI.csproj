@@ -8,6 +8,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Serilog.Sinks.Async" Version="2.1.0" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="6.1.0" />
+    <PackageReference Include="Serilog.Sinks.Debug" Version="3.0.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PetitMoteur3D.Logging\PetitMoteur3D.Logging.csproj" />
     <ProjectReference Include="..\PetitMoteur3D.Window.SilkNet\PetitMoteur3D.Window.SilkNet.csproj" />
     <ProjectReference Include="..\PetitMoteur3D\PetitMoteur3D.csproj" />
     <ProjectReference Include="..\PetitMoteur3D.Input.SilkNet\PetitMoteur3D.Input.SilkNet.csproj" />

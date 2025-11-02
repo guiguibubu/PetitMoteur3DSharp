@@ -1,5 +1,4 @@
 ﻿using System.Drawing;
-using Microsoft.UI.Input;
 
 namespace PetitMoteur3D.Window.WinUI;
 
@@ -137,11 +136,11 @@ public class WinUIWindow : IWindow, ICompositionWindow
             if (runFrame)
             {
                 _lastFramePushed++;
-                //System.Diagnostics.Trace.WriteLine($"[PetitMoteur3D] WinUiWindow Run called runFrame {_lastFramePushed}");
-                //System.Diagnostics.Trace.WriteLine($"[PetitMoteur3D] WinUiWindow Run Ennqueue frame");
+                //LogHelper.Log($"[PetitMoteur3D] WinUiWindow Run called runFrame {_lastFramePushed}");
+                //LogHelper.Log($"[PetitMoteur3D] WinUiWindow Run Ennqueue frame");
                 _dxPanel.SwapChainPanel.DispatcherQueue.TryEnqueue(onFrame.Invoke);
                 //_inputPointerSource?.DispatcherQueue.TryEnqueue(onFrame.Invoke);
-                //System.Diagnostics.Trace.WriteLine($"[PetitMoteur3D] WinUiWindow Run Ennqueue frame finished");
+                //LogHelper.Log($"[PetitMoteur3D] WinUiWindow Run Ennqueue frame finished");
             }
         }
     }

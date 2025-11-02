@@ -6,6 +6,8 @@ using Microsoft.UI.Input;
 using Microsoft.UI.Xaml;
 using PetitMoteur3D.Input;
 using PetitMoteur3D.Input.WinUI;
+using PetitMoteur3D.Logging;
+using Serilog;
 using WinRT;
 
 // To learn more about WinUI, the WinUI project structure,
@@ -21,29 +23,50 @@ namespace PetitMoteur3D.Application
         public MainWindow()
         {
             InitializeComponent();
+            string logFilePath = $"logs/{PetitMoteur3D.Logging.Log.GenerateLogFileName()}";
+            Logging.Log.Logger = new Serilog.LoggerConfiguration()
+#if DEBUG
+                .MinimumLevel.Debug()
+#else
+                .MinimumLevel.Information()
+#endif
+#if DEBUG
+                .WriteTo.Debug()
+#endif
+                .WriteTo.Console()
+                .WriteTo.Async(c => c.File(logFilePath))
+                .CreateLogger();
+            _dispatcherQueueController = DispatcherQueueController.CreateOnDedicatedThread();
         }
 
         private DispatcherQueueController _dispatcherQueueController;
 
         private void DXSwapChainPanel_Loaded(object sender, RoutedEventArgs e)
         {
-            System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] DXSwapChainPanel_Loaded Begin");
+            Logging.Log.Information("[PetitMoteur3D] DXSwapChainPanel_Loaded Begin");
             Thread.CurrentThread.Name = "UiThread";
             PetitMoteur3D.Window.WinUI.WinUIWindow window = new(this.AppWindow, DXSwapChainPanel);
             DXSwapChainPanel.Focus(FocusState.Programmatic);
             _dispatcherQueueController.DispatcherQueue.TryEnqueue(() => EngineAction(window));
-            System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] DXSwapChainPanel_Loaded End");
+            Logging.Log.Information("[PetitMoteur3D] DXSwapChainPanel_Loaded End");
         }
 
         private void EngineAction(PetitMoteur3D.Window.WinUI.WinUIWindow window)
         {
-            System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] EngineAction Begin");
+            Logging.Log.Information("[PetitMoteur3D] EngineAction Begin");
             try
             {
                 Thread.CurrentThread.Name = "EngineThread";
                 WinUiInputPlatform platform = new();
                 IInputContext inputContext = platform.CreateInput(window);
-                Engine engine = new(window, inputContext);
+
+                PetitMoteur3D.Window.IWindow engineWindow = window;
+                EngineConfiguration conf = new(in engineWindow)
+                {
+                    Window = window,
+                    InputContext = inputContext
+                };
+                Engine engine = new(in conf);
                 engine.Initialized += () =>
                 {
                     bool success = DXSwapChainPanel.DispatcherQueue.TryEnqueue(DispatcherQueuePriority.High, () =>
@@ -51,13 +74,13 @@ namespace PetitMoteur3D.Application
                         SetSwapwhain(engine);
                     });
                 };
-                System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] EngineAction Engine Initialzation");
+                Logging.Log.Information("[PetitMoteur3D] EngineAction Engine Initialzation");
                 engine.Initialize();
-                System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] EngineAction Engine Initialzation Finished");
+                Logging.Log.Information("[PetitMoteur3D] EngineAction Engine Initialzation Finished");
 
-                System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] EngineAction Engine Run");
+                Logging.Log.Information("[PetitMoteur3D] EngineAction Engine Run");
                 engine.Run();
-                System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] EngineAction Engine Run Finished");
+                Logging.Log.Information("[PetitMoteur3D] EngineAction Engine Run Finished");
             }
             catch (Exception)
             {
@@ -67,12 +90,12 @@ namespace PetitMoteur3D.Application
                 }
                 throw;
             }
-            System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] EngineAction End");
+            Logging.Log.Information("[PetitMoteur3D] EngineAction End");
         }
 
         private void SetSwapwhain(Engine engine)
         {
-            System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] SetSwapwhain Begin");
+            Logging.Log.Information("[PetitMoteur3D] SetSwapwhain Begin");
             IObjectReference nativeReference = ((IWinRTObject)DXSwapChainPanel.SwapChainPanel).NativeObject;
             try
             {
@@ -84,7 +107,7 @@ namespace PetitMoteur3D.Application
 #else
                     int errorCode = ABI.WinUIDesktopInterop.SetSwapchain(nativeReference.ThisPtr, (nint)engine.DeviceD3D11.Swapchain.Handle);
 #endif
-                    System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] SetSwapwhain errorCode = " + errorCode);
+                    Logging.Log.Information("[PetitMoteur3D] SetSwapwhain errorCode = " + errorCode);
                     System.Runtime.InteropServices.Marshal.ThrowExceptionForHR(errorCode);
                 }
             }
@@ -100,12 +123,12 @@ namespace PetitMoteur3D.Application
 
         private void Window_Activated(object sender, Microsoft.UI.Xaml.WindowActivatedEventArgs args)
         {
-            _dispatcherQueueController = DispatcherQueueController.CreateOnDedicatedThread();
         }
 
         private void Window_Closed(object sender, WindowEventArgs args)
         {
             _dispatcherQueueController.ShutdownQueue();
+            Serilog.Log.CloseAndFlush();
         }
 
         private void DXSwapChainPanel_GettingFocus(UIElement sender, Microsoft.UI.Xaml.Input.GettingFocusEventArgs args)

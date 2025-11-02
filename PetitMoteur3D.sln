@@ -25,6 +25,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PetitMoteur3D.Application.A
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PetitMoteur3D.Input.WinUI", "src\PetitMoteur3D.Input.WinUI\PetitMoteur3D.Input.WinUI.csproj", "{1C98FCE0-27AB-4938-BBDE-9D77CAC6EE88}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PetitMoteur3D.Logging", "src\PetitMoteur3D.Logging\PetitMoteur3D.Logging.csproj", "{A092CC41-71EA-4030-8871-BAE32A583C0A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -171,6 +173,18 @@ Global
 		{1C98FCE0-27AB-4938-BBDE-9D77CAC6EE88}.Release|x64.Build.0 = Release|Any CPU
 		{1C98FCE0-27AB-4938-BBDE-9D77CAC6EE88}.Release|x86.ActiveCfg = Release|Any CPU
 		{1C98FCE0-27AB-4938-BBDE-9D77CAC6EE88}.Release|x86.Build.0 = Release|Any CPU
+		{A092CC41-71EA-4030-8871-BAE32A583C0A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A092CC41-71EA-4030-8871-BAE32A583C0A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A092CC41-71EA-4030-8871-BAE32A583C0A}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{A092CC41-71EA-4030-8871-BAE32A583C0A}.Debug|x64.Build.0 = Debug|Any CPU
+		{A092CC41-71EA-4030-8871-BAE32A583C0A}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{A092CC41-71EA-4030-8871-BAE32A583C0A}.Debug|x86.Build.0 = Debug|Any CPU
+		{A092CC41-71EA-4030-8871-BAE32A583C0A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A092CC41-71EA-4030-8871-BAE32A583C0A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A092CC41-71EA-4030-8871-BAE32A583C0A}.Release|x64.ActiveCfg = Release|Any CPU
+		{A092CC41-71EA-4030-8871-BAE32A583C0A}.Release|x64.Build.0 = Release|Any CPU
+		{A092CC41-71EA-4030-8871-BAE32A583C0A}.Release|x86.ActiveCfg = Release|Any CPU
+		{A092CC41-71EA-4030-8871-BAE32A583C0A}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

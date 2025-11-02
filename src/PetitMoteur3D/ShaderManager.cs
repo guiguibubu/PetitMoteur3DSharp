@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
+using PetitMoteur3D.Logging;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D.Compilers;
 using Silk.NET.Direct3D11;
@@ -163,7 +164,7 @@ namespace PetitMoteur3D
             {
                 if (compilationErrors.Handle is not null)
                 {
-                    System.Diagnostics.Trace.WriteLine(SilkMarshal.PtrToString((nint)compilationErrors.GetBufferPointer()));
+                    Log.Information(SilkMarshal.PtrToString((nint)compilationErrors.GetBufferPointer()));
                 }
 
                 hr.Throw();

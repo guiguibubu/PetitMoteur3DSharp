@@ -45,6 +45,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\PetitMoteur3D.Input\PetitMoteur3D.Input.csproj" />
+    <ProjectReference Include="..\PetitMoteur3D.Logging\PetitMoteur3D.Logging.csproj" />
     <ProjectReference Include="..\PetitMoteur3D.Window\PetitMoteur3D.Window.csproj" />
   </ItemGroup>
 

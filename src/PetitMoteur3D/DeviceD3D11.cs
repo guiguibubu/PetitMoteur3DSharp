@@ -2,6 +2,7 @@
 using System;
 using System.Drawing;
 using System.Runtime.CompilerServices;
+using PetitMoteur3D.Logging;
 using PetitMoteur3D.Window;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D.Compilers;
@@ -96,7 +97,7 @@ namespace PetitMoteur3D
             _renderDoc.API.SetActiveWindow(new IntPtr(_device.Handle), _window.Native!.DXHandle!.Value);
             _renderDoc.API.SetActiveWindow(new IntPtr(_device.Handle), _window.Native!.Win32!.Value.Hwnd);
             _renderDoc.API.SetCaptureFilePathTemplate(System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "capture"));
-            System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] Render doc file path : " + _renderDoc.API.GetCaptureFilePathTemplate());
+            LogHelper.Log("[PetitMoteur3D] Render doc file path : " + _renderDoc.API.GetCaptureFilePathTemplate());
 #endif
         }
 
@@ -176,17 +177,17 @@ namespace PetitMoteur3D
 
         public unsafe void StartFrameCapture()
         {
-            System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] StartFrameCapture");
+            LogHelper.Log("[PetitMoteur3D] StartFrameCapture");
             _renderDoc.API.StartFrameCapture((nint)_device.Handle, _window.Native!.DXHandle!.Value);
         }
 
         public unsafe void EndFrameCapture()
         {
-            System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] EndFrameCapture");
+            LogHelper.Log("[PetitMoteur3D] EndFrameCapture");
             uint errorCode = _renderDoc.API.EndFrameCapture((nint)_device.Handle, _window.Native!.DXHandle!.Value);
             if (errorCode == 0)
             {
-                System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] EndFrameCapture fail to capture");
+                LogHelper.Log("[PetitMoteur3D] EndFrameCapture fail to capture");
             }
         }
 #endif
@@ -253,7 +254,7 @@ namespace PetitMoteur3D
                 _device.SetInfoQueueCallback(msg =>
                 {
                     string? msgStr = SilkMarshal.PtrToString((nint)msg.PDescription);
-                    System.Diagnostics.Trace.WriteLine(msgStr);
+                    LogHelper.Log(msgStr);
                     //System.Diagnostics.Debugger.Break();
                 });
             }

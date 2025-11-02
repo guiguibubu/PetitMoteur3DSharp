@@ -216,16 +216,16 @@ namespace PetitMoteur3D.DebugGui
 
 #if DEBUG && DEBUG_LOG_DRAW_COMMANDS
             uint totalIndexToDrawTemp = 0;
-            System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] drawDataPtr.CmdListsCount = " + drawDataPtr.CmdListsCount);
+            LogHelper.Log("[PetitMoteur3D] drawDataPtr.CmdListsCount = " + drawDataPtr.CmdListsCount);
             for (int i = 0; i < drawDataPtr.CmdListsCount; i++)
             {
                 ImDrawListPtr cmdList = drawDataPtr.CmdLists[i];
-                System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] cmdList.CmdBuffer.Size = " + cmdList.CmdBuffer.Size);
+                LogHelper.Log("[PetitMoteur3D] cmdList.CmdBuffer.Size = " + cmdList.CmdBuffer.Size);
                 for (int j = 0; j < cmdList.CmdBuffer.Size; j++)
                 {
                     ImDrawCmdPtr cmd = cmdList.CmdBuffer[j];
                     uint nbIndexToDraw = cmd.ElemCount;
-                    System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] cmd.ElemCount = " + cmd.ElemCount);
+                    LogHelper.Log("[PetitMoteur3D] cmd.ElemCount = " + cmd.ElemCount);
                     totalIndexToDrawTemp += nbIndexToDraw;
                 }
             }
@@ -233,7 +233,7 @@ namespace PetitMoteur3D.DebugGui
             if (totalIndexToDrawTemp != totalIndexToDraw)
             {
                 totalIndexToDraw = totalIndexToDrawTemp;
-                System.Diagnostics.Trace.WriteLine("[PetitMoteur3D] totalIndexToDraw = " + totalIndexToDraw);
+                LogHelper.Log("[PetitMoteur3D] totalIndexToDraw = " + totalIndexToDraw);
             }
 #endif
 
