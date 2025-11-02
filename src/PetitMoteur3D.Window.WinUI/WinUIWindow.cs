@@ -126,6 +126,7 @@ public class WinUIWindow : IWindow, ICompositionWindow
         }
         bool runFrame = true;
         _lastFramePushed = 0;
+        Microsoft.UI.Dispatching.DispatcherQueueHandler dispatcherHandler = onFrame.Invoke;
         while (!IsClosing)
         {
             if (engine is not null)
@@ -136,11 +137,7 @@ public class WinUIWindow : IWindow, ICompositionWindow
             if (runFrame)
             {
                 _lastFramePushed++;
-                //LogHelper.Log($"[PetitMoteur3D] WinUiWindow Run called runFrame {_lastFramePushed}");
-                //LogHelper.Log($"[PetitMoteur3D] WinUiWindow Run Ennqueue frame");
-                _dxPanel.SwapChainPanel.DispatcherQueue.TryEnqueue(onFrame.Invoke);
-                //_inputPointerSource?.DispatcherQueue.TryEnqueue(onFrame.Invoke);
-                //LogHelper.Log($"[PetitMoteur3D] WinUiWindow Run Ennqueue frame finished");
+                _dxPanel.SwapChainPanel.DispatcherQueue.TryEnqueue(dispatcherHandler);
             }
         }
     }
