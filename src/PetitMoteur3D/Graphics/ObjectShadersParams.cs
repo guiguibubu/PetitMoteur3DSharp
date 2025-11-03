@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 using PetitMoteur3D.Core;
 using Silk.NET.Maths;
 
-namespace PetitMoteur3D;
+namespace PetitMoteur3D.Graphics;
 
 [StructLayout(LayoutKind.Sequential, Pack = 16)]
 internal struct ObjectShadersParams : IResetable
@@ -27,12 +27,12 @@ internal struct ObjectShadersParams : IResetable
     /// <summary>
     /// Indique la présence d'une texture
     /// </summary>
-    public Int32 hasTexture;
+    public int hasTexture;
     /// <summary>
     /// Indique la présence d'une texture pour le "normal mapping"
     /// </summary>
-    public Int32 hasNormalMap;
-    private readonly UInt64 alignement1_1;
+    public int hasNormalMap;
+    private readonly ulong alignement1_1;
 
     public void Reset()
     {

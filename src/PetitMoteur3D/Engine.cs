@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using ImGuiNET;
 using PetitMoteur3D.Camera;
 using PetitMoteur3D.DebugGui;
+using PetitMoteur3D.Graphics;
 using PetitMoteur3D.Input;
 using PetitMoteur3D.Logging;
 using PetitMoteur3D.Window;

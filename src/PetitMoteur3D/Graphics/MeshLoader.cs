@@ -5,7 +5,7 @@ using System.Linq;
 using Silk.NET.Assimp;
 using Silk.NET.Maths;
 
-namespace PetitMoteur3D;
+namespace PetitMoteur3D.Graphics;
 
 internal class MeshLoader
 {
@@ -39,7 +39,7 @@ internal class MeshLoader
 
             IReadOnlyList<Mesh> meshes = ReadMeshes(scene, materials);
 
-            Silk.NET.Assimp.Node* rootNode = scene.MRootNode;
+            Node* rootNode = scene.MRootNode;
             if (rootNode is null)
             {
                 sceneMeshes = meshes.Select(m => new SceneMesh(m)).ToList();
@@ -104,7 +104,7 @@ internal class MeshLoader
         return meshes;
     }
 
-    private static unsafe IReadOnlyList<SceneMesh> ReadNode(Silk.NET.Assimp.Node node, IReadOnlyList<Mesh> meshes)
+    private static unsafe IReadOnlyList<SceneMesh> ReadNode(Node node, IReadOnlyList<Mesh> meshes)
     {
         uint nbSubmesh = node.MNumMeshes;
         List<SceneMesh> sceneMeshes;
@@ -120,7 +120,7 @@ internal class MeshLoader
                 uint nbChildren = node.MNumChildren;
                 for (int j = 0; j < nbChildren; j++)
                 {
-                    Silk.NET.Assimp.Node* child = node.MChildren[j];
+                    Node* child = node.MChildren[j];
                     if (child is null)
                     {
                         continue;
@@ -136,7 +136,7 @@ internal class MeshLoader
             sceneMeshes = new List<SceneMesh>((int)nbChildren);
             for (int j = 0; j < nbChildren; j++)
             {
-                Silk.NET.Assimp.Node* child = node.MChildren[j];
+                Node* child = node.MChildren[j];
                 if (child is null)
                 {
                     continue;
@@ -177,7 +177,7 @@ internal class MeshLoader
         List<ushort> indices = new();
         for (int j = 0; j < nbFaces; j++)
         {
-            Silk.NET.Assimp.Face face = mesh.MFaces[j];
+            Face face = mesh.MFaces[j];
             Span<uint> indicesFace = new Span<uint>(face.MIndices, (int)face.MNumIndices);
             for (int l = 0; l < indicesFace.Length; l++)
             {
@@ -187,13 +187,13 @@ internal class MeshLoader
         return indices;
     }
 
-    private static void ThrowIfFailed(Silk.NET.Assimp.Return returnCode)
+    private static void ThrowIfFailed(Return returnCode)
     {
-        if (returnCode == Silk.NET.Assimp.Return.Success)
+        if (returnCode == Return.Success)
         {
             return;
         }
-        if (returnCode == Silk.NET.Assimp.Return.Outofmemory)
+        if (returnCode == Return.Outofmemory)
         {
             throw new MeshLoaderException("'ReturnOutofmemory' returned by ASSIMP");
         }

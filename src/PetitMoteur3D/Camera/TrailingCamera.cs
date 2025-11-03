@@ -39,7 +39,6 @@ internal class TrailingCamera : ICamera
     /// <param name="champVision"></param>
     public TrailingCamera(ISceneObjet target, float champVision) : this(target, champVision, Vector3D<float>.Zero)
     {
-
     }
 
     /// <summary>

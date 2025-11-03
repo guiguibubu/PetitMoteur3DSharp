@@ -9,7 +9,7 @@ using Silk.NET.Direct3D11;
 using Silk.NET.DXGI;
 using Silk.NET.Maths;
 
-namespace PetitMoteur3D;
+namespace PetitMoteur3D.Graphics;
 
 public class DeviceD3D11
 {
@@ -306,7 +306,7 @@ public class DeviceD3D11
         dxgi.Dispose();
 
         // Create the swapchain.
-        if (windowPtr != IntPtr.Zero)
+        if (windowPtr != nint.Zero)
         {
             SilkMarshal.ThrowHResult
             (

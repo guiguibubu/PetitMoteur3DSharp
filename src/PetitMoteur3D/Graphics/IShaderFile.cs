@@ -1,4 +1,4 @@
-﻿namespace PetitMoteur3D;
+﻿namespace PetitMoteur3D.Graphics;
 
 internal interface IShaderFile
 {

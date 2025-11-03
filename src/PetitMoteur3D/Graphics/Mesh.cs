@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace PetitMoteur3D;
+namespace PetitMoteur3D.Graphics;
 
 internal class Mesh
 {

@@ -2,7 +2,7 @@
 using Silk.NET.Direct3D.Compilers;
 using Silk.NET.Direct3D11;
 
-namespace PetitMoteur3D;
+namespace PetitMoteur3D.Graphics;
 
 internal class GraphicDeviceRessourceFactory
 {

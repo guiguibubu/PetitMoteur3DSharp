@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
+using PetitMoteur3D.Graphics;
 using PetitMoteur3D.Logging;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D.Compilers;

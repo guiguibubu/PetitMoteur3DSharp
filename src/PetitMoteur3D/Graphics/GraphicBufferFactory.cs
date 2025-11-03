@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
 
-namespace PetitMoteur3D;
+namespace PetitMoteur3D.Graphics;
 
 internal class GraphicBufferFactory
 {
@@ -51,7 +51,7 @@ internal class GraphicBufferFactory
             Usage = usage,
             BindFlags = (uint)BindFlag.IndexBuffer,
             CPUAccessFlags = (uint)cpuAcccassFlags,
-            StructureByteStride = (uint)(Marshal.SizeOf<T>())
+            StructureByteStride = (uint)Marshal.SizeOf<T>()
         };
         return CreateBuffer(bufferDesc, data, name);
     }
@@ -64,7 +64,7 @@ internal class GraphicBufferFactory
             Usage = usage,
             BindFlags = (uint)BindFlag.IndexBuffer,
             CPUAccessFlags = (uint)cpuAcccassFlags,
-            StructureByteStride = (uint)(Marshal.SizeOf<T>())
+            StructureByteStride = (uint)Marshal.SizeOf<T>()
         };
         return CreateBuffer(bufferDesc, name);
     }
@@ -73,7 +73,7 @@ internal class GraphicBufferFactory
     {
         BufferDesc bufferDesc = new()
         {
-            ByteWidth = (uint)(Marshal.SizeOf<T>(default)),
+            ByteWidth = (uint)Marshal.SizeOf<T>(default),
             Usage = usage,
             BindFlags = (uint)BindFlag.ConstantBuffer,
             CPUAccessFlags = (uint)cpuAcccessFlags,
@@ -108,7 +108,7 @@ internal class GraphicBufferFactory
             // Set Debug Name
             using (GlobalMemory unmanagedName = SilkMarshal.StringToMemory(name, NativeStringEncoding.Ansi))
             {
-                IntPtr namePtr = unmanagedName.Handle;
+                nint namePtr = unmanagedName.Handle;
                 fixed (Guid* guidPtr = &Windows.Win32.PInvoke.WKPDID_D3DDebugObjectName)
                 {
                     buffer.SetPrivateData(guidPtr, (uint)name.Length, namePtr.ToPointer());

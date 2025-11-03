@@ -1,7 +1,7 @@
 ﻿using System.Runtime.InteropServices;
 using Silk.NET.Maths;
 
-namespace PetitMoteur3D;
+namespace PetitMoteur3D.Graphics;
 
 [StructLayout(LayoutKind.Sequential, Pack = 16)]
 internal struct LightShadersParams

@@ -5,7 +5,7 @@ using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
 using Silk.NET.DXGI;
 
-namespace PetitMoteur3D;
+namespace PetitMoteur3D.Graphics;
 
 internal class TextureFactory
 {
@@ -130,7 +130,7 @@ internal class TextureFactory
             // Set Debug Name
             using (GlobalMemory unmanagedName = SilkMarshal.StringToMemory(name, NativeStringEncoding.Ansi))
             {
-                IntPtr namePtr = unmanagedName.Handle;
+                nint namePtr = unmanagedName.Handle;
                 fixed (Guid* guidPtr = &Windows.Win32.PInvoke.WKPDID_D3DDebugObjectName)
                 {
                     sampler.SetPrivateData(guidPtr, (uint)name.Length, namePtr.ToPointer());

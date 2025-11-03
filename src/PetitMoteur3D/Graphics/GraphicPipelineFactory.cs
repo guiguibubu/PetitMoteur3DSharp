@@ -2,7 +2,7 @@
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
 
-namespace PetitMoteur3D;
+namespace PetitMoteur3D.Graphics;
 
 internal class GraphicPipelineFactory
 {
@@ -22,7 +22,7 @@ internal class GraphicPipelineFactory
             // Set Debug Name
             using (GlobalMemory unmanagedName = SilkMarshal.StringToMemory(name, NativeStringEncoding.Ansi))
             {
-                IntPtr namePtr = unmanagedName.Handle;
+                nint namePtr = unmanagedName.Handle;
                 fixed (Guid* guidPtr = &Windows.Win32.PInvoke.WKPDID_D3DDebugObjectName)
                 {
                     blendState.SetPrivateData(guidPtr, (uint)name.Length, namePtr.ToPointer());
@@ -40,7 +40,7 @@ internal class GraphicPipelineFactory
             // Set Debug Name
             using (GlobalMemory unmanagedName = SilkMarshal.StringToMemory(name, NativeStringEncoding.Ansi))
             {
-                IntPtr namePtr = unmanagedName.Handle;
+                nint namePtr = unmanagedName.Handle;
                 fixed (Guid* guidPtr = &Windows.Win32.PInvoke.WKPDID_D3DDebugObjectName)
                 {
                     depthStencilState.SetPrivateData(guidPtr, (uint)name.Length, namePtr.ToPointer());
@@ -59,7 +59,7 @@ internal class GraphicPipelineFactory
             // Set Debug Name
             using (GlobalMemory unmanagedName = SilkMarshal.StringToMemory(name, NativeStringEncoding.Ansi))
             {
-                IntPtr namePtr = unmanagedName.Handle;
+                nint namePtr = unmanagedName.Handle;
                 fixed (Guid* guidPtr = &Windows.Win32.PInvoke.WKPDID_D3DDebugObjectName)
                 {
                     rasterizerState.SetPrivateData(guidPtr, (uint)name.Length, namePtr.ToPointer());

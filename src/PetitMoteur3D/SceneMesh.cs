@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using PetitMoteur3D.Graphics;
 using Silk.NET.Maths;
 
 namespace PetitMoteur3D;
