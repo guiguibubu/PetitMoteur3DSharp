@@ -2,6 +2,7 @@
 using System;
 using System.Drawing;
 using System.Runtime.CompilerServices;
+using PetitMoteur3D.Logging;
 using PetitMoteur3D.Window;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D.Compilers;
@@ -252,8 +253,7 @@ public class DeviceD3D11
             _device.SetInfoQueueCallback(msg =>
             {
                 string? msgStr = SilkMarshal.PtrToString((nint)msg.PDescription);
-                LogHelper.Log(msgStr);
-                //System.Diagnostics.Debugger.Break();
+                Log.Information(msgStr);
             });
         }
 #endif
