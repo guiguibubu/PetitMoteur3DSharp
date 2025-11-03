@@ -8,6 +8,7 @@ using System.Drawing;
 using System.Numerics;
 using ImGuiNET;
 using OpenTelemetry.Metrics;
+using PetitMoteur3D.DebugGui.Extensions;
 using PetitMoteur3D.Input;
 using PetitMoteur3D.Window;
 
