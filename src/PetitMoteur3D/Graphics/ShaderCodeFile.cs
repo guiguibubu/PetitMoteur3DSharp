@@ -1,8 +1,7 @@
 ﻿using System;
 using System.IO;
-using PetitMoteur3D.Graphics;
 
-namespace PetitMoteur3D;
+namespace PetitMoteur3D.Graphics;
 
 internal class ShaderCodeFile : IShaderFile
 {
@@ -15,7 +14,7 @@ internal class ShaderCodeFile : IShaderFile
 
     public ShaderCodeFile(string filePath, string entryPoint, string target, uint compilationFlags, string name = "")
     {
-        ArgumentNullException.ThrowIfNullOrEmpty(filePath);
+        ArgumentException.ThrowIfNullOrEmpty(filePath);
         Name = name;
         FilePath = filePath;
         Data = File.ReadAllBytes(filePath);

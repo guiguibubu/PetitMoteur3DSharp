@@ -2,13 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
-using PetitMoteur3D.Graphics;
 using PetitMoteur3D.Logging;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D.Compilers;
 using Silk.NET.Direct3D11;
 
-namespace PetitMoteur3D;
+namespace PetitMoteur3D.Graphics;
 
 internal class ShaderManager
 {
@@ -209,7 +208,7 @@ internal class ShaderManager
             // Set Debug Name
             using (GlobalMemory unmanagedName = SilkMarshal.StringToMemory(name, NativeStringEncoding.Ansi))
             {
-                IntPtr namePtr = unmanagedName.Handle;
+                nint namePtr = unmanagedName.Handle;
                 fixed (Guid* guidPtr = &Windows.Win32.PInvoke.WKPDID_D3DDebugObjectName)
                 {
                     vertexShader.SetPrivateData(guidPtr, (uint)name.Length, namePtr.ToPointer());
@@ -258,7 +257,7 @@ internal class ShaderManager
             // Set Debug Name
             using (GlobalMemory unmanagedName = SilkMarshal.StringToMemory(name, NativeStringEncoding.Ansi))
             {
-                IntPtr namePtr = unmanagedName.Handle;
+                nint namePtr = unmanagedName.Handle;
                 fixed (Guid* guidPtr = &Windows.Win32.PInvoke.WKPDID_D3DDebugObjectName)
                 {
                     inputLayout.SetPrivateData(guidPtr, (uint)name.Length, namePtr.ToPointer());
@@ -303,7 +302,7 @@ internal class ShaderManager
             // Set Debug Name
             using (GlobalMemory unmanagedName = SilkMarshal.StringToMemory(name, NativeStringEncoding.Ansi))
             {
-                IntPtr namePtr = unmanagedName.Handle;
+                nint namePtr = unmanagedName.Handle;
                 fixed (Guid* guidPtr = &Windows.Win32.PInvoke.WKPDID_D3DDebugObjectName)
                 {
                     pixelShader.SetPrivateData(guidPtr, (uint)name.Length, namePtr.ToPointer());
