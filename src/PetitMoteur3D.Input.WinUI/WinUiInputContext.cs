@@ -29,8 +29,8 @@ internal class WinUiInputContext : IInputContext
 
     public event Action<IInputDevice, bool>? ConnexionChanged
     {
-        add {  }
-        remove {  }
+        add { }
+        remove { }
     }
 
     public void Dispose()

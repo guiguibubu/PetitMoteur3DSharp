@@ -2,71 +2,70 @@
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
 
-namespace PetitMoteur3D
+namespace PetitMoteur3D;
+
+internal class GraphicPipelineFactory
 {
-    internal class GraphicPipelineFactory
+    private readonly ComPtr<ID3D11Device> _device;
+
+    public GraphicPipelineFactory(ComPtr<ID3D11Device> device)
     {
-        private readonly ComPtr<ID3D11Device> _device;
+        _device = device;
+    }
 
-        public GraphicPipelineFactory(ComPtr<ID3D11Device> device)
+    public unsafe ComPtr<ID3D11BlendState> CreateBlendState(BlendDesc desc, string name = "")
+    {
+        ComPtr<ID3D11BlendState> blendState = default;
+        SilkMarshal.ThrowHResult(_device.CreateBlendState(in desc, ref blendState));
+        if (!string.IsNullOrEmpty(name))
         {
-            _device = device;
-        }
-
-        public unsafe ComPtr<ID3D11BlendState> CreateBlendState(BlendDesc desc, string name = "")
-        {
-            ComPtr<ID3D11BlendState> blendState = default;
-            SilkMarshal.ThrowHResult(_device.CreateBlendState(in desc, ref blendState));
-            if (!string.IsNullOrEmpty(name))
+            // Set Debug Name
+            using (GlobalMemory unmanagedName = SilkMarshal.StringToMemory(name, NativeStringEncoding.Ansi))
             {
-                // Set Debug Name
-                using (GlobalMemory unmanagedName = SilkMarshal.StringToMemory(name, NativeStringEncoding.Ansi))
+                IntPtr namePtr = unmanagedName.Handle;
+                fixed (Guid* guidPtr = &Windows.Win32.PInvoke.WKPDID_D3DDebugObjectName)
                 {
-                    IntPtr namePtr = unmanagedName.Handle;
-                    fixed (Guid* guidPtr = &Windows.Win32.PInvoke.WKPDID_D3DDebugObjectName)
-                    {
-                        blendState.SetPrivateData(guidPtr, (uint)name.Length, namePtr.ToPointer());
-                    }
+                    blendState.SetPrivateData(guidPtr, (uint)name.Length, namePtr.ToPointer());
                 }
             }
-            return blendState;
         }
-        public unsafe ComPtr<ID3D11DepthStencilState> CreateDepthStencilState(DepthStencilDesc desc, string name = "")
+        return blendState;
+    }
+    public unsafe ComPtr<ID3D11DepthStencilState> CreateDepthStencilState(DepthStencilDesc desc, string name = "")
+    {
+        ComPtr<ID3D11DepthStencilState> depthStencilState = default;
+        SilkMarshal.ThrowHResult(_device.CreateDepthStencilState(in desc, ref depthStencilState));
+        if (!string.IsNullOrEmpty(name))
         {
-            ComPtr<ID3D11DepthStencilState> depthStencilState = default;
-            SilkMarshal.ThrowHResult(_device.CreateDepthStencilState(in desc, ref depthStencilState));
-            if (!string.IsNullOrEmpty(name))
+            // Set Debug Name
+            using (GlobalMemory unmanagedName = SilkMarshal.StringToMemory(name, NativeStringEncoding.Ansi))
             {
-                // Set Debug Name
-                using (GlobalMemory unmanagedName = SilkMarshal.StringToMemory(name, NativeStringEncoding.Ansi))
+                IntPtr namePtr = unmanagedName.Handle;
+                fixed (Guid* guidPtr = &Windows.Win32.PInvoke.WKPDID_D3DDebugObjectName)
                 {
-                    IntPtr namePtr = unmanagedName.Handle;
-                    fixed (Guid* guidPtr = &Windows.Win32.PInvoke.WKPDID_D3DDebugObjectName)
-                    {
-                        depthStencilState.SetPrivateData(guidPtr, (uint)name.Length, namePtr.ToPointer());
-                    }
+                    depthStencilState.SetPrivateData(guidPtr, (uint)name.Length, namePtr.ToPointer());
                 }
             }
-            return depthStencilState;
         }
+        return depthStencilState;
+    }
 
-        public unsafe ComPtr<ID3D11RasterizerState> CreateRasterizerState(RasterizerDesc desc, string name = "")
+    public unsafe ComPtr<ID3D11RasterizerState> CreateRasterizerState(RasterizerDesc desc, string name = "")
+    {
+        ComPtr<ID3D11RasterizerState> rasterizerState = default;
+        SilkMarshal.ThrowHResult(_device.CreateRasterizerState(in desc, ref rasterizerState));
+        if (!string.IsNullOrEmpty(name))
         {
-            ComPtr<ID3D11RasterizerState> rasterizerState = default;
-            SilkMarshal.ThrowHResult(_device.CreateRasterizerState(in desc, ref rasterizerState));
-            if (!string.IsNullOrEmpty(name))
+            // Set Debug Name
+            using (GlobalMemory unmanagedName = SilkMarshal.StringToMemory(name, NativeStringEncoding.Ansi))
             {
-                // Set Debug Name
-                using (GlobalMemory unmanagedName = SilkMarshal.StringToMemory(name, NativeStringEncoding.Ansi))
+                IntPtr namePtr = unmanagedName.Handle;
+                fixed (Guid* guidPtr = &Windows.Win32.PInvoke.WKPDID_D3DDebugObjectName)
                 {
-                    IntPtr namePtr = unmanagedName.Handle;
-                    fixed (Guid* guidPtr = &Windows.Win32.PInvoke.WKPDID_D3DDebugObjectName)
-                    {
-                        rasterizerState.SetPrivateData(guidPtr, (uint)name.Length, namePtr.ToPointer());
-                    }
+                    rasterizerState.SetPrivateData(guidPtr, (uint)name.Length, namePtr.ToPointer());
                 }
             }
-            return rasterizerState;
         }
+        return rasterizerState;
     }
 }

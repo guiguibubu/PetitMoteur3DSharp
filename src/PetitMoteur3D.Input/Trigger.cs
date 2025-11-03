@@ -1,29 +1,28 @@
-namespace PetitMoteur3D.Input
+namespace PetitMoteur3D.Input;
+
+/// <summary>
+/// Represents a trigger.
+/// </summary>
+public struct Trigger
 {
     /// <summary>
-    /// Represents a trigger.
+    /// The index of this trigger.
     /// </summary>
-    public struct Trigger
+    public int Index { get; }
+
+    /// <summary>
+    /// The position of this trigger; how far down it's currently pressed.
+    /// </summary>
+    public float Position { get; }
+
+    /// <summary>
+    /// Creates a new instance of the Trigger struct.
+    /// </summary>
+    /// <param name="index">The index of this trigger.</param>
+    /// <param name="position">The position of this trigger.</param>
+    public Trigger(int index, float position)
     {
-        /// <summary>
-        /// The index of this trigger.
-        /// </summary>
-        public int Index { get; }
-
-        /// <summary>
-        /// The position of this trigger; how far down it's currently pressed.
-        /// </summary>
-        public float Position { get; }
-
-        /// <summary>
-        /// Creates a new instance of the Trigger struct.
-        /// </summary>
-        /// <param name="index">The index of this trigger.</param>
-        /// <param name="position">The position of this trigger.</param>
-        public Trigger(int index, float position)
-        {
-            Index = index;
-            Position = position;
-        }
+        Index = index;
+        Position = position;
     }
 }

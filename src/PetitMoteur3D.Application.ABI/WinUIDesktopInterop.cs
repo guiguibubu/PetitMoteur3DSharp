@@ -29,7 +29,7 @@ public static partial class WinUIDesktopInterop
     [ComImport]
 #else
     [System.Runtime.InteropServices.Marshalling.GeneratedComInterface(
-        Options = System.Runtime.InteropServices.Marshalling.ComInterfaceOptions.ComObjectWrapper, 
+        Options = System.Runtime.InteropServices.Marshalling.ComInterfaceOptions.ComObjectWrapper,
         StringMarshalling = StringMarshalling.Utf8)]
 #endif
     [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
@@ -44,7 +44,7 @@ public static partial class WinUIDesktopInterop
 #if PM3D_USEITEROP_LIBRARY_IMPORT
     [LibraryImport(NativeLibraryPath,
             EntryPoint = SwapchainPanelNativeWrapper_Add_Name, StringMarshalling = StringMarshalling.Utf8)]
-            [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
     public static partial Int32 Add(Int32 a, Int32 b);
 
     [LibraryImport(NativeLibraryPath,

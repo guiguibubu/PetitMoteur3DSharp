@@ -1,29 +1,28 @@
-namespace PetitMoteur3D.Input
+namespace PetitMoteur3D.Input;
+
+/// <summary>
+/// Represents a joystick hat.
+/// </summary>
+public struct Hat
 {
     /// <summary>
-    /// Represents a joystick hat.
+    /// The index of this hat.
     /// </summary>
-    public struct Hat
+    public int Index { get; }
+
+    /// <summary>
+    /// The position of this hat.
+    /// </summary>
+    public Position2D Position { get; }
+
+    /// <summary>
+    /// Creates a new instance of the Hat struct.
+    /// </summary>
+    /// <param name="index">The index of the hat.</param>
+    /// <param name="position">The position of the hat.</param>
+    public Hat(int index, Position2D position)
     {
-        /// <summary>
-        /// The index of this hat.
-        /// </summary>
-        public int Index { get; }
-
-        /// <summary>
-        /// The position of this hat.
-        /// </summary>
-        public Position2D Position { get; }
-
-        /// <summary>
-        /// Creates a new instance of the Hat struct.
-        /// </summary>
-        /// <param name="index">The index of the hat.</param>
-        /// <param name="position">The position of the hat.</param>
-        public Hat(int index, Position2D position)
-        {
-            Index = index;
-            Position = position;
-        }
+        Index = index;
+        Position = position;
     }
 }

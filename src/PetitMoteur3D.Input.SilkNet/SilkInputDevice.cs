@@ -1,69 +1,68 @@
-﻿namespace PetitMoteur3D.Input.SilkNet
+﻿namespace PetitMoteur3D.Input.SilkNet;
+
+public static class SilkInputDevice
 {
-    public static class SilkInputDevice
+    internal static IInputDevice FromSilk(Silk.NET.Input.IInputDevice inputDevice)
     {
-        internal static IInputDevice FromSilk(Silk.NET.Input.IInputDevice inputDevice)
+        if (inputDevice is Silk.NET.Input.IGamepad gamepad)
         {
-            if (inputDevice is Silk.NET.Input.IGamepad gamepad)
-            {
-                return FromSilk(gamepad);
-            }
-            else if (inputDevice is Silk.NET.Input.IJoystick joystick)
-            {
-                return FromSilk(joystick);
-            }
-            else if (inputDevice is Silk.NET.Input.IMouse mouse)
-            {
-                return FromSilk(mouse);
-            }
-            else if (inputDevice is Silk.NET.Input.IKeyboard keyboard)
-            {
-                return FromSilk(keyboard);
-            }
-            else
-            {
-                return new SilkInputDeviceImpl(inputDevice);
-            }
+            return FromSilk(gamepad);
         }
-
-        public static IGamepad FromSilk(Silk.NET.Input.IGamepad inputDevice)
+        else if (inputDevice is Silk.NET.Input.IJoystick joystick)
         {
-            return new SilkGamepad(inputDevice);
+            return FromSilk(joystick);
         }
-
-        public static IJoystick FromSilk(Silk.NET.Input.IJoystick inputDevice)
+        else if (inputDevice is Silk.NET.Input.IMouse mouse)
         {
-            return new SilkJoystick(inputDevice);
+            return FromSilk(mouse);
         }
-
-        public static IMouse FromSilk(Silk.NET.Input.IMouse inputDevice)
+        else if (inputDevice is Silk.NET.Input.IKeyboard keyboard)
         {
-            return new SilkMouse(inputDevice);
+            return FromSilk(keyboard);
         }
-
-        public static IKeyboard FromSilk(Silk.NET.Input.IKeyboard inputDevice)
+        else
         {
-            return new SilkKeyboard(inputDevice);
+            return new SilkInputDeviceImpl(inputDevice);
         }
     }
 
-    internal class SilkInputDeviceImpl : BaseSilkInputDeviceImpl<Silk.NET.Input.IInputDevice>
+    public static IGamepad FromSilk(Silk.NET.Input.IGamepad inputDevice)
     {
-        public SilkInputDeviceImpl(Silk.NET.Input.IInputDevice silkInputDevice) : base(silkInputDevice)
-        {
-        }
+        return new SilkGamepad(inputDevice);
     }
 
-    internal abstract class BaseSilkInputDeviceImpl<T> : IInputDevice where T : Silk.NET.Input.IInputDevice
+    public static IJoystick FromSilk(Silk.NET.Input.IJoystick inputDevice)
     {
-        protected T _silkInputDevice;
-
-        public BaseSilkInputDeviceImpl(T silkInputDevice)
-        {
-            _silkInputDevice = silkInputDevice;
-        }
-        public string Name => _silkInputDevice.Name;
-
-        public bool IsConnected => _silkInputDevice.IsConnected;
+        return new SilkJoystick(inputDevice);
     }
+
+    public static IMouse FromSilk(Silk.NET.Input.IMouse inputDevice)
+    {
+        return new SilkMouse(inputDevice);
+    }
+
+    public static IKeyboard FromSilk(Silk.NET.Input.IKeyboard inputDevice)
+    {
+        return new SilkKeyboard(inputDevice);
+    }
+}
+
+internal class SilkInputDeviceImpl : BaseSilkInputDeviceImpl<Silk.NET.Input.IInputDevice>
+{
+    public SilkInputDeviceImpl(Silk.NET.Input.IInputDevice silkInputDevice) : base(silkInputDevice)
+    {
+    }
+}
+
+internal abstract class BaseSilkInputDeviceImpl<T> : IInputDevice where T : Silk.NET.Input.IInputDevice
+{
+    protected T _silkInputDevice;
+
+    public BaseSilkInputDeviceImpl(T silkInputDevice)
+    {
+        _silkInputDevice = silkInputDevice;
+    }
+    public string Name => _silkInputDevice.Name;
+
+    public bool IsConnected => _silkInputDevice.IsConnected;
 }

@@ -1,18 +1,17 @@
-namespace PetitMoteur3D.Input
+namespace PetitMoteur3D.Input;
+
+/// <summary>
+/// Type used by a cursor.
+/// </summary>
+public enum CursorType
 {
     /// <summary>
-    /// Type used by a cursor.
+    /// One of the standard cursors.
     /// </summary>
-    public enum CursorType
-    {
-        /// <summary>
-        /// One of the standard cursors.
-        /// </summary>
-        Standard,
+    Standard,
 
-        /// <summary>
-        /// A custom cursor provided as image data.
-        /// </summary>
-        Custom
-    }
+    /// <summary>
+    /// A custom cursor provided as image data.
+    /// </summary>
+    Custom
 }

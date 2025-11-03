@@ -1,64 +1,63 @@
 using System.Collections.Generic;
 using Silk.NET.Maths;
 
-namespace PetitMoteur3D
+namespace PetitMoteur3D;
+
+internal class ObjetMesh : BaseObjet3D
 {
-    internal class ObjetMesh : BaseObjet3D
+    public SceneMesh Mesh => _sceneMesh;
+    private readonly SceneMesh _sceneMesh;
+
+    private IReadOnlyList<SubObjet3D>? _subObjects = null;
+
+    public ObjetMesh(SceneMesh sceneMesh, GraphicDeviceRessourceFactory graphicDeviceRessourceFactory)
+        : base(graphicDeviceRessourceFactory)
     {
-        public SceneMesh Mesh => _sceneMesh;
-        private readonly SceneMesh _sceneMesh;
+        _sceneMesh = sceneMesh;
 
-        private IReadOnlyList<SubObjet3D>? _subObjects = null;
+        Initialisation();
+    }
 
-        public ObjetMesh(SceneMesh sceneMesh, GraphicDeviceRessourceFactory graphicDeviceRessourceFactory)
-            : base(graphicDeviceRessourceFactory)
+    /// <inheritdoc/>
+    protected override IReadOnlyList<Sommet> InitVertex()
+    {
+        return _sceneMesh.GetAllVertices();
+    }
+
+    /// <inheritdoc/>
+    protected override IReadOnlyList<ushort> InitIndex()
+    {
+        return _sceneMesh.GetAllIndices();
+    }
+
+    /// <inheritdoc/>
+    protected override IReadOnlyList<SubObjet3D> GetSubObjets()
+    {
+        if (_subObjects is null)
         {
-            _sceneMesh = sceneMesh;
-
-            Initialisation();
+            _subObjects = GetSubObjets(_sceneMesh);
         }
+        return _subObjects;
+    }
 
-        /// <inheritdoc/>
-        protected override IReadOnlyList<Sommet> InitVertex()
+    private static IReadOnlyList<SubObjet3D> GetSubObjets(SceneMesh sceneMesh)
+    {
+        List<SubObjet3D> subObjects = new();
+        subObjects.Add(ToSubObjet3D(sceneMesh, Matrix4X4<float>.Identity));
+        foreach (SceneMesh child in sceneMesh.Children)
         {
-            return _sceneMesh.GetAllVertices();
+            subObjects.AddRange(GetSubObjets(child));
         }
+        return subObjects;
+    }
 
-        /// <inheritdoc/>
-        protected override IReadOnlyList<ushort> InitIndex()
+    private static SubObjet3D ToSubObjet3D(SceneMesh sceneMesh, Matrix4X4<float> parentTransform)
+    {
+        return new SubObjet3D()
         {
-            return _sceneMesh.GetAllIndices();
-        }
-
-        /// <inheritdoc/>
-        protected override IReadOnlyList<SubObjet3D> GetSubObjets()
-        {
-            if (_subObjects is null)
-            {
-                _subObjects = GetSubObjets(_sceneMesh);
-            }
-            return _subObjects;
-        }
-
-        private static IReadOnlyList<SubObjet3D> GetSubObjets(SceneMesh sceneMesh)
-        {
-            List<SubObjet3D> subObjects = new();
-            subObjects.Add(ToSubObjet3D(sceneMesh, Matrix4X4<float>.Identity));
-            foreach (SceneMesh child in sceneMesh.Children)
-            {
-                subObjects.AddRange(GetSubObjets(child));
-            }
-            return subObjects;
-        }
-
-        private static SubObjet3D ToSubObjet3D(SceneMesh sceneMesh, Matrix4X4<float> parentTransform)
-        {
-            return new SubObjet3D()
-            {
-                Indices = sceneMesh.Mesh.Indices,
-                Material = sceneMesh.Mesh.Material,
-                Transformation = parentTransform * sceneMesh.Transformation
-            };
-        }
+            Indices = sceneMesh.Mesh.Indices,
+            Material = sceneMesh.Mesh.Material,
+            Transformation = parentTransform * sceneMesh.Transformation
+        };
     }
 }

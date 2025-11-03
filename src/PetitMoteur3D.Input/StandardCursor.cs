@@ -1,77 +1,76 @@
-namespace PetitMoteur3D.Input
+namespace PetitMoteur3D.Input;
+
+/// <summary>
+/// Standard cursors.
+/// </summary>
+/// <remarks>
+/// Not every backend supports every standard cursor. Check availability with
+/// <see cref="ICursor.IsSupported(StandardCursor)"/> before changing to a standard cursor.
+/// </remarks>
+public enum StandardCursor
 {
     /// <summary>
-    /// Standard cursors.
+    /// Default cursor.
     /// </summary>
-    /// <remarks>
-    /// Not every backend supports every standard cursor. Check availability with
-    /// <see cref="ICursor.IsSupported(StandardCursor)"/> before changing to a standard cursor.
-    /// </remarks>
-    public enum StandardCursor
-    {
-        /// <summary>
-        /// Default cursor.
-        /// </summary>
-        Default,
+    Default,
 
-        /// <summary>
-        /// Regular arrow cursor.
-        /// </summary>
-        Arrow,
+    /// <summary>
+    /// Regular arrow cursor.
+    /// </summary>
+    Arrow,
 
-        /// <summary>
-        /// Text input I-beam cursor.
-        /// </summary>
-        IBeam,
+    /// <summary>
+    /// Text input I-beam cursor.
+    /// </summary>
+    IBeam,
 
-        /// <summary>
-        /// Crosshair cursor.
-        /// </summary>
-        Crosshair,
+    /// <summary>
+    /// Crosshair cursor.
+    /// </summary>
+    Crosshair,
 
-        /// <summary>
-        /// Hand cursor.
-        /// </summary>
-        Hand,
+    /// <summary>
+    /// Hand cursor.
+    /// </summary>
+    Hand,
 
-        /// <summary>
-        /// Horizontal resize arrow cursor.
-        /// </summary>
-        HResize,
+    /// <summary>
+    /// Horizontal resize arrow cursor.
+    /// </summary>
+    HResize,
 
-        /// <summary>
-        /// Vertical resize arrow cursor.
-        /// </summary>
-        VResize,
+    /// <summary>
+    /// Vertical resize arrow cursor.
+    /// </summary>
+    VResize,
 
-        /// <summary>
-        /// Top-left to bottom-right diagonal resize/move arrow cursor.
-        /// </summary>
-        NwseResize,
+    /// <summary>
+    /// Top-left to bottom-right diagonal resize/move arrow cursor.
+    /// </summary>
+    NwseResize,
 
-        /// <summary>
-        /// Top-right to bottom-left diagonal resize/move arrow cursor.
-        /// </summary>
-        NeswResize,
+    /// <summary>
+    /// Top-right to bottom-left diagonal resize/move arrow cursor.
+    /// </summary>
+    NeswResize,
 
-        /// <summary>
-        /// Omni-directional resize/move cursor.
-        /// </summary>
-        ResizeAll,
+    /// <summary>
+    /// Omni-directional resize/move cursor.
+    /// </summary>
+    ResizeAll,
 
-        /// <summary>
-        /// Operation not allowed cursor.
-        /// </summary>
-        NotAllowed,
+    /// <summary>
+    /// Operation not allowed cursor.
+    /// </summary>
+    NotAllowed,
 
-        /// <summary>
-        /// Hourglass/waiting cursor.
-        /// </summary>
-        Wait,
+    /// <summary>
+    /// Hourglass/waiting cursor.
+    /// </summary>
+    Wait,
 
-        /// <summary>
-        /// Regular arrow but with an hourglass/waiting icon cursor.
-        /// </summary>
-        WaitArrow
-    }
+    /// <summary>
+    /// Regular arrow but with an hourglass/waiting icon cursor.
+    /// </summary>
+    WaitArrow
 }

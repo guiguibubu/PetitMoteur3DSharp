@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Runtime.InteropServices;
 using PetitMoteur3D;
 using PetitMoteur3D.Input;
 using PetitMoteur3D.Input.SilkNet;
-using PetitMoteur3D.Logging;
 using PetitMoteur3D.Window;
 using PetitMoteur3D.Window.SilkNet;
 using Serilog;

@@ -1,18 +1,17 @@
 using Silk.NET.Maths;
 
-namespace PetitMoteur3D.Camera
-{
-    internal interface ICamera : ISceneObjet, IMovableObjet
-    {
-        /// <summary>
-        /// Champ vision
-        /// </summary>
-        float ChampVision { get; }
+namespace PetitMoteur3D.Camera;
 
-        /// <summary>
-        /// Get the current view matrix
-        /// </summary>
-        /// <returns></returns>
-        void GetViewMatrix(out Matrix4X4<float> viewMatrix);
-    }
+internal interface ICamera : ISceneObjet, IMovableObjet
+{
+    /// <summary>
+    /// Champ vision
+    /// </summary>
+    float ChampVision { get; }
+
+    /// <summary>
+    /// Get the current view matrix
+    /// </summary>
+    /// <returns></returns>
+    void GetViewMatrix(out Matrix4X4<float> viewMatrix);
 }
