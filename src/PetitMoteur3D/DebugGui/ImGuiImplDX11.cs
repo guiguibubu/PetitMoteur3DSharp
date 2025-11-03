@@ -4,6 +4,7 @@ using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using ImGuiNET;
+using PetitMoteur3D.Core;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D.Compilers;
 using Silk.NET.Direct3D11;
@@ -32,10 +33,10 @@ internal class ImGuiImplDX11 : IImGuiBackendRenderer
     private readonly GraphicDeviceRessourceFactory _graphicDeviceRessourceFactory;
     private readonly GraphicPipelineFactory _pipelineFactory;
 
-    private static readonly IObjectPool<System.Numerics.Vector2> _vector2Pool = ObjectPoolFactory.Create(new Vector2Resetter());
-    private static readonly IObjectPool<Box2D<int>> _box2DPool = ObjectPoolFactory.Create(new Box2DResetter<int>());
-    private static readonly IObjectPool<SamplerDesc> _shaderDescPool = ObjectPoolFactory.Create<SamplerDesc>(new DX11SamplerDescResetter());
-    private static readonly IObjectPool<Viewport> _viewPortPool = ObjectPoolFactory.Create<Viewport>(new ViewportResetter());
+    private static readonly IObjectPool<System.Numerics.Vector2> _vector2Pool = ObjectPoolFactory.Create<System.Numerics.Vector2>();
+    private static readonly IObjectPool<Box2D<int>> _box2DPool = ObjectPoolFactory.Create<Box2D<int>>();
+    private static readonly IObjectPool<SamplerDesc> _shaderDescPool = ObjectPoolFactory.Create<SamplerDesc>();
+    private static readonly IObjectPool<Viewport> _viewPortPool = ObjectPoolFactory.Create<Viewport>();
 
     private static unsafe readonly uint VertexBufferStride = (uint)Unsafe.SizeOf<ImDrawVert>();
     private static unsafe readonly uint IndexBufferStride = (uint)Unsafe.SizeOf<ImDrawIdx>();

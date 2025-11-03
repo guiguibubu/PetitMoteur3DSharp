@@ -2,17 +2,17 @@
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 
-namespace PetitMoteur3D;
+namespace PetitMoteur3D.Core;
 
 public delegate void ObjectReseterDelegate<T>(ref T instance) where T : struct;
 
-internal interface IObjectPool<T> where T : struct
+public interface IObjectPool<T> where T : struct
 {
     void Get([NotNull] out ObjectPoolWrapper<T> item);
     void Return(ObjectPoolWrapper<T> item);
 }
 
-internal static class ObjectPoolFactory
+public static class ObjectPoolFactory
 {
     public static IObjectPool<T> Create<T>() where T : struct, IResetable
     {
@@ -24,9 +24,9 @@ internal static class ObjectPoolFactory
         return new BaseObjectPoolImpl<T>(objectResetFunc);
     }
 
-    public static IObjectPool<T> Create<T>(IIResetter<T> resetter) where T : struct
+    public static IObjectPool<T> Create<T>(IResetter<T>? resetter = null) where T : struct
     {
-        return new BaseObjectPoolImpl<T>(resetter);
+        return new BaseObjectPoolImpl<T>(resetter ?? new DefaultStructResetter<T>());
     }
 
     private class BaseObjectPoolImpl<T> : IObjectPool<T>, IDisposable where T : struct
@@ -43,7 +43,7 @@ internal static class ObjectPoolFactory
             _objectsAvailableKeys = new ConcurrentBag<Guid>();
         }
 
-        public BaseObjectPoolImpl(IIResetter<T> resetter)
+        public BaseObjectPoolImpl(IResetter<T> resetter)
             : this((ref T item) => resetter.Reset(ref item))
         { }
 
@@ -118,7 +118,7 @@ internal static class ObjectPoolFactory
     }
 }
 
-internal class ObjectPoolWrapper<T> where T : struct
+public class ObjectPoolWrapper<T> where T : struct
 {
     public readonly Guid Id;
     public T Data;

@@ -1,8 +1,8 @@
 ﻿using System.Runtime.CompilerServices;
 
-namespace PetitMoteur3D;
+namespace PetitMoteur3D.Core;
 
-internal static class MemoryHelper
+public static class MemoryHelper
 {
     public static void ResetMemory<T>(T item)
     {
