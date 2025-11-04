@@ -1,4 +1,6 @@
-﻿namespace PetitMoteur3D.Input.WinUI.Extensions;
+﻿using Windows.Win32;
+
+namespace PetitMoteur3D.Input.WinUI.Extensions;
 
 internal static class KeyExtensions
 {
@@ -229,6 +231,47 @@ internal static class KeyExtensions
             case Key.Menu: return Windows.System.VirtualKey.Menu;
             default:
                 return Windows.System.VirtualKey.None;
+        }
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <remarks>cf. https://learn.microsoft.com/en-us/windows/win32/inputdev/about-keyboard-input#scan-codes</remarks>
+    /// <param name="key"></param>
+    /// <returns></returns>
+    public static uint ToWin32ScanCode(this Key key)
+    {
+        switch (key)
+        {
+            case Key.A: return PInvoke.DIK_A;
+            case Key.B: return PInvoke.DIK_B;
+            case Key.C: return PInvoke.DIK_C;
+            case Key.D: return PInvoke.DIK_D;
+            case Key.E: return PInvoke.DIK_E;
+            case Key.F: return PInvoke.DIK_F;
+            case Key.G: return PInvoke.DIK_G;
+            case Key.H: return PInvoke.DIK_H;
+            case Key.I: return PInvoke.DIK_I;
+            case Key.J: return PInvoke.DIK_J;
+            case Key.K: return PInvoke.DIK_K;
+            case Key.L: return PInvoke.DIK_L;
+            case Key.M: return PInvoke.DIK_M;
+            case Key.N: return PInvoke.DIK_N;
+            case Key.O: return PInvoke.DIK_O;
+            case Key.P: return PInvoke.DIK_P;
+            case Key.Q: return PInvoke.DIK_Q;
+            case Key.R: return PInvoke.DIK_R;
+            case Key.S: return PInvoke.DIK_S;
+            case Key.T: return PInvoke.DIK_T;
+            case Key.U: return PInvoke.DIK_U;
+            case Key.V: return PInvoke.DIK_V;
+            case Key.W: return PInvoke.DIK_W;
+            case Key.X: return PInvoke.DIK_X;
+            case Key.Y: return PInvoke.DIK_Y;
+            case Key.Z: return PInvoke.DIK_Z;
+            default:
+                return 0;
         }
     }
 }

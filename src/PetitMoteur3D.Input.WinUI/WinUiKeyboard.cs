@@ -127,8 +127,16 @@ internal class WinUiKeyboard : IKeyboard
 
     public bool IsKeyPressed(Key key)
     {
-        CoreVirtualKeyStates state = InputKeyboardSource.GetKeyStateForCurrentThread(key.ToWinUi());
-        return state == CoreVirtualKeyStates.Down;
+        uint scanCode = key.ToWin32ScanCode();
+        if (scanCode != 0)
+        {
+            return IsScancodePressed((int)scanCode);
+        }
+        else
+        {
+            CoreVirtualKeyStates state = InputKeyboardSource.GetKeyStateForCurrentThread(key.ToWinUi());
+            return state == CoreVirtualKeyStates.Down;
+        }
     }
 
     ConcurrentDictionary<int, bool> _scanCodesPressedCache = new();
