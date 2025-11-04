@@ -14,6 +14,7 @@ public class Orientation3D
     public ref readonly Vector3 Rigth { get => ref _rigth; }
 
     private Quaternion _quaternion;
+    public ref readonly Quaternion Quaternion { get => ref _quaternion; }
 
     private static readonly Vector3 BaseRight = Vector3.UnitX;
     private static readonly Vector3 BaseUp = Vector3.UnitY;
@@ -55,7 +56,12 @@ public class Orientation3D
             return;
         }
         Quaternion quaternionTemp = Quaternion.CreateFromAxisAngle(axis, angle);
-        _quaternion = Quaternion.Normalize(quaternionTemp * _quaternion);
+        Rotate(in quaternionTemp);
+    }
+
+    public void Rotate(scoped ref readonly Quaternion quaternion)
+    {
+        _quaternion = Quaternion.Normalize(quaternion * _quaternion);
         UpdateOrientation();
     }
 
@@ -63,12 +69,22 @@ public class Orientation3D
     {
         if ((System.Math.Abs(angle) - 0f) < float.Epsilon)
         {
-            _quaternion = Quaternion.Identity;
+            SetRotation(Quaternion.Identity);
         }
         else
         {
-            _quaternion = Quaternion.CreateFromAxisAngle(axis, angle);
+            SetRotation(Quaternion.CreateFromAxisAngle(axis, angle));
         }
+    }
+
+    public void SetRotation(Quaternion quaternion)
+    {
+        SetRotation(in quaternion);
+    }
+
+    public void SetRotation(scoped ref readonly Quaternion quaternion)
+    {
+        _quaternion = quaternion;
         UpdateOrientation();
     }
 

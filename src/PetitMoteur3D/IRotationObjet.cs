@@ -12,5 +12,13 @@ internal interface IRotationObjet
     /// </summary>
     /// <param name="rotation"></param>
     /// <returns>The new rotation</returns>
-    ref readonly Vector3D<float> Rotate(ref readonly Vector3D<float> rotation);
+    ref readonly Vector3D<float> RotateEuler(ref readonly Vector3D<float> rotation);
+
+    /// <summary>
+    /// Rotate the object
+    /// </summary>
+    /// <param name="axis"></param>
+    /// <param name="angle">In radians</param>
+    /// <returns>The new rotation</returns>
+    ref readonly Vector3D<float> Rotate(ref readonly Vector3D<float> axis, float angle);
 }

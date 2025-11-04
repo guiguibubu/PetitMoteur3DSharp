@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using PetitMoteur3D.Core.Math;
 using PetitMoteur3D.Core.Memory;
 using PetitMoteur3D.Graphics;
 using Silk.NET.Core.Native;
@@ -14,10 +15,6 @@ internal abstract class BaseObjet3D : IObjet3D
 {
     /// <inheritdoc/>
     public ref readonly Vector3D<float> Position { get { return ref _position; } }
-    /// <summary>
-    /// Rotation de l'objet
-    /// </summary>
-    public ref readonly Vector3D<float> Rotation { get { return ref _rotation; } }
 
     private ComPtr<ID3D11Buffer> _vertexBuffer = default;
     private ComPtr<ID3D11Buffer> _indexBuffer = default;
@@ -34,7 +31,9 @@ internal abstract class BaseObjet3D : IObjet3D
     private Matrix4X4<float> _matWorld = default;
 
     private Vector3D<float> _position;
-    private Vector3D<float> _rotation;
+    private Orientation3D _orientation;
+
+    private static readonly Vector3D<float> ZeroRotation = Vector3D<float>.Zero;
 
     private Sommet[] _sommets;
     private ushort[] _indices;
@@ -54,7 +53,7 @@ internal abstract class BaseObjet3D : IObjet3D
     protected BaseObjet3D(GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, string name = "")
     {
         _position = Vector3D<float>.Zero;
-        _rotation = Vector3D<float>.Zero;
+        _orientation = new Orientation3D();
         _matWorld = Matrix4X4<float>.Identity;
 
         _sommets = Array.Empty<Sommet>();
@@ -95,20 +94,29 @@ internal abstract class BaseObjet3D : IObjet3D
     }
 
     /// <inheritdoc/>
-    public ref readonly Vector3D<float> Rotate(ref readonly Vector3D<float> rotation)
+    /// <remarks>Currently only return zero vector</remarks>
+    public ref readonly Vector3D<float> RotateEuler(ref readonly Vector3D<float> rotation)
     {
-        _rotation.X += rotation.X;
-        _rotation.Y += rotation.Y;
-        _rotation.Z += rotation.Z;
-        return ref _rotation;
+        System.Numerics.Quaternion quaternion = System.Numerics.Quaternion.CreateFromYawPitchRoll(rotation.Y, rotation.X, rotation.Z);
+        _orientation.Rotate(in quaternion);
+        return ref ZeroRotation;
+    }
+
+
+    /// <inheritdoc/>
+    /// <remarks>Currently only return zero vector</remarks>
+    public ref readonly Vector3D<float> Rotate(ref readonly Vector3D<float> axis, float angle)
+    {
+        _orientation.Rotate(axis.ToSystem(), angle);
+        return ref ZeroRotation;
     }
 
     /// <inheritdoc/>
     public virtual void Update(float elapsedTime)
     {
-        _rotation.Y += (float)((Math.PI * 2.0f) / 24.0f * elapsedTime / 1000f);
+        _orientation.Rotate(System.Numerics.Vector3.UnitY, (float)((Math.PI * 2.0f) / 24.0f * elapsedTime / 1000f));
         // modifier la matrice de l’objet bloc
-        _matWorld = Matrix4X4.CreateRotationY(_rotation.Y) * Matrix4X4.CreateTranslation(_position);
+        _matWorld = Matrix4X4.CreateFromQuaternion(_orientation.Quaternion.ToGeneric()) * Matrix4X4.CreateTranslation(_position);
     }
 
     /// <inheritdoc/>
