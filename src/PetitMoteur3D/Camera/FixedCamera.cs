@@ -76,7 +76,6 @@ internal class FixedCamera : ICamera
     /// <inheritdoc/>
     public void Update(float elapsedTime)
     {
-        //TODO: Handle input
         if (_inputContext is null)
         {
             return;

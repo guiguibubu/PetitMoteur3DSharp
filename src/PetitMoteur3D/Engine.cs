@@ -337,7 +337,8 @@ public class Engine
 
     private void InitScene()
     {
-        _camera = new FixedCamera(Vector3D<float>.Zero);
+        //_camera = new FixedCamera(Vector3D<float>.Zero);
+        _camera = new ArcCamera(Vector3D<float>.Zero);
         _camera.Move(-10 * Vector3D<float>.UnitZ);
 
         _scene = new Scene(_graphicDeviceRessourceFactory.BufferFactory, _camera);

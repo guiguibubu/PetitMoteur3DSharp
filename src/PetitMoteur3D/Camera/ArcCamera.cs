@@ -27,6 +27,8 @@ internal class ArcCamera : ICamera
 
     private Orientation3D _orientation;
 
+    private IInputContext? _inputContext;
+
     /// <summary>
     /// Constructeur par defaut
     /// </summary>
@@ -68,18 +70,71 @@ internal class ArcCamera : ICamera
         ChampVision = champVision;
         _position = position;
         _orientation = new Orientation3D();
+        _inputContext = default;
     }
 
     /// <inheritdoc/>
     public virtual void Update(float elapsedTime)
     {
-        //TODO: Handle input
+        if (_inputContext is null)
+        {
+            return;
+        }
+
+        System.Numerics.Vector3 direction = _target - _position.ToSystem();
+        float oldDistance = direction.Length();
+        _orientation.LookTo(in direction);
+
+        IKeyboard keyboard = _inputContext.Keyboards[0];
+        // WASD (W is up, A is left, S is down, and D is right)
+        float hautBas = 0f;
+        float gaucheDroite = 0f;
+        if (keyboard.IsKeyPressed(Key.W) && direction.LengthSquared() > Math.Pow(float.Epsilon, 2))
+        {
+            hautBas += 1f;
+        }
+        if (keyboard.IsKeyPressed(Key.S))
+        {
+            hautBas -= 1f;
+        }
+        if (keyboard.IsKeyPressed(Key.D))
+        {
+            gaucheDroite += 1f;
+        }
+        if (keyboard.IsKeyPressed(Key.A))
+        {
+            gaucheDroite -= 1f;
+        }
+
+
+        Vector3D<float> move = Vector3D<float>.Zero;
+
+        if (hautBas != 0)
+        {
+            move += (hautBas * _orientation.Up).ToGeneric();
+        }
+
+        if (gaucheDroite != 0)
+        {
+            move += (gaucheDroite * _orientation.Rigth).ToGeneric();
+        }
+
+        Move(in move);
+
+        System.Numerics.Vector3 newDirection = _target - _position.ToSystem();
+        float newDistance = newDirection.Length();
+        _orientation.LookTo(in newDirection);
+
+        if (Math.Abs(newDistance - oldDistance) > float.Epsilon)
+        {
+            _position = (oldDistance * -_orientation.Forward).ToGeneric();
+        }
     }
 
     /// <inheritdoc/>
     public void InitInput(IInputContext? inputContext)
     {
-        throw new NotImplementedException();
+        _inputContext = inputContext;
     }
 
     /// <inheritdoc/>
