@@ -1,4 +1,5 @@
 using System;
+using PetitMoteur3D.Core.Math;
 using PetitMoteur3D.Input;
 using Silk.NET.Maths;
 
@@ -77,10 +78,11 @@ internal class TrailingCamera : ICamera
     }
 
     /// <inheritdoc/>
-    public void GetViewMatrix(out Matrix4X4<float> viewMatrix)
+    public void GetViewMatrix(out System.Numerics.Matrix4x4 viewMatrix)
     {
-        Vector3D<float> cameraTarget = _target.Position;
-        Vector3D<float> cameraUpVector = Vector3D<float>.UnitY;
-        viewMatrix = CameraHelper.CreateLookAtLH(in _position, in cameraTarget, in cameraUpVector);
+        System.Numerics.Vector3 cameraPosition = _position.ToSystem();
+        System.Numerics.Vector3 cameraTarget = _target.Position.ToSystem();
+        System.Numerics.Vector3 cameraUpVector = System.Numerics.Vector3.UnitY;
+        viewMatrix = Matrix4x4Helper.CreateLookAtLeftHanded(in cameraPosition, in cameraTarget, in cameraUpVector);
     }
 }

@@ -31,7 +31,7 @@ public class Engine
     private MeshLoader _meshLoader = default!;
     private Scene _scene = default!;
     private ICamera _camera = default!;
-    private Matrix4X4<float> _matView = default;
+    private System.Numerics.Matrix4x4 _matView = default;
     private Matrix4X4<float> _matProj = default;
 
     private bool _imGuiShowDemo = false;
@@ -439,7 +439,7 @@ public class Engine
         if (_initAnimationFinished)
         {
             _camera.GetViewMatrix(out _matView);
-            Matrix4X4<float> matViewProj = _matView * _matProj;
+            Matrix4X4<float> matViewProj = _matView.ToGeneric() * _matProj;
             _scene.Draw(in _deviceD3D11.DeviceContext, in matViewProj);
         }
     }

@@ -1,4 +1,4 @@
-using Silk.NET.Maths;
+using System.Numerics;
 
 namespace PetitMoteur3D.Camera;
 
@@ -13,5 +13,5 @@ internal interface ICamera : ISceneObjet, IMovableObjet, IInputListener
     /// Get the current view matrix
     /// </summary>
     /// <returns></returns>
-    void GetViewMatrix(out Matrix4X4<float> viewMatrix);
+    void GetViewMatrix(out Matrix4x4 viewMatrix);
 }

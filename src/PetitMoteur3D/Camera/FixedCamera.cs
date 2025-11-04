@@ -137,11 +137,11 @@ internal class FixedCamera : ICamera
     }
 
     /// <inheritdoc/>
-    public void GetViewMatrix(out Matrix4X4<float> viewMatrix)
+    public void GetViewMatrix(out System.Numerics.Matrix4x4 viewMatrix)
     {
         ref readonly System.Numerics.Vector3 cameraTarget = ref _target;
         ref readonly System.Numerics.Vector3 cameraUpVector = ref _orientation.Up;
         System.Numerics.Vector3 cameraPosition = _position.ToSystem();
-        viewMatrix = CameraHelper.CreateLookAtLH(in cameraPosition, in cameraTarget, in cameraUpVector);
+        viewMatrix = Matrix4x4Helper.CreateLookAtLeftHanded(in cameraPosition, in cameraTarget, in cameraUpVector);
     }
 }

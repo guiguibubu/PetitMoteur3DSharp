@@ -167,11 +167,12 @@ internal class FreeCamera : ICamera, IRotationObjet
     }
 
     /// <inheritdoc/>
-    public void GetViewMatrix(out Matrix4X4<float> viewMatrix)
+    public void GetViewMatrix(out System.Numerics.Matrix4x4 viewMatrix)
     {
-        Vector3D<float> cameraDirection = _orientation.Forward.ToGeneric();
-        Vector3D<float> cameraTarget = _position + cameraDirection;
-        Vector3D<float> cameraUpVector = _orientation.Up.ToGeneric();
-        viewMatrix = CameraHelper.CreateLookAtLH(in _position, in cameraTarget, in cameraUpVector);
+        System.Numerics.Vector3 cameraPosition = _position.ToSystem();
+        System.Numerics.Vector3 cameraDirection = _orientation.Forward;
+        System.Numerics.Vector3 cameraTarget = cameraPosition + cameraDirection;
+        System.Numerics.Vector3 cameraUpVector = _orientation.Up;
+        viewMatrix = Matrix4x4Helper.CreateLookAtLeftHanded(in cameraPosition, in cameraTarget, in cameraUpVector);
     }
 }
