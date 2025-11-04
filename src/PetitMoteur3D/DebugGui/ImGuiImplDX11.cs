@@ -4,7 +4,7 @@ using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using ImGuiNET;
-using PetitMoteur3D.Core;
+using PetitMoteur3D.Core.Memory;
 using PetitMoteur3D.Graphics;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D.Compilers;

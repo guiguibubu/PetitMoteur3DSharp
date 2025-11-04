@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using PetitMoteur3D.Core;
+using PetitMoteur3D.Core.Memory;
 using PetitMoteur3D.Graphics;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
@@ -86,7 +86,7 @@ internal abstract class BaseObjet3D : IObjet3D
     }
 
     /// <inheritdoc/>
-    public ref readonly Vector3D<float> Move(ref readonly Vector3D<float> move)
+    public ref readonly Vector3D<float> Move(scoped ref readonly Vector3D<float> move)
     {
         _position.X += move.X;
         _position.Y += move.Y;
@@ -104,7 +104,7 @@ internal abstract class BaseObjet3D : IObjet3D
     }
 
     /// <inheritdoc/>
-    public virtual void Anime(float elapsedTime)
+    public virtual void Update(float elapsedTime)
     {
         _rotation.Y += (float)((Math.PI * 2.0f) / 24.0f * elapsedTime / 1000f);
         // modifier la matrice de l’objet bloc

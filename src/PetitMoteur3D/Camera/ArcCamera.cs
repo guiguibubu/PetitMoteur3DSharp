@@ -1,13 +1,14 @@
 using System;
+using PetitMoteur3D.Core.Math;
 using PetitMoteur3D.Input;
 using Silk.NET.Maths;
 
 namespace PetitMoteur3D.Camera;
 
 /// <summary>
-/// Implemmentation for a camera fixed on a target object
+/// Implemmentation for a camera fixed on a target position and keep same distance to it
 /// </summary>
-internal class TrailingCamera : ICamera
+internal class ArcCamera : ICamera
 {
     /// <summary>
     /// Champ vision
@@ -22,13 +23,15 @@ internal class TrailingCamera : ICamera
     /// <summary>
     /// The target of the camera.
     /// <summary>
-    private ISceneObjet _target;
+    private System.Numerics.Vector3 _target;
+
+    private Orientation3D _orientation;
 
     /// <summary>
     /// Constructeur par defaut
     /// </summary>
     /// <param name="target"></param>
-    public TrailingCamera(ISceneObjet target) : this(target, (float)(Math.PI / 4))
+    public ArcCamera(ref readonly Vector3D<float> target) : this(in target, (float)(Math.PI / 4))
     {
 
     }
@@ -38,8 +41,9 @@ internal class TrailingCamera : ICamera
     /// </summary>
     /// <param name="target"></param>
     /// <param name="champVision"></param>
-    public TrailingCamera(ISceneObjet target, float champVision) : this(target, champVision, Vector3D<float>.Zero)
+    public ArcCamera(ref readonly Vector3D<float> target, float champVision) : this(in target, champVision, Vector3D<float>.Zero)
     {
+
     }
 
     /// <summary>
@@ -48,11 +52,22 @@ internal class TrailingCamera : ICamera
     /// <param name="target"></param>
     /// <param name="champVision"></param>
     /// <param name="position"></param>
-    public TrailingCamera(ISceneObjet target, float champVision, ref readonly Vector3D<float> position)
+    public ArcCamera(ref readonly Vector3D<float> target, float champVision, Vector3D<float> position)
+        : this(in target, champVision, in position)
+    { }
+
+    /// <summary>
+    /// Constructeur
+    /// </summary>
+    /// <param name="target"></param>
+    /// <param name="champVision"></param>
+    /// <param name="position"></param>
+    public ArcCamera(ref readonly Vector3D<float> target, float champVision, ref readonly Vector3D<float> position)
     {
-        _target = target;
+        _target = target.ToSystem();
         ChampVision = champVision;
         _position = position;
+        _orientation = new Orientation3D();
     }
 
     /// <inheritdoc/>
@@ -79,8 +94,9 @@ internal class TrailingCamera : ICamera
     /// <inheritdoc/>
     public void GetViewMatrix(out Matrix4X4<float> viewMatrix)
     {
-        Vector3D<float> cameraTarget = _target.Position;
-        Vector3D<float> cameraUpVector = Vector3D<float>.UnitY;
-        viewMatrix = CameraHelper.CreateLookAtLH(in _position, in cameraTarget, in cameraUpVector);
+        ref readonly System.Numerics.Vector3 cameraTarget = ref _target;
+        ref readonly System.Numerics.Vector3 cameraUpVector = ref _orientation.Up;
+        System.Numerics.Vector3 cameraPosition = _position.ToSystem();
+        viewMatrix = CameraHelper.CreateLookAtLH(in cameraPosition, in cameraTarget, in cameraUpVector);
     }
 }

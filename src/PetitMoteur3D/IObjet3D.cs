@@ -7,11 +7,6 @@ namespace PetitMoteur3D;
 internal interface IObjet3D : ISceneObjet, IMovableObjet, IRotationObjet
 {
     /// <summary>
-    /// Anime l'objet
-    /// </summary>
-    /// <param name="elapsedTime"></param>
-    void Anime(float elapsedTime);
-    /// <summary>
     /// Dessine l'objet
     /// </summary>
     /// <param name="deviceContext"></param>

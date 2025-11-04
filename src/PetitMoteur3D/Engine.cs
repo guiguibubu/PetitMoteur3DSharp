@@ -418,17 +418,7 @@ public class Engine
                 _debugToolKeyPressed = false;
             }
         };
-        keyboard.KeyChar += (_, c) =>
-        {
-            if (c == 'd')
-            {
-                _camera.Move(Vector3D<float>.UnitX);
-            }
-            else if (c == 'q')
-            {
-                _camera.Move(-Vector3D<float>.UnitX);
-            }
-        };
+        _camera.InitInput(_inputContext);
     }
 
     private void InitDebugTools()

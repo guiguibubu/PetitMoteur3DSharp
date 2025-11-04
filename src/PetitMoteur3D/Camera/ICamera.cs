@@ -2,7 +2,7 @@ using Silk.NET.Maths;
 
 namespace PetitMoteur3D.Camera;
 
-internal interface ICamera : ISceneObjet, IMovableObjet
+internal interface ICamera : ISceneObjet, IMovableObjet, IInputListener
 {
     /// <summary>
     /// Champ vision

@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Runtime.InteropServices;
-using PetitMoteur3D.Core;
+using PetitMoteur3D.Core.Memory;
 using Silk.NET.Maths;
 
 namespace PetitMoteur3D.Graphics;

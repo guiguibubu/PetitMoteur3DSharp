@@ -5,7 +5,7 @@ namespace PetitMoteur3D;
 /// <summary>
 /// Interface for scene object
 /// </summary>
-internal interface ISceneObjet
+internal interface ISceneObjet : IUpdatableObjet
 {
     /// <summary>
     /// Position

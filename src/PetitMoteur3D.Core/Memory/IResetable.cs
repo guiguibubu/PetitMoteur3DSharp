@@ -1,4 +1,4 @@
-﻿namespace PetitMoteur3D.Core;
+﻿namespace PetitMoteur3D.Core.Memory;
 
 public interface IResetable
 {

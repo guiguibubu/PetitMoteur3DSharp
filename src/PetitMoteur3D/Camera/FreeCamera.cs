@@ -1,4 +1,5 @@
 using System;
+using PetitMoteur3D.Input;
 using Silk.NET.Maths;
 
 namespace PetitMoteur3D.Camera;
@@ -51,7 +52,19 @@ internal class FreeCamera : ICamera, IRotationObjet
     }
 
     /// <inheritdoc/>
-    public ref readonly Vector3D<float> Move(ref readonly Vector3D<float> move)
+    public virtual void Update(float elapsedTime)
+    {
+        //TODO: Handle input
+    }
+
+    /// <inheritdoc/>
+    public void InitInput(IInputContext? inputContext)
+    {
+        throw new NotImplementedException();
+    }
+
+    /// <inheritdoc/>
+    public ref readonly Vector3D<float> Move(scoped ref readonly Vector3D<float> move)
     {
         _position.X += move.X;
         _position.Y += move.Y;
@@ -68,6 +81,7 @@ internal class FreeCamera : ICamera, IRotationObjet
         return ref _rotation;
     }
 
+    /// <inheritdoc/>
     public void GetViewMatrix(out Matrix4X4<float> viewMatrix)
     {
         Vector3D<float> cameraDirection = _rotation * Vector3D<float>.UnitZ;

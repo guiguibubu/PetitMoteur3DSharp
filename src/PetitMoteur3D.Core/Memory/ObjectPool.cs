@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.Contracts;
 
-namespace PetitMoteur3D.Core;
+namespace PetitMoteur3D.Core.Memory;
 
 public delegate void ObjectReseterDelegate<T>(ref T instance) where T : struct;
 
@@ -14,22 +15,25 @@ public interface IObjectPool<T> where T : struct
 
 public static class ObjectPoolFactory
 {
+    [Pure]
     public static IObjectPool<T> Create<T>() where T : struct, IResetable
     {
-        return new BaseObjectPoolImpl<T>((ref T item) => item.Reset());
+        return new BaseObjectPoolImpl<T>(DefaultObjectReseterDelegateFunc);
     }
 
+    [Pure]
     public static IObjectPool<T> Create<T>(ObjectReseterDelegate<T> objectResetFunc) where T : struct
     {
         return new BaseObjectPoolImpl<T>(objectResetFunc);
     }
 
+    [Pure]
     public static IObjectPool<T> Create<T>(IResetter<T>? resetter = null) where T : struct
     {
         return new BaseObjectPoolImpl<T>(resetter ?? new DefaultStructResetter<T>());
     }
 
-    private class BaseObjectPoolImpl<T> : IObjectPool<T>, IDisposable where T : struct
+    private sealed class BaseObjectPoolImpl<T> : IObjectPool<T>, IDisposable where T : struct
     {
         private readonly ConcurrentDictionary<Guid, ObjectPoolWrapper<T>> _objects;
         private readonly ConcurrentBag<Guid> _objectsAvailableKeys;
@@ -115,6 +119,11 @@ public static class ObjectPoolFactory
                 _disposed = true;
             }
         }
+    }
+
+    private static void DefaultObjectReseterDelegateFunc<T>(ref T instance) where T : struct, IResetable
+    {
+        instance.Reset();
     }
 }
 

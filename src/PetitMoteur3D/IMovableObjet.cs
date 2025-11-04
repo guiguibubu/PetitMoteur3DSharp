@@ -12,5 +12,5 @@ internal interface IMovableObjet
     /// </summary>
     /// <param name="move"></param>
     /// <returns>The new position</returns>
-    ref readonly Vector3D<float> Move(ref readonly Vector3D<float> move);
+    ref readonly Vector3D<float> Move(scoped ref readonly Vector3D<float> move);
 }

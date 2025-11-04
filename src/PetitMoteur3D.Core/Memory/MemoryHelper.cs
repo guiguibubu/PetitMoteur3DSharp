@@ -1,6 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
 
-namespace PetitMoteur3D.Core;
+namespace PetitMoteur3D.Core.Memory;
 
 public static class MemoryHelper
 {

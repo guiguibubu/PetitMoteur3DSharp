@@ -10,7 +10,6 @@ namespace PetitMoteur3D;
 
 internal class Scene
 {
-    private readonly List<ISceneObjet> _objects;
     private readonly List<IObjet3D> _objects3D;
     private ICamera _camera;
 
@@ -27,10 +26,8 @@ internal class Scene
 
     public Scene(GraphicBufferFactory bufferFactory, ICamera camera)
     {
-        _objects = new List<ISceneObjet>();
         _objects3D = new List<IObjet3D>();
         _camera = camera;
-        _objects.Add(camera);
 
         _light = new LightShadersParams()
         {
@@ -57,7 +54,6 @@ internal class Scene
 
     public void AddObjet(IObjet3D obj)
     {
-        _objects.Add(obj);
         _objects3D.Add(obj);
     }
 
@@ -65,8 +61,9 @@ internal class Scene
     {
         foreach (IObjet3D obj in _objects3D)
         {
-            obj.Anime(elapsedTime);
+            obj.Update(elapsedTime);
         }
+        _camera.Update(elapsedTime);
     }
 
     public void Draw(ref readonly ComPtr<ID3D11DeviceContext> deviceContext, ref readonly Matrix4X4<float> matViewProj)
