@@ -8,7 +8,7 @@ using Silk.NET.Maths;
 
 namespace PetitMoteur3D;
 
-internal class Scene
+internal class Scene : IDrawableObjet
 {
     private readonly List<IObjet3D> _objects3D;
     private ICamera _camera;
@@ -21,7 +21,7 @@ internal class Scene
     /// <summary>
     /// Constructeur par défaut
     /// </summary>
-    public Scene(GraphicBufferFactory bufferFactory) : this(bufferFactory, new FixedCamera(Vector3D<float>.Zero))
+    public Scene(GraphicBufferFactory bufferFactory) : this(bufferFactory, new FixedCamera(System.Numerics.Vector3.Zero))
     { }
 
     public Scene(GraphicBufferFactory bufferFactory, ICamera camera)
@@ -40,7 +40,7 @@ internal class Scene
         _shadersParams = new SceneShadersParams()
         {
             LightParams = _light,
-            CameraPos = new Vector4D<float>(_camera.Position, 1.0f),
+            CameraPos = new Vector4D<float>(_camera.Position.ToGeneric(), 1.0f),
         };
 
         // Create our constant buffer.
@@ -66,11 +66,11 @@ internal class Scene
         _camera.Update(elapsedTime);
     }
 
-    public void Draw(ref readonly ComPtr<ID3D11DeviceContext> deviceContext, ref readonly Matrix4X4<float> matViewProj)
+    public void Draw(ref readonly ComPtr<ID3D11DeviceContext> deviceContext, ref readonly System.Numerics.Matrix4x4 matViewProj)
     {
         // Initialiser et sélectionner les « constantes » des shaders
         ref Vector4D<float> cameraPosParam = ref _shadersParams.CameraPos;
-        ref readonly Vector3D<float> cameraPos = ref _camera.Position;
+        ref readonly System.Numerics.Vector3 cameraPos = ref _camera.Position;
         cameraPosParam.X = cameraPos.X;
         cameraPosParam.Y = cameraPos.Y;
         cameraPosParam.Z = cameraPos.Z;

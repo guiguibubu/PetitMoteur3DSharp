@@ -14,7 +14,7 @@ namespace PetitMoteur3D;
 internal abstract class BaseObjet3D : IObjet3D
 {
     /// <inheritdoc/>
-    public ref readonly Vector3D<float> Position { get { return ref _position; } }
+    public ref readonly System.Numerics.Vector3 Position { get { return ref _position; } }
 
     private ComPtr<ID3D11Buffer> _vertexBuffer = default;
     private ComPtr<ID3D11Buffer> _indexBuffer = default;
@@ -28,12 +28,13 @@ internal abstract class BaseObjet3D : IObjet3D
     private ComPtr<ID3D11ShaderResourceView> _normalMap;
     private ComPtr<ID3D11SamplerState> _sampleState;
 
-    private Matrix4X4<float> _matWorld = default;
+    private System.Numerics.Matrix4x4 _matWorld = default;
 
-    private Vector3D<float> _position;
+    private System.Numerics.Vector3 _position;
     private Orientation3D _orientation;
 
-    private static readonly Vector3D<float> ZeroRotation = Vector3D<float>.Zero;
+    private static readonly System.Numerics.Vector3 ZeroRotation = System.Numerics.Vector3.Zero;
+    private static readonly System.Numerics.Vector3 AxisRotation = System.Numerics.Vector3.UnitY;
 
     private Sommet[] _sommets;
     private ushort[] _indices;
@@ -52,9 +53,9 @@ internal abstract class BaseObjet3D : IObjet3D
 
     protected BaseObjet3D(GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, string name = "")
     {
-        _position = Vector3D<float>.Zero;
+        _position = System.Numerics.Vector3.Zero;
         _orientation = new Orientation3D();
-        _matWorld = Matrix4X4<float>.Identity;
+        _matWorld = System.Numerics.Matrix4x4.Identity;
 
         _sommets = Array.Empty<Sommet>();
         _indices = Array.Empty<ushort>();
@@ -85,17 +86,23 @@ internal abstract class BaseObjet3D : IObjet3D
     }
 
     /// <inheritdoc/>
-    public ref readonly Vector3D<float> Move(scoped ref readonly Vector3D<float> move)
+    public ref readonly System.Numerics.Vector3 Move(float dx, float dy, float dz)
     {
-        _position.X += move.X;
-        _position.Y += move.Y;
-        _position.Z += move.Z;
+        _position.X += dx;
+        _position.Y += dy;
+        _position.Z += dz;
         return ref _position;
     }
 
     /// <inheritdoc/>
+    public ref readonly System.Numerics.Vector3 Move(scoped ref readonly System.Numerics.Vector3 move)
+    {
+        return ref Move(move.X, move.Y, move.Z);
+    }
+
+    /// <inheritdoc/>
     /// <remarks>Currently only return zero vector</remarks>
-    public ref readonly Vector3D<float> RotateEuler(ref readonly Vector3D<float> rotation)
+    public ref readonly System.Numerics.Vector3 RotateEuler(ref readonly System.Numerics.Vector3 rotation)
     {
         System.Numerics.Quaternion quaternion = System.Numerics.Quaternion.CreateFromYawPitchRoll(rotation.Y, rotation.X, rotation.Z);
         _orientation.Rotate(in quaternion);
@@ -105,22 +112,22 @@ internal abstract class BaseObjet3D : IObjet3D
 
     /// <inheritdoc/>
     /// <remarks>Currently only return zero vector</remarks>
-    public ref readonly Vector3D<float> Rotate(ref readonly Vector3D<float> axis, float angle)
+    public ref readonly System.Numerics.Vector3 Rotate(ref readonly System.Numerics.Vector3 axis, float angle)
     {
-        _orientation.Rotate(axis.ToSystem(), angle);
+        _orientation.Rotate(in axis, angle);
         return ref ZeroRotation;
     }
 
     /// <inheritdoc/>
     public virtual void Update(float elapsedTime)
     {
-        _orientation.Rotate(System.Numerics.Vector3.UnitY, (float)((Math.PI * 2.0f) / 24.0f * elapsedTime / 1000f));
+        _orientation.Rotate(in AxisRotation, (float)((Math.PI * 2.0f) / 24.0f * elapsedTime / 1000f));
         // modifier la matrice de l’objet bloc
-        _matWorld = Matrix4X4.CreateFromQuaternion(_orientation.Quaternion.ToGeneric()) * Matrix4X4.CreateTranslation(_position);
+        _matWorld = System.Numerics.Matrix4x4.CreateFromQuaternion(_orientation.Quaternion) * System.Numerics.Matrix4x4.CreateTranslation(_position);
     }
 
     /// <inheritdoc/>
-    public unsafe void Draw(ref readonly ComPtr<ID3D11DeviceContext> deviceContext, ref readonly Matrix4X4<float> matViewProj)
+    public unsafe void Draw(ref readonly ComPtr<ID3D11DeviceContext> deviceContext, ref readonly System.Numerics.Matrix4x4 matViewProj)
     {
         // Choisir la topologie des primitives
         deviceContext.IASetPrimitiveTopology(D3DPrimitiveTopology.D3D11PrimitiveTopologyTrianglelist);
@@ -136,8 +143,8 @@ internal abstract class BaseObjet3D : IObjet3D
             // Initialiser et sélectionner les « constantes » des shaders
             _objectShadersParamsPool.Get(out ObjectPoolWrapper<ObjectShadersParams> shadersParamsWrapper);
             ref ObjectShadersParams shadersParams = ref shadersParamsWrapper.Data;
-            shadersParams.matWorldViewProj = Matrix4X4.Transpose(subObjet3D.Transformation * _matWorld * matViewProj);
-            shadersParams.matWorld = Matrix4X4.Transpose(subObjet3D.Transformation * _matWorld);
+            shadersParams.matWorldViewProj = System.Numerics.Matrix4x4.Transpose(subObjet3D.Transformation * _matWorld * matViewProj).ToGeneric();
+            shadersParams.matWorld = System.Numerics.Matrix4x4.Transpose(subObjet3D.Transformation * _matWorld).ToGeneric();
             shadersParams.ambiantMaterialValue = subObjet3D.Material.Ambient;
             shadersParams.diffuseMaterialValue = subObjet3D.Material.Diffuse;
             shadersParams.hasTexture = Convert.ToInt32(_textureD3D.Handle is not null);
@@ -324,7 +331,7 @@ internal abstract class BaseObjet3D : IObjet3D
     public struct SubObjet3D
     {
         public IReadOnlyList<ushort> Indices;
-        public Matrix4X4<float> Transformation;
+        public System.Numerics.Matrix4x4 Transformation;
         public Material Material;
     }
 }

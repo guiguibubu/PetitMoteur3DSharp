@@ -13,7 +13,7 @@ internal class Bloc : BaseObjet3D
     private readonly ushort[] _indices;
     private readonly SubObjet3D[] _subObjects;
 
-    private Matrix4X4<float> _transformation;
+    private System.Numerics.Matrix4x4 _transformation;
 
     public unsafe Bloc(float dx, float dy, float dz, GraphicDeviceRessourceFactory graphicDeviceRessourceFactory)
         : base(graphicDeviceRessourceFactory)
@@ -101,7 +101,7 @@ internal class Bloc : BaseObjet3D
         };
 
 
-        _transformation = Matrix4X4<float>.Identity;
+        _transformation = System.Numerics.Matrix4x4.Identity;
 
         _subObjects = new SubObjet3D[] {new ()
             {
@@ -114,7 +114,7 @@ internal class Bloc : BaseObjet3D
         Initialisation();
     }
 
-    public void AddTransform(Matrix4X4<float> transformation)
+    public void AddTransform(System.Numerics.Matrix4x4 transformation)
     {
         _transformation = transformation * _transformation;
     }

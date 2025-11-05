@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using PetitMoteur3D.Graphics;
-using Silk.NET.Maths;
 
 namespace PetitMoteur3D;
 
@@ -44,7 +43,7 @@ internal class ObjetMesh : BaseObjet3D
     private static IReadOnlyList<SubObjet3D> GetSubObjets(SceneMesh sceneMesh)
     {
         List<SubObjet3D> subObjects = new();
-        subObjects.Add(ToSubObjet3D(sceneMesh, Matrix4X4<float>.Identity));
+        subObjects.Add(ToSubObjet3D(sceneMesh, System.Numerics.Matrix4x4.Identity));
         foreach (SceneMesh child in sceneMesh.Children)
         {
             subObjects.AddRange(GetSubObjets(child));
@@ -52,7 +51,7 @@ internal class ObjetMesh : BaseObjet3D
         return subObjects;
     }
 
-    private static SubObjet3D ToSubObjet3D(SceneMesh sceneMesh, Matrix4X4<float> parentTransform)
+    private static SubObjet3D ToSubObjet3D(SceneMesh sceneMesh, System.Numerics.Matrix4x4 parentTransform)
     {
         return new SubObjet3D()
         {

@@ -1,6 +1,4 @@
-﻿using Silk.NET.Maths;
-
-namespace PetitMoteur3D;
+﻿namespace PetitMoteur3D;
 
 /// <summary>
 /// Interface for a moveable object (move)
@@ -12,5 +10,12 @@ internal interface IMovableObjet
     /// </summary>
     /// <param name="move"></param>
     /// <returns>The new position</returns>
-    ref readonly Vector3D<float> Move(scoped ref readonly Vector3D<float> move);
+    ref readonly System.Numerics.Vector3 Move(float dx, float dy, float dz);
+
+    /// <summary>
+    /// Move the object
+    /// </summary>
+    /// <param name="move"></param>
+    /// <returns>The new position</returns>
+    ref readonly System.Numerics.Vector3 Move(scoped ref readonly System.Numerics.Vector3 move);
 }

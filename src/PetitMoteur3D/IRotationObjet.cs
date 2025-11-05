@@ -1,6 +1,4 @@
-﻿using Silk.NET.Maths;
-
-namespace PetitMoteur3D;
+﻿namespace PetitMoteur3D;
 
 /// <summary>
 /// Interface for a object which rotate
@@ -12,7 +10,7 @@ internal interface IRotationObjet
     /// </summary>
     /// <param name="rotation"></param>
     /// <returns>The new rotation</returns>
-    ref readonly Vector3D<float> RotateEuler(ref readonly Vector3D<float> rotation);
+    ref readonly System.Numerics.Vector3 RotateEuler(ref readonly System.Numerics.Vector3 rotation);
 
     /// <summary>
     /// Rotate the object
@@ -20,5 +18,5 @@ internal interface IRotationObjet
     /// <param name="axis"></param>
     /// <param name="angle">In radians</param>
     /// <returns>The new rotation</returns>
-    ref readonly Vector3D<float> Rotate(ref readonly Vector3D<float> axis, float angle);
+    ref readonly System.Numerics.Vector3 Rotate(ref readonly System.Numerics.Vector3 axis, float angle);
 }

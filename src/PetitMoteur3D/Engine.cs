@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Numerics;
 using System.Runtime.InteropServices;
 using ImGuiNET;
 using PetitMoteur3D.Camera;
@@ -12,7 +13,6 @@ using PetitMoteur3D.Logging;
 using PetitMoteur3D.Window;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
-using Silk.NET.Maths;
 
 namespace PetitMoteur3D;
 
@@ -31,8 +31,8 @@ public class Engine
     private MeshLoader _meshLoader = default!;
     private Scene _scene = default!;
     private ICamera _camera = default!;
-    private System.Numerics.Matrix4x4 _matView = default;
-    private Matrix4X4<float> _matProj = default;
+    private Matrix4x4 _matView = default;
+    private Matrix4x4 _matProj = default;
 
     private bool _imGuiShowDemo = false;
     private bool _imGuiShowDebugLogs = false;
@@ -42,7 +42,7 @@ public class Engine
     private bool _showDebugTool = false;
     private bool _showWireFrame = false;
     private bool _showScene = true;
-    private System.Numerics.Vector4 _backgroundColour = default!;
+    private Vector4 _backgroundColour = default!;
 
     private Stopwatch _horlogeEngine = new Stopwatch();
     private Stopwatch _horlogeScene = new Stopwatch();
@@ -328,8 +328,8 @@ public class Engine
     private void InitRendering()
     {
         _deviceD3D11 = new DeviceD3D11(_window, !_onNativeDxPlatform);
-        _deviceD3D11.GetBackgroundColour(out Vector4D<float> backgroundColor);
-        _backgroundColour = backgroundColor.ToSystem();
+        _deviceD3D11.GetBackgroundColour(out Vector4 backgroundColor);
+        _backgroundColour = backgroundColor;
         _graphicDeviceRessourceFactory = new GraphicDeviceRessourceFactory(_deviceD3D11.Device, _deviceD3D11.ShaderCompiler);
         _graphicPipelineFactory = new GraphicPipelineFactory(_deviceD3D11.Device);
         _meshLoader = new MeshLoader();
@@ -337,21 +337,21 @@ public class Engine
 
     private void InitScene()
     {
-        //_camera = new FixedCamera(Vector3D<float>.Zero);
-        //_camera = new ArcCamera(Vector3D<float>.Zero);
+        //_camera = new FixedCamera(Vector3.Zero);
+        //_camera = new ArcCamera(Vector3.Zero);
         _camera = new FreeCamera(_window);
-        _camera.Move(-10 * Vector3D<float>.UnitZ);
+        _camera.Move(-10 * Vector3.UnitZ);
 
         _scene = new Scene(_graphicDeviceRessourceFactory.BufferFactory, _camera);
 
         Bloc bloc1 = new(4.0f, 4.0f, 4.0f, _graphicDeviceRessourceFactory);
         bloc1.SetTexture(_graphicDeviceRessourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall.jpg"));
         bloc1.SetNormalMapTexture(_graphicDeviceRessourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall_normal.jpg"));
-        bloc1.Move(new Vector3D<float>(-4f, 0f, 0f));
+        bloc1.Move(-4f, 0f, 0f);
 
         Bloc bloc2 = new(4.0f, 4.0f, 4.0f, _graphicDeviceRessourceFactory);
         bloc2.SetTexture(_graphicDeviceRessourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall.jpg"));
-        bloc2.Move(new Vector3D<float>(4f, 0f, 0f));
+        bloc2.Move(4f, 0f, 0f);
 
         IReadOnlyList<SceneMesh>? meshes = _meshLoader.Load("models\\teapot.obj");
         ObjetMesh objetMesh = new(meshes[0], _graphicDeviceRessourceFactory);
@@ -362,10 +362,10 @@ public class Engine
         float dimX = boundingBox.Max.X - boundingBox.Min.X;
         float dimY = boundingBox.Max.Y - boundingBox.Min.Y;
         float dimZ = boundingBox.Max.Z - boundingBox.Min.Z;
-        Vector3D<float> sceneCenter = new(centerX, centerY, centerZ);
-        Vector3D<float> sceneDim = new(dimX, dimY, dimZ);
+        Vector3 sceneCenter = new(centerX, centerY, centerZ);
+        Vector3 sceneDim = new(dimX, dimY, dimZ);
 
-        objetMesh.Mesh.AddTransform(Matrix4X4.CreateScale(4f / float.Max(float.Max(dimX, dimY), dimZ)));
+        objetMesh.Mesh.AddTransform(Matrix4x4.CreateScale(4f / float.Max(float.Max(dimX, dimY), dimZ)));
 
         _scene.AddObjet(bloc1);
         _scene.AddObjet(bloc2);
@@ -439,19 +439,18 @@ public class Engine
         if (_initAnimationFinished)
         {
             _camera.GetViewMatrix(out _matView);
-            Matrix4X4<float> matViewProj = _matView.ToGeneric() * _matProj;
+            Matrix4x4 matViewProj = _matView * _matProj;
             _scene.Draw(in _deviceD3D11.DeviceContext, in matViewProj);
         }
     }
 
-    public static Matrix4X4<T> CreatePerspectiveFieldOfViewLH<T>(T fieldOfView, T aspectRatio, T nearPlaneDistance, T farPlaneDistance)
-        where T : unmanaged, IFormattable, IEquatable<T>, IComparable<T>
+    public static Matrix4x4 CreatePerspectiveFieldOfViewLH(float fieldOfView, float aspectRatio, float nearPlaneDistance, float farPlaneDistance)
     {
-        Matrix4X4<T> result = Matrix4X4.CreatePerspectiveFieldOfView(fieldOfView, aspectRatio, nearPlaneDistance, farPlaneDistance);
-        result.M31 = Scalar.Negate(result.M31);
-        result.M32 = Scalar.Negate(result.M32);
-        result.M33 = Scalar.Negate(result.M33);
-        result.M34 = Scalar.Negate(result.M34);
+        Matrix4x4 result = Matrix4x4.CreatePerspectiveFieldOfView(fieldOfView, aspectRatio, nearPlaneDistance, farPlaneDistance);
+        result.M31 = -result.M31;
+        result.M32 = -result.M32;
+        result.M33 = -result.M33;
+        result.M34 = -result.M34;
         return result;
     }
 }

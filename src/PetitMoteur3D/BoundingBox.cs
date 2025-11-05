@@ -1,19 +1,19 @@
-using Silk.NET.Maths;
+using System.Numerics;
 
 namespace PetitMoteur3D;
 
 internal struct BoundingBox
 {
-    public Vector3D<float> Min;
-    public Vector3D<float> Max;
+    public Vector3 Min;
+    public Vector3 Max;
 
-    public BoundingBox(Vector3D<float> min, Vector3D<float> max)
+    public BoundingBox(Vector3 min, Vector3 max)
     {
         Min = min;
         Max = max;
     }
 
     public BoundingBox()
-    : this(new Vector3D<float>(float.MinValue, float.MinValue, float.MinValue), new Vector3D<float>(float.MaxValue, float.MaxValue, float.MaxValue))
+    : this(new Vector3(float.MinValue, float.MinValue, float.MinValue), new Vector3(float.MaxValue, float.MaxValue, float.MaxValue))
     { }
 }

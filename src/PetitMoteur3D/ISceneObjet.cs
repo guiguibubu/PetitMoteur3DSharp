@@ -1,6 +1,4 @@
-﻿using Silk.NET.Maths;
-
-namespace PetitMoteur3D;
+﻿namespace PetitMoteur3D;
 
 /// <summary>
 /// Interface for scene object
@@ -10,5 +8,5 @@ internal interface ISceneObjet : IUpdatableObjet
     /// <summary>
     /// Position
     /// </summary>
-    ref readonly Vector3D<float> Position { get; }
+    ref readonly System.Numerics.Vector3 Position { get; }
 }

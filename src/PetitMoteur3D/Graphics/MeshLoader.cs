@@ -115,7 +115,7 @@ internal class MeshLoader
             {
                 uint indexMesh = node.MMeshes[i];
                 Mesh mesh = meshes[(int)indexMesh];
-                Matrix4X4<float> transformation = node.MTransformation.ToGeneric();
+                System.Numerics.Matrix4x4 transformation = node.MTransformation;
                 SceneMesh sceneMesh = new(mesh, transformation);
                 uint nbChildren = node.MNumChildren;
                 for (int j = 0; j < nbChildren; j++)

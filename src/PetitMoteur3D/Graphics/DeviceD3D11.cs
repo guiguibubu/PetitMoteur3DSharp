@@ -8,7 +8,6 @@ using Silk.NET.Core.Native;
 using Silk.NET.Direct3D.Compilers;
 using Silk.NET.Direct3D11;
 using Silk.NET.DXGI;
-using Silk.NET.Maths;
 
 namespace PetitMoteur3D.Graphics;
 
@@ -191,9 +190,9 @@ public class DeviceD3D11
     }
 #endif
 
-    public void GetBackgroundColour(out Vector4D<float> backgroundColour)
+    public void GetBackgroundColour(out System.Numerics.Vector4 backgroundColour)
     {
-        backgroundColour = new Vector4D<float>(_backgroundColour[0], _backgroundColour[1], _backgroundColour[2], _backgroundColour[3]);
+        backgroundColour = new System.Numerics.Vector4(_backgroundColour[0], _backgroundColour[1], _backgroundColour[2], _backgroundColour[3]);
     }
 
     public void SetBackgroundColour(float r, float g, float b, float a)

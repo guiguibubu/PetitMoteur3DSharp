@@ -9,27 +9,27 @@ namespace PetitMoteur3D;
 internal class SceneMesh
 {
     public Mesh Mesh { get { return _mesh; } }
-    public Matrix4X4<float> Transformation { get { return _transformation; } }
+    public System.Numerics.Matrix4x4 Transformation { get { return _transformation; } }
     public IReadOnlyList<SceneMesh> Children { get { return _children; } }
 
     private readonly Mesh _mesh;
-    private Matrix4X4<float> _transformation;
+    private System.Numerics.Matrix4x4 _transformation;
     private readonly List<SceneMesh> _children;
 
-    public SceneMesh(Mesh mesh, Matrix4X4<float> transformation, IReadOnlyList<SceneMesh> children)
+    public SceneMesh(Mesh mesh, System.Numerics.Matrix4x4 transformation, IReadOnlyList<SceneMesh> children)
     {
         _mesh = mesh;
         _transformation = transformation;
         _children = new List<SceneMesh>(children);
     }
 
-    public SceneMesh(Mesh mesh, Matrix4X4<float> transformation)
+    public SceneMesh(Mesh mesh, System.Numerics.Matrix4x4 transformation)
     : this(mesh, transformation, Array.Empty<SceneMesh>())
     {
     }
 
     public SceneMesh(Mesh mesh)
-    : this(mesh, Matrix4X4<float>.Identity)
+    : this(mesh, System.Numerics.Matrix4x4.Identity)
     {
     }
 
@@ -65,17 +65,17 @@ internal class SceneMesh
 
     public BoundingBox GetBoundingBox()
     {
-        return GetBoundingBox(Matrix4X4<float>.Identity);
+        return GetBoundingBox(System.Numerics.Matrix4x4.Identity);
     }
 
-    public BoundingBox GetBoundingBox(Matrix4X4<float> transformation)
+    public BoundingBox GetBoundingBox(System.Numerics.Matrix4x4 transformation)
     {
         BoundingBox boundingBox = new();
 
         IReadOnlyList<Sommet> sommets = Mesh.Sommets;
-        Matrix4X4<float> fullTransformation = transformation * _transformation;
+        System.Numerics.Matrix4x4 fullTransformation = transformation * _transformation;
 
-        IReadOnlyList<Vector4D<float>> positions = sommets.Select(v => new Vector4D<float>(v.Position, 1f) * fullTransformation).ToList();
+        IReadOnlyList<System.Numerics.Vector4> positions = sommets.Select(v => System.Numerics.Vector4.Transform(new System.Numerics.Vector4(v.Position.ToSystem(), 1f), fullTransformation)).ToList();
         IReadOnlyList<float> sommetsX = positions.Select(v => v.X).Order().ToList();
         IReadOnlyList<float> sommetsY = positions.Select(v => v.Y).Order().ToList();
         IReadOnlyList<float> sommetsZ = positions.Select(v => v.Z).Order().ToList();
@@ -101,7 +101,7 @@ internal class SceneMesh
         return boundingBox;
     }
 
-    public void AddTransform(Matrix4X4<float> transformation)
+    public void AddTransform(System.Numerics.Matrix4x4 transformation)
     {
         _transformation = transformation * _transformation;
     }

@@ -1,10 +1,10 @@
 using System;
 using System.Drawing;
+using System.Numerics;
 using PetitMoteur3D.Core.Math;
 using PetitMoteur3D.Input;
 using PetitMoteur3D.Logging;
 using PetitMoteur3D.Window;
-using Silk.NET.Maths;
 
 namespace PetitMoteur3D.Camera;
 
@@ -16,9 +16,9 @@ internal class FreeCamera : ICamera, IRotationObjet
     public float ChampVision { get; init; }
 
     /// <inheritdoc/>
-    public ref readonly Vector3D<float> Position => ref _position;
+    public ref readonly Vector3 Position => ref _position;
 
-    private Vector3D<float> _position;
+    private Vector3 _position;
 
     private IWindow _window;
     private Orientation3D _orientation;
@@ -27,8 +27,8 @@ internal class FreeCamera : ICamera, IRotationObjet
 
     private const float WindowCenterOffset = 1f / 8;
 
-    private static readonly System.Numerics.Vector3 UpRotationAxis = System.Numerics.Vector3.UnitY;
-    private static readonly Vector3D<float> ZeroRotation = Vector3D<float>.Zero;
+    private static readonly Vector3 UpRotationAxis = Vector3.UnitY;
+    private static readonly Vector3 ZeroRotation = Vector3.Zero;
 
     /// <summary>
     /// Constructeur par defaut
@@ -42,7 +42,7 @@ internal class FreeCamera : ICamera, IRotationObjet
     /// Constructeur
     /// </summary>
     /// <param name="champVision"></param>
-    public FreeCamera(IWindow window, float champVision) : this(window, champVision, Vector3D<float>.Zero)
+    public FreeCamera(IWindow window, float champVision) : this(window, champVision, Vector3.Zero)
     {
 
     }
@@ -52,7 +52,7 @@ internal class FreeCamera : ICamera, IRotationObjet
     /// </summary>
     /// <param name="position"></param>
     /// <param name="rotation"></param>
-    public FreeCamera(IWindow window, float champVision, ref readonly Vector3D<float> position)
+    public FreeCamera(IWindow window, float champVision, ref readonly Vector3 position)
     {
         _window = window;
         ChampVision = champVision;
@@ -90,16 +90,16 @@ internal class FreeCamera : ICamera, IRotationObjet
             gaucheDroite -= 1f;
         }
 
-        Vector3D<float> move = Vector3D<float>.Zero;
+        Vector3 move = Vector3.Zero;
 
         if (avantArriere != 0)
         {
-            move += (avantArriere * _orientation.Forward).ToGeneric();
+            move += (avantArriere * _orientation.Forward);
         }
 
         if (gaucheDroite != 0)
         {
-            move += (gaucheDroite * _orientation.Rigth).ToGeneric();
+            move += (gaucheDroite * _orientation.Rigth);
         }
 
         Move(in move);
@@ -107,7 +107,7 @@ internal class FreeCamera : ICamera, IRotationObjet
         IMouse mouse = _inputContext.Mice[0];
         Size windowsSize = _window.Size;
 
-        System.Numerics.Vector2 positionMouse = mouse.Position;
+        Vector2 positionMouse = mouse.Position;
 
         bool intoWindow = positionMouse.X >= 0 
             && positionMouse.X <= windowsSize.Width
@@ -120,7 +120,7 @@ internal class FreeCamera : ICamera, IRotationObjet
         }
 
         // Normalize mouse position into [-1, 1] in window space
-        System.Numerics.Vector2 positionNormalized = ((mouse.Position / new System.Numerics.Vector2(windowsSize.Width, windowsSize.Height)) - new System.Numerics.Vector2(0.5f)) * 2;
+        Vector2 positionNormalized = ((mouse.Position / new Vector2(windowsSize.Width, windowsSize.Height)) - new Vector2(0.5f)) * 2;
 
         bool isInCenter = Math.Abs(positionNormalized.X) <= WindowCenterOffset && Math.Abs(positionNormalized.Y) <= WindowCenterOffset;
         if (!isInCenter)
@@ -140,19 +140,25 @@ internal class FreeCamera : ICamera, IRotationObjet
     }
 
     /// <inheritdoc/>
-    public ref readonly Vector3D<float> Move(scoped ref readonly Vector3D<float> move)
+    public ref readonly Vector3 Move(float dx, float dy, float dz)
     {
-        _position.X += move.X;
-        _position.Y += move.Y;
-        _position.Z += move.Z;
+        _position.X += dx;
+        _position.Y += dy;
+        _position.Z += dz;
         return ref _position;
     }
 
     /// <inheritdoc/>
-    /// <remarks>Currently only return zero vector</remarks>
-    public ref readonly Vector3D<float> RotateEuler(ref readonly Vector3D<float> rotation)
+    public ref readonly Vector3 Move(scoped ref readonly Vector3 move)
     {
-        System.Numerics.Quaternion quaternion = System.Numerics.Quaternion.CreateFromYawPitchRoll(rotation.Y, rotation.X, rotation.Z);
+        return ref Move(move.X, move.Y, move.Z);
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>Currently only return zero vector</remarks>
+    public ref readonly Vector3 RotateEuler(ref readonly Vector3 rotation)
+    {
+        Quaternion quaternion = Quaternion.CreateFromYawPitchRoll(rotation.Y, rotation.X, rotation.Z);
         _orientation.Rotate(in quaternion);
         return ref ZeroRotation;
     }
@@ -160,19 +166,19 @@ internal class FreeCamera : ICamera, IRotationObjet
 
     /// <inheritdoc/>
     /// <remarks>Currently only return zero vector</remarks>
-    public ref readonly Vector3D<float> Rotate(ref readonly Vector3D<float> axis, float angle)
+    public ref readonly Vector3 Rotate(ref readonly Vector3 axis, float angle)
     {
-        _orientation.Rotate(axis.ToSystem(), angle);
+        _orientation.Rotate(in axis, angle);
         return ref ZeroRotation;
     }
 
     /// <inheritdoc/>
-    public void GetViewMatrix(out System.Numerics.Matrix4x4 viewMatrix)
+    public void GetViewMatrix(out Matrix4x4 viewMatrix)
     {
-        System.Numerics.Vector3 cameraPosition = _position.ToSystem();
-        System.Numerics.Vector3 cameraDirection = _orientation.Forward;
-        System.Numerics.Vector3 cameraTarget = cameraPosition + cameraDirection;
-        System.Numerics.Vector3 cameraUpVector = _orientation.Up;
+        Vector3 cameraPosition = _position;
+        Vector3 cameraDirection = _orientation.Forward;
+        Vector3 cameraTarget = cameraPosition + cameraDirection;
+        Vector3 cameraUpVector = _orientation.Up;
         viewMatrix = Matrix4x4Helper.CreateLookAtLeftHanded(in cameraPosition, in cameraTarget, in cameraUpVector);
     }
 }

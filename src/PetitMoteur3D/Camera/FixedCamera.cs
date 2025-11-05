@@ -1,7 +1,7 @@
 using System;
+using System.Numerics;
 using PetitMoteur3D.Core.Math;
 using PetitMoteur3D.Input;
-using Silk.NET.Maths;
 
 namespace PetitMoteur3D.Camera;
 
@@ -16,14 +16,14 @@ internal class FixedCamera : ICamera
     public float ChampVision { get; init; }
 
     /// <inheritdoc/>
-    public ref readonly Vector3D<float> Position => ref _position;
+    public ref readonly Vector3 Position => ref _position;
 
-    private Vector3D<float> _position;
+    private Vector3 _position;
 
     /// <summary>
     /// The target of the camera.
     /// <summary>
-    private System.Numerics.Vector3 _target;
+    private Vector3 _target;
 
     private Orientation3D _orientation;
 
@@ -33,7 +33,7 @@ internal class FixedCamera : ICamera
     /// Constructeur par defaut
     /// </summary>
     /// <param name="target"></param>
-    public FixedCamera(ref readonly Vector3D<float> target) : this(in target, (float)(Math.PI / 4))
+    public FixedCamera(ref readonly Vector3 target) : this(in target, (float)(Math.PI / 4))
     {
 
     }
@@ -43,7 +43,7 @@ internal class FixedCamera : ICamera
     /// </summary>
     /// <param name="target"></param>
     /// <param name="champVision"></param>
-    public FixedCamera(ref readonly Vector3D<float> target, float champVision) : this(in target, champVision, Vector3D<float>.Zero)
+    public FixedCamera(ref readonly Vector3 target, float champVision) : this(in target, champVision, Vector3.Zero)
     {
 
     }
@@ -54,7 +54,7 @@ internal class FixedCamera : ICamera
     /// <param name="target"></param>
     /// <param name="champVision"></param>
     /// <param name="position"></param>
-    public FixedCamera(ref readonly Vector3D<float> target, float champVision, Vector3D<float> position)
+    public FixedCamera(ref readonly Vector3 target, float champVision, Vector3 position)
         : this(in target, champVision, in position)
     { }
 
@@ -64,9 +64,9 @@ internal class FixedCamera : ICamera
     /// <param name="target"></param>
     /// <param name="champVision"></param>
     /// <param name="position"></param>
-    public FixedCamera(ref readonly Vector3D<float> target, float champVision, ref readonly Vector3D<float> position)
+    public FixedCamera(ref readonly Vector3 target, float champVision, ref readonly Vector3 position)
     {
-        _target = target.ToSystem();
+        _target = target;
         ChampVision = champVision;
         _position = position;
         _orientation = new Orientation3D();
@@ -81,7 +81,7 @@ internal class FixedCamera : ICamera
             return;
         }
 
-        System.Numerics.Vector3 direction = _target - _position.ToSystem();
+        Vector3 direction = _target - _position;
         _orientation.LookTo(in direction);
 
         IKeyboard keyboard = _inputContext.Keyboards[0];
@@ -106,16 +106,16 @@ internal class FixedCamera : ICamera
         }
 
 
-        Vector3D<float> move = Vector3D<float>.Zero;
+        Vector3 move = Vector3.Zero;
 
         if (avantArriere != 0)
         {
-            move += (avantArriere * _orientation.Forward).ToGeneric();
+            move += (avantArriere * _orientation.Forward);
         }
 
         if (gaucheDroite != 0)
         {
-            move += (gaucheDroite * _orientation.Rigth).ToGeneric();
+            move += (gaucheDroite * _orientation.Rigth);
         }
 
         Move(in move);
@@ -128,20 +128,26 @@ internal class FixedCamera : ICamera
     }
 
     /// <inheritdoc/>
-    public ref readonly Vector3D<float> Move(scoped ref readonly Vector3D<float> move)
+    public ref readonly Vector3 Move(float dx, float dy, float dz)
     {
-        _position.X += move.X;
-        _position.Y += move.Y;
-        _position.Z += move.Z;
+        _position.X += dx;
+        _position.Y += dy;
+        _position.Z += dz;
         return ref _position;
     }
 
     /// <inheritdoc/>
-    public void GetViewMatrix(out System.Numerics.Matrix4x4 viewMatrix)
+    public ref readonly Vector3 Move(scoped ref readonly Vector3 move)
     {
-        ref readonly System.Numerics.Vector3 cameraTarget = ref _target;
-        ref readonly System.Numerics.Vector3 cameraUpVector = ref _orientation.Up;
-        System.Numerics.Vector3 cameraPosition = _position.ToSystem();
+        return ref Move(move.X, move.Y, move.Z);
+    }
+
+    /// <inheritdoc/>
+    public void GetViewMatrix(out Matrix4x4 viewMatrix)
+    {
+        ref readonly Vector3 cameraTarget = ref _target;
+        ref readonly Vector3 cameraUpVector = ref _orientation.Up;
+        Vector3 cameraPosition = _position;
         viewMatrix = Matrix4x4Helper.CreateLookAtLeftHanded(in cameraPosition, in cameraTarget, in cameraUpVector);
     }
 }
