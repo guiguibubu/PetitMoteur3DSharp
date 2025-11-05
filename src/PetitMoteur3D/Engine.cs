@@ -34,19 +34,20 @@ public class Engine
     private Matrix4x4 _matView = default;
     private Matrix4x4 _matProj = default;
 
-    private bool _imGuiShowDemo = false;
-    private bool _imGuiShowDebugLogs = false;
-    private bool _imGuiShowEngineLogs = false;
-    private bool _imGuiShowMetrics = false;
-    private bool _debugToolKeyPressed = false;
-    private bool _showDebugTool = false;
-    private bool _showWireFrame = false;
-    private bool _showScene = true;
+    private bool _imGuiShowDemo;
+    private bool _imGuiShowDebugLogs;
+    private bool _imGuiShowEngineLogs;
+    private bool _imGuiShowMetrics;
+    private bool _debugToolKeyPressed;
+    private bool _showDebugTool;
+    private bool _showWireFrame;
+    private bool _showScene;
     private Vector4 _backgroundColour = default!;
 
-    private Stopwatch _horlogeEngine = new Stopwatch();
-    private Stopwatch _horlogeScene = new Stopwatch();
-    private Stopwatch _horlogeDebugTool = new Stopwatch();
+    private readonly Stopwatch _horlogeEngine;
+    private readonly Stopwatch _horlogeScene;
+    private readonly Stopwatch _horlogeDebugTool;
+
     private const int IMAGESPARSECONDE_ENGINE = 60;
     private const int IMAGESPARSECONDE_SCENE = 60;
     private const int IMAGESPARSECONDE_DEBUGTOOL = 30;
@@ -55,16 +56,16 @@ public class Engine
     private const double ECART_TEMPS_DEBUGTOOL = (1.0 / (double)IMAGESPARSECONDE_DEBUGTOOL) * 1000.0;
 
     private readonly Int64 _memoryAtStartUp;
-    private bool _initAnimationFinished = false;
+    private bool _initAnimationFinished;
 
     private Process _currentProcess = Process.GetCurrentProcess();
     private bool _onNativeDxPlatform;
 
-    private bool _isInitializing = false;
-    private bool _isInitialized = false;
+    private bool _isInitializing;
+    private bool _isInitialized;
     public event Action? Initialized;
 
-    public ulong CurrentFrameCount = 0;
+    public ulong CurrentFrameCount;
 
     public Engine(ref readonly EngineConfiguration conf)
     {
@@ -72,6 +73,24 @@ public class Engine
         _onNativeDxPlatform = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
         _window = conf.Window;
         _inputContext = conf.InputContext;
+
+        _isInitializing = false;
+        _isInitialized = false;
+        _initAnimationFinished = false;
+        CurrentFrameCount = 0;
+
+        _imGuiShowDemo = false;
+        _imGuiShowDebugLogs = false;
+        _imGuiShowEngineLogs = false;
+        _imGuiShowMetrics = false;
+        _debugToolKeyPressed = false;
+        _showDebugTool = false;
+        _showWireFrame = false;
+        _showScene = true;
+
+        _horlogeEngine = new Stopwatch();
+        _horlogeScene = new Stopwatch();
+        _horlogeDebugTool = new Stopwatch();
     }
 
     public void Initialize()

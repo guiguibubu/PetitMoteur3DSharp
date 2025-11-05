@@ -4,7 +4,7 @@ using Silk.NET.Maths;
 
 namespace PetitMoteur3D;
 
-internal class Bloc : BaseObjet3D
+internal sealed class Bloc : BaseObjet3D
 {
     private readonly Vector3D<float>[] _vertices;
     private readonly Vector3D<float>[] _normales;

@@ -8,7 +8,7 @@ namespace PetitMoteur3D.Camera;
 /// <summary>
 /// Implemmentation for a camera fixed on a target position and keep same distance to it
 /// </summary>
-internal class ArcCamera : ICamera
+internal sealed class ArcCamera : ICamera
 {
     /// <summary>
     /// Champ vision
@@ -74,7 +74,7 @@ internal class ArcCamera : ICamera
     }
 
     /// <inheritdoc/>
-    public virtual void Update(float elapsedTime)
+    public void Update(float elapsedTime)
     {
         if (_inputContext is null)
         {
@@ -144,6 +144,12 @@ internal class ArcCamera : ICamera
         _position.Y += dy;
         _position.Z += dz;
         return ref _position;
+    }
+
+    /// <inheritdoc/>
+    public ref readonly Vector3 Move(Vector3 move)
+    {
+        return ref Move(in move);
     }
 
     /// <inheritdoc/>

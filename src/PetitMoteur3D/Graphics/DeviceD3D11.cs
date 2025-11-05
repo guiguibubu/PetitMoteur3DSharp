@@ -43,10 +43,10 @@ public class DeviceD3D11
 
 
     private readonly IWindow _window;
-    private Size _currentSize = new();
+    private Size _currentSize;
     private readonly float[] _backgroundColour = new[] { 0.0f, 0.5f, 0.0f, 1.0f };
 
-    private bool _isSwapChainComposition = false;
+    private bool _isSwapChainComposition;
 #if USE_RENDERDOC
     private readonly Evergine.Bindings.RenderDoc.RenderDoc _renderDoc;
 #endif
@@ -69,6 +69,7 @@ public class DeviceD3D11
 
         InitDevice(_d3d11Api);
 
+        _isSwapChainComposition = false;
         // Initialisation de la swapchain
         InitSwapChain(window, forceDxvk);
 
@@ -90,6 +91,7 @@ public class DeviceD3D11
         SilkMarshal.ThrowHResult(_device.CreateRasterizerState(in rsWireDesc, ref _wireFrameCullBackRS));
         _deviceContext.RSSetState(_solidCullBackRS);
 
+        _currentSize = new Size();
 #if USE_RENDERDOC
         Evergine.Bindings.RenderDoc.RenderDoc.Load(out _renderDoc);
         _renderDoc.API.SetActiveWindow(new IntPtr(_device.Handle), _window.Native!.DXHandle!.Value);

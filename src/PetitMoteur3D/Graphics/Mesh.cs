@@ -3,7 +3,7 @@ using System.Linq;
 
 namespace PetitMoteur3D.Graphics;
 
-internal class Mesh
+internal sealed class Mesh
 {
     public IReadOnlyList<Sommet> Sommets { get { return _sommets; } }
     public IReadOnlyList<ushort> Indices { get { return _indices; } }

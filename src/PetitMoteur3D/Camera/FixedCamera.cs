@@ -8,7 +8,7 @@ namespace PetitMoteur3D.Camera;
 /// <summary>
 /// Implemmentation for a camera fixed on a target position and keep same distance to it
 /// </summary>
-internal class FixedCamera : ICamera
+internal sealed class FixedCamera : ICamera
 {
     /// <summary>
     /// Champ vision
@@ -33,7 +33,7 @@ internal class FixedCamera : ICamera
     /// Constructeur par defaut
     /// </summary>
     /// <param name="target"></param>
-    public FixedCamera(ref readonly Vector3 target) : this(in target, (float)(Math.PI / 4))
+    public FixedCamera(Vector3 target) : this(target, (float)(Math.PI / 4))
     {
 
     }
@@ -43,7 +43,7 @@ internal class FixedCamera : ICamera
     /// </summary>
     /// <param name="target"></param>
     /// <param name="champVision"></param>
-    public FixedCamera(ref readonly Vector3 target, float champVision) : this(in target, champVision, Vector3.Zero)
+    public FixedCamera(Vector3 target, float champVision) : this(target, champVision, Vector3.Zero)
     {
 
     }
@@ -54,17 +54,7 @@ internal class FixedCamera : ICamera
     /// <param name="target"></param>
     /// <param name="champVision"></param>
     /// <param name="position"></param>
-    public FixedCamera(ref readonly Vector3 target, float champVision, Vector3 position)
-        : this(in target, champVision, in position)
-    { }
-
-    /// <summary>
-    /// Constructeur
-    /// </summary>
-    /// <param name="target"></param>
-    /// <param name="champVision"></param>
-    /// <param name="position"></param>
-    public FixedCamera(ref readonly Vector3 target, float champVision, ref readonly Vector3 position)
+    public FixedCamera(Vector3 target, float champVision, Vector3 position)
     {
         _target = target;
         ChampVision = champVision;
@@ -134,6 +124,12 @@ internal class FixedCamera : ICamera
         _position.Y += dy;
         _position.Z += dz;
         return ref _position;
+    }
+
+    /// <inheritdoc/>
+    public ref readonly Vector3 Move(Vector3 move)
+    {
+        return ref Move(in move);
     }
 
     /// <inheritdoc/>

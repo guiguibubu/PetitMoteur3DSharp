@@ -8,7 +8,7 @@ using PetitMoteur3D.Window;
 
 namespace PetitMoteur3D.Camera;
 
-internal class FreeCamera : ICamera, IRotationObjet
+internal sealed class FreeCamera : ICamera, IRotationObjet
 {
     /// <summary>
     /// Champ vision
@@ -52,7 +52,7 @@ internal class FreeCamera : ICamera, IRotationObjet
     /// </summary>
     /// <param name="position"></param>
     /// <param name="rotation"></param>
-    public FreeCamera(IWindow window, float champVision, ref readonly Vector3 position)
+    public FreeCamera(IWindow window, float champVision, Vector3 position)
     {
         _window = window;
         ChampVision = champVision;
@@ -62,7 +62,7 @@ internal class FreeCamera : ICamera, IRotationObjet
     }
 
     /// <inheritdoc/>
-    public virtual void Update(float elapsedTime)
+    public void Update(float elapsedTime)
     {
         if (_inputContext is null)
         {
@@ -146,6 +146,12 @@ internal class FreeCamera : ICamera, IRotationObjet
         _position.Y += dy;
         _position.Z += dz;
         return ref _position;
+    }
+
+    /// <inheritdoc/>
+    public ref readonly Vector3 Move(Vector3 move)
+    {
+        return ref Move(in move);
     }
 
     /// <inheritdoc/>

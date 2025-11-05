@@ -45,6 +45,7 @@ public static class ObjectPoolFactory
             _objectResetFunc = objectResetFunc;
             _objects = new ConcurrentDictionary<Guid, ObjectPoolWrapper<T>>();
             _objectsAvailableKeys = new ConcurrentBag<Guid>();
+            _disposed = false;
         }
 
         public BaseObjectPoolImpl(IResetter<T> resetter)
@@ -72,7 +73,7 @@ public static class ObjectPoolFactory
             _objectsAvailableKeys.Add(item.Id);
         }
 
-        private bool _disposed = false;
+        private bool _disposed;
 
         /// <inheritdoc/>
         public void Dispose()

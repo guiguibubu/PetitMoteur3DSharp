@@ -6,7 +6,7 @@ using Silk.NET.Direct3D11;
 
 namespace PetitMoteur3D.Graphics;
 
-internal class GraphicBufferFactory
+internal sealed class GraphicBufferFactory
 {
     private readonly ComPtr<ID3D11Device> _device;
 

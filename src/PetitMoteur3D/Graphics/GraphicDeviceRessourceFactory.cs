@@ -4,7 +4,7 @@ using Silk.NET.Direct3D11;
 
 namespace PetitMoteur3D.Graphics;
 
-internal class GraphicDeviceRessourceFactory
+internal sealed class GraphicDeviceRessourceFactory
 {
     private readonly GraphicBufferFactory _bufferFactory;
     private readonly ShaderManager _shaderManager;

@@ -94,7 +94,7 @@ public class Orientation3D
         {
             return;
         }
-        Matrix4x4 viewMatrix = Matrix4x4Helper.CreateLookToLeftHanded(System.Numerics.Vector3.Zero, direction, Vector3.UnitY);
+        Matrix4x4 viewMatrix = Matrix4x4Helper.CreateLookToLeftHanded(Vector3.Zero, direction, Vector3.UnitY);
         Quaternion quaternionTemp = Quaternion.CreateFromRotationMatrix(Matrix4x4.Transpose(viewMatrix));
         _quaternion = Quaternion.Normalize(quaternionTemp);
         UpdateOrientation();

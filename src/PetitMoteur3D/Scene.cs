@@ -8,7 +8,7 @@ using Silk.NET.Maths;
 
 namespace PetitMoteur3D;
 
-internal class Scene : IDrawableObjet
+internal sealed class Scene : IDrawableObjet
 {
     private readonly List<IObjet3D> _objects3D;
     private ICamera _camera;

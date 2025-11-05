@@ -8,7 +8,7 @@ namespace PetitMoteur3D.Camera;
 /// <summary>
 /// Implemmentation for a camera fixed on a target object
 /// </summary>
-internal class TrailingCamera : ICamera
+internal sealed class TrailingCamera : ICamera
 {
     /// <summary>
     /// Champ vision
@@ -51,7 +51,7 @@ internal class TrailingCamera : ICamera
     /// <param name="target"></param>
     /// <param name="champVision"></param>
     /// <param name="position"></param>
-    public TrailingCamera(ISceneObjet target, float champVision, ref readonly Vector3 position)
+    public TrailingCamera(ISceneObjet target, float champVision, Vector3 position)
     {
         _target = target;
         ChampVision = champVision;
@@ -59,7 +59,7 @@ internal class TrailingCamera : ICamera
     }
 
     /// <inheritdoc/>
-    public virtual void Update(float elapsedTime)
+    public void Update(float elapsedTime)
     {
         //TODO: Handle input
     }
@@ -77,6 +77,12 @@ internal class TrailingCamera : ICamera
         _position.Y += dy;
         _position.Z += dz;
         return ref _position;
+    }
+
+    /// <inheritdoc/>
+    public ref readonly Vector3 Move(Vector3 move)
+    {
+        return ref Move(in move);
     }
 
     /// <inheritdoc/>

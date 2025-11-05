@@ -31,7 +31,7 @@ internal abstract class BaseObjet3D : IObjet3D
     private System.Numerics.Matrix4x4 _matWorld = default;
 
     private System.Numerics.Vector3 _position;
-    private Orientation3D _orientation;
+    private readonly Orientation3D _orientation;
 
     private static readonly System.Numerics.Vector3 ZeroRotation = System.Numerics.Vector3.Zero;
     private static readonly System.Numerics.Vector3 AxisRotation = System.Numerics.Vector3.UnitY;
@@ -42,7 +42,7 @@ internal abstract class BaseObjet3D : IObjet3D
     private unsafe readonly uint _vertexStride = (uint)sizeof(Sommet);
     private static readonly uint _vertexOffset = 0;
 
-    private string _name;
+    private readonly string _name;
 
     private static IObjectPool<ObjectShadersParams> _objectShadersParamsPool = ObjectPoolFactory.Create<ObjectShadersParams>();
     private static IObjectPool<SamplerDesc> _shaderDescPool = ObjectPoolFactory.Create<SamplerDesc>();
@@ -92,6 +92,12 @@ internal abstract class BaseObjet3D : IObjet3D
         _position.Y += dy;
         _position.Z += dz;
         return ref _position;
+    }
+
+    /// <inheritdoc/>
+    public ref readonly System.Numerics.Vector3 Move(System.Numerics.Vector3 move)
+    {
+        return ref Move(in move);
     }
 
     /// <inheritdoc/>

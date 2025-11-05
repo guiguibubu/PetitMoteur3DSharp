@@ -17,5 +17,12 @@ internal interface IMovableObjet
     /// </summary>
     /// <param name="move"></param>
     /// <returns>The new position</returns>
+    ref readonly System.Numerics.Vector3 Move(System.Numerics.Vector3 move);
+
+    /// <summary>
+    /// Move the object
+    /// </summary>
+    /// <param name="move"></param>
+    /// <returns>The new position</returns>
     ref readonly System.Numerics.Vector3 Move(scoped ref readonly System.Numerics.Vector3 move);
 }

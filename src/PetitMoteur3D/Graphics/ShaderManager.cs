@@ -9,7 +9,7 @@ using Silk.NET.Direct3D11;
 
 namespace PetitMoteur3D.Graphics;
 
-internal class ShaderManager
+internal sealed class ShaderManager
 {
     private readonly D3DCompiler _compiler;
     private readonly ComPtr<ID3D11Device> _device;

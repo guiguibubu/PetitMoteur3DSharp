@@ -5,7 +5,7 @@ using Silk.NET.DXGI;
 
 namespace PetitMoteur3D.Graphics;
 
-internal class Texture : IDisposable
+internal sealed class Texture : IDisposable
 {
     public string Name { get; private set; }
     public int Width { get; private set; }
@@ -39,6 +39,7 @@ internal class Texture : IDisposable
                 }
             }
         }
+        _disposed = false;
     }
 
     ~Texture()
@@ -46,7 +47,7 @@ internal class Texture : IDisposable
         Dispose(disposing: false);
     }
 
-    private bool _disposed = false;
+    private bool _disposed;
 
     /// <inheritdoc/>
     public void Dispose()
@@ -67,7 +68,7 @@ internal class Texture : IDisposable
     // If disposing equals false, the method has been called by the
     // runtime from inside the finalizer and you should not reference
     // other objects. Only unmanaged resources can be disposed.
-    protected virtual void Dispose(bool disposing)
+    private void Dispose(bool disposing)
     {
         // Check to see if Dispose has already been called.
         if (!_disposed)

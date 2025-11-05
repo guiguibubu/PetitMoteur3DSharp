@@ -7,7 +7,7 @@ using Silk.NET.Maths;
 
 namespace PetitMoteur3D.Graphics;
 
-internal class MeshLoader
+internal sealed class MeshLoader
 {
     private readonly Assimp _importer;
     public MeshLoader()
@@ -35,7 +35,7 @@ internal class MeshLoader
             }
             Silk.NET.Assimp.Scene scene = *scenePtr;
 
-            IReadOnlyList<Material> materials = ReadMaterials(scene, _importer);
+            Material[] materials = ReadMaterials(scene, _importer);
 
             IReadOnlyList<Mesh> meshes = ReadMeshes(scene, materials);
 
@@ -56,10 +56,11 @@ internal class MeshLoader
         return sceneMeshes;
     }
 
-    private static unsafe IReadOnlyList<Material> ReadMaterials(Silk.NET.Assimp.Scene scene, Assimp importer)
+    private static unsafe Material[] ReadMaterials(Silk.NET.Assimp.Scene scene, Assimp importer)
     {
-        List<Material> materials = new();
-        for (int i = 0; i < scene.MNumMaterials; i++)
+        uint nbMaterials = scene.MNumMaterials;
+        Material[] materials = new Material[nbMaterials];
+        for (int i = 0; i < nbMaterials; i++)
         {
             Silk.NET.Assimp.Material* material = scene.MMaterials[i];
             System.Numerics.Vector4 diffuse = new System.Numerics.Vector4(0.8f, 0.8f, 0.8f, 1f);
@@ -75,7 +76,7 @@ internal class MeshLoader
             importer.GetMaterialColor(material, Assimp.MatkeyColorEmissive, 0, 0, ref emission);
             importer.GetMaterialColor(material, Assimp.MatkeyColorReflective, 0, 0, ref reflexion);
             importer.GetMaterialFloatArray(material, Assimp.MatkeyShininess, 0, 0, ref shininess, ref max);
-            materials.Add(new Material(
+            materials[i] = new Material(
                 ambient.ToGeneric(),
                 diffuse.ToGeneric(),
                 specular.ToGeneric(),
@@ -83,12 +84,12 @@ internal class MeshLoader
                 reflexion.ToGeneric(),
                 shininess,
                 false
-            ));
+            );
         }
         return materials;
     }
 
-    private static unsafe IReadOnlyList<Mesh> ReadMeshes(Silk.NET.Assimp.Scene scene, IReadOnlyList<Material> sceneMaterials)
+    private static unsafe Mesh[] ReadMeshes(Silk.NET.Assimp.Scene scene, Material[] sceneMaterials)
     {
         uint nbSubmesh = scene.MNumMeshes;
         Mesh[] meshes = new Mesh[nbSubmesh];
@@ -104,7 +105,7 @@ internal class MeshLoader
         return meshes;
     }
 
-    private static unsafe IReadOnlyList<SceneMesh> ReadNode(Node node, IReadOnlyList<Mesh> meshes)
+    private static unsafe List<SceneMesh> ReadNode(Node node, IReadOnlyList<Mesh> meshes)
     {
         uint nbSubmesh = node.MNumMeshes;
         List<SceneMesh> sceneMeshes;
@@ -147,7 +148,7 @@ internal class MeshLoader
         return sceneMeshes;
     }
 
-    private unsafe static IReadOnlyList<Sommet> ReadVertices(Silk.NET.Assimp.Mesh mesh)
+    private unsafe static Sommet[] ReadVertices(Silk.NET.Assimp.Mesh mesh)
     {
         uint nbVertices = mesh.MNumVertices;
         Sommet[] vertices = new Sommet[nbVertices];
@@ -171,14 +172,16 @@ internal class MeshLoader
         return vertices;
     }
 
-    private unsafe static IReadOnlyList<ushort> ReadIndices(Silk.NET.Assimp.Mesh mesh)
+    private unsafe static List<ushort> ReadIndices(Silk.NET.Assimp.Mesh mesh)
     {
         uint nbFaces = mesh.MNumFaces;
         List<ushort> indices = new();
         for (int j = 0; j < nbFaces; j++)
         {
             Face face = mesh.MFaces[j];
+            int nbIndices = (int)face.MNumIndices;
             Span<uint> indicesFace = new Span<uint>(face.MIndices, (int)face.MNumIndices);
+            indices.EnsureCapacity(indices.Capacity + nbIndices);
             for (int l = 0; l < indicesFace.Length; l++)
             {
                 indices.Add((ushort)indicesFace[l]);
@@ -203,7 +206,7 @@ internal class MeshLoader
         }
     }
 
-    public class MeshLoaderException : ApplicationException
+    public sealed class MeshLoaderException : ApplicationException
     {
         public MeshLoaderException(string text) : base(text) { }
         public MeshLoaderException([StringSyntax(StringSyntaxAttribute.CompositeFormat)] string format, params object?[] args) : this(string.Format(format, args)) { }

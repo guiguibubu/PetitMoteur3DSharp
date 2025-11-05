@@ -7,7 +7,7 @@ using Silk.NET.DXGI;
 
 namespace PetitMoteur3D.Graphics;
 
-internal class TextureFactory
+internal sealed class TextureFactory
 {
     private ComPtr<ID3D11Device> _device;
 

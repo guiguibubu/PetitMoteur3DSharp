@@ -21,7 +21,7 @@ namespace PetitMoteur3D.DebugGui;
 /// <remarks>
 /// Adaptation pour DX11 du ImGuiController officiel de Silk.NET (https://github.com/dotnet/Silk.NET/blob/main/src/OpenGL/Extensions/Silk.NET.OpenGL.Extensions.ImGui/ImGuiController.cs)
 /// </remarks>
-internal class ImGuiController : IDisposable
+internal sealed class ImGuiController : IDisposable
 {
     private readonly IImGuiBackendRenderer _backendRenderer;
     private readonly IWindow _view;
@@ -43,7 +43,7 @@ internal class ImGuiController : IDisposable
     private static readonly Gauge<long> TotalIdxCounter = MyMeter.CreateGauge<long>("TotalIdxCounter", "index count", "Index count");
     private static readonly Gauge<long> TotalVtxCounter = MyMeter.CreateGauge<long>("TotalVtxCounter", "vertex count", "Vertex count");
 
-    private MeterProvider _meterProvider;
+    private readonly MeterProvider _meterProvider;
     #endregion
 
     /// <summary>
@@ -101,6 +101,8 @@ internal class ImGuiController : IDisposable
             .AddMeter("PetitMoteur3D.DebugGui.ImGuiController")
             .AddConsoleExporter()
             .Build();
+
+        _disposed = false;
     }
 
     ~ImGuiController()
@@ -353,7 +355,7 @@ internal class ImGuiController : IDisposable
         _backendRenderer.RenderDrawData(in drawDataPtr);
     }
 
-    private bool _disposed = false;
+    private bool _disposed;
 
     /// <inheritdoc/>
     public void Dispose()
@@ -374,7 +376,7 @@ internal class ImGuiController : IDisposable
     // If disposing equals false, the method has been called by the
     // runtime from inside the finalizer and you should not reference
     // other objects. Only unmanaged resources can be disposed.
-    protected virtual void Dispose(bool disposing)
+    private void Dispose(bool disposing)
     {
         // Check to see if Dispose has already been called.
         if (!_disposed)

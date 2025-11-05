@@ -3,7 +3,7 @@ using System.IO;
 
 namespace PetitMoteur3D.Graphics;
 
-internal class ShaderCodeFile : IShaderFile
+internal sealed class ShaderCodeFile : IShaderFile
 {
     public string Name { get; init; }
     public string FilePath { get; init; }

@@ -20,14 +20,14 @@ namespace PetitMoteur3D.DebugGui;
 /// <remarks>
 /// Adapted from official ImGui code (https://github.com/ocornut/imgui/blob/master/backends/imgui_impl_dx11.cpp)
 /// </remarks>
-internal class ImGuiImplDX11 : IImGuiBackendRenderer
+internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
 {
     /// <summary>
     /// Singleton
     /// </summary>
     private readonly nint _backendRendererName;
     private ImGuiImplDX11Data _backendRendererUserData;
-    private bool _backendInitialized = false;
+    private bool _backendInitialized;
     private BackupDX11State _oldDxState = new();
 
     private readonly DeviceD3D11 _renderDevice;
@@ -50,6 +50,8 @@ internal class ImGuiImplDX11 : IImGuiBackendRenderer
         _backendRendererUserData = new();
         _graphicDeviceRessourceFactory = graphicDeviceRessourceFactory;
         _pipelineFactory = pipelineFactory;
+        _backendInitialized = false;
+        _disposed = false;
     }
 
     ~ImGuiImplDX11()
@@ -639,7 +641,7 @@ internal class ImGuiImplDX11 : IImGuiBackendRenderer
         deviceContext.RSSetState(_backendRendererUserData.RasterizerState);
     }
 
-    private void GetCurrentDX11State(ref readonly ComPtr<ID3D11DeviceContext> deviceContext, ref BackupDX11State curentState)
+    private static void GetCurrentDX11State(ref readonly ComPtr<ID3D11DeviceContext> deviceContext, ref BackupDX11State curentState)
     {
         deviceContext.RSGetScissorRects(ref curentState.ScissorRectsCount, ref curentState.ScissorRects.Value);
         deviceContext.RSGetViewports(ref curentState.ViewportsCount, ref curentState.Viewports.Value);
@@ -658,7 +660,7 @@ internal class ImGuiImplDX11 : IImGuiBackendRenderer
         deviceContext.IAGetInputLayout(ref curentState.InputLayout);
     }
 
-    private unsafe void SetDX11State(ref readonly ComPtr<ID3D11DeviceContext> deviceContext, ref BackupDX11State newDxState)
+    private static unsafe void SetDX11State(ref readonly ComPtr<ID3D11DeviceContext> deviceContext, ref BackupDX11State newDxState)
     {
         deviceContext.RSSetScissorRects(newDxState.ScissorRectsCount, newDxState.ScissorRects);
         deviceContext.RSSetViewports(newDxState.ViewportsCount, newDxState.Viewports);
@@ -702,7 +704,7 @@ internal class ImGuiImplDX11 : IImGuiBackendRenderer
         return result;
     }
 
-    private bool _disposed = false;
+    private bool _disposed;
 
     /// <inheritdoc/>
     public void Dispose()
@@ -723,7 +725,7 @@ internal class ImGuiImplDX11 : IImGuiBackendRenderer
     // If disposing equals false, the method has been called by the
     // runtime from inside the finalizer and you should not reference
     // other objects. Only unmanaged resources can be disposed.
-    protected virtual void Dispose(bool disposing)
+    private void Dispose(bool disposing)
     {
         // Check to see if Dispose has already been called.
         if (!_disposed)

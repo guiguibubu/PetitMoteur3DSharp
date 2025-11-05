@@ -6,7 +6,7 @@ using Silk.NET.Maths;
 
 namespace PetitMoteur3D;
 
-internal class SceneMesh
+internal sealed class SceneMesh
 {
     public Mesh Mesh { get { return _mesh; } }
     public System.Numerics.Matrix4x4 Transformation { get { return _transformation; } }

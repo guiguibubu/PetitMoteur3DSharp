@@ -5,43 +5,44 @@ using Silk.NET.Direct3D11;
 
 namespace PetitMoteur3D.Graphics;
 
-internal class TextureManager
+internal sealed class TextureManager
 {
     public TextureFactory Factory => _textureFactory;
 
-    private TextureFactory _textureFactory;
-    private readonly Dictionary<string, Texture> _textures = new();
+    private readonly TextureFactory _textureFactory;
+    private readonly Dictionary<string, Texture> _textures;
 
     public TextureManager(ComPtr<ID3D11Device> device)
     {
-        _textureFactory = new(device);
+        _textureFactory = new TextureFactory(device);
+        _textures = new Dictionary<string, Texture>();
     }
 
     public Texture GetOrLoadTexture(string fileName)
     {
-        if (_textures.ContainsKey(fileName))
+        if (TryGet(fileName, out Texture? texture))
         {
-            return _textures[fileName];
+            return texture;
         }
         else
         {
-            Texture texture = _textureFactory.FromFile(fileName);
-            _textures.Add(fileName, texture);
-            return texture;
+            Texture newTexture = _textureFactory.FromFile(fileName);
+            _textures.Add(fileName, newTexture);
+            return newTexture;
         }
     }
 
     public Texture GetOrCreateTexture(string name, nint pixels, int width, int height, int bytesPerPixel)
     {
-        if (_textures.ContainsKey(name))
+        if (TryGet(name, out Texture? texture))
         {
-            return _textures[name];
+            return texture;
         }
         else
         {
-            Texture texture = _textureFactory.Create(name, pixels, width, height, bytesPerPixel);
-            _textures.Add(name, texture);
-            return texture;
+            Texture newTexture = _textureFactory.Create(name, pixels, width, height, bytesPerPixel);
+            _textures.Add(name, newTexture);
+            return newTexture;
         }
     }
 
@@ -61,7 +62,7 @@ internal class TextureManager
         }
     }
 
-    public bool TryGet(string name, [MaybeNullWhen(false)] out Texture? texture)
+    public bool TryGet(string name, [NotNullWhen(true)][MaybeNullWhen(false)] out Texture? texture)
     {
         return _textures.TryGetValue(name, out texture);
     }
