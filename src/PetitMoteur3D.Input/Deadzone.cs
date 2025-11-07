@@ -1,3 +1,5 @@
+using System;
+
 namespace PetitMoteur3D.Input;
 
 /// <summary>

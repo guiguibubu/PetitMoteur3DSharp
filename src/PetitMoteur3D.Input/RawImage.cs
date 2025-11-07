@@ -1,4 +1,6 @@
-﻿namespace PetitMoteur3D.Input;
+﻿using System;
+
+namespace PetitMoteur3D.Input;
 
 /// <summary>
 /// Represents loaded, uncompressed, processed image data.
