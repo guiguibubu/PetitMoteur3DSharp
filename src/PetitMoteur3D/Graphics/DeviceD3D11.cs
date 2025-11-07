@@ -13,7 +13,7 @@ namespace PetitMoteur3D.Graphics;
 
 public class DeviceD3D11
 {
-    public ref ComPtr<ID3D11Device> Device { get { return ref _device; } }
+    public ref readonly ComPtr<ID3D11Device> Device { get { return ref _device; } }
     public ref ComPtr<ID3D11DeviceContext> DeviceContext { get { return ref _deviceContext; } }
     public ref ComPtr<IDXGISwapChain1> Swapchain { get { return ref _swapchain; } }
     public ref ComPtr<ID3D11RenderTargetView> RenderTargetView { get { return ref _renderTargetView; } }

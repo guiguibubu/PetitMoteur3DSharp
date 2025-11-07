@@ -176,12 +176,14 @@ internal sealed class MeshLoader
     {
         uint nbFaces = mesh.MNumFaces;
         List<ushort> indices = new();
+        int totalIndices = 0;
         for (int j = 0; j < nbFaces; j++)
         {
             Face face = mesh.MFaces[j];
             int nbIndices = (int)face.MNumIndices;
+            totalIndices += nbIndices;
             Span<uint> indicesFace = new Span<uint>(face.MIndices, (int)face.MNumIndices);
-            indices.EnsureCapacity(indices.Capacity + nbIndices);
+            indices.EnsureCapacity(totalIndices);
             for (int l = 0; l < indicesFace.Length; l++)
             {
                 indices.Add((ushort)indicesFace[l]);
