@@ -31,6 +31,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PetitMoteur3D.Core", "src\P
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PetitMoteur3D.Physics", "src\PetitMoteur3D.Physics\PetitMoteur3D.Physics.csproj", "{616D3690-21D1-4C3D-B3C5-E2FD425728B4}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PetitMoteur3D.Physics.Demo", "src\PetitMoteur3D.Physics.Demo\PetitMoteur3D.Physics.Demo.csproj", "{78A9BB0A-D2BC-4DA0-BFA5-B2D3B5EA7691}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -213,6 +215,18 @@ Global
 		{616D3690-21D1-4C3D-B3C5-E2FD425728B4}.Release|x64.Build.0 = Release|Any CPU
 		{616D3690-21D1-4C3D-B3C5-E2FD425728B4}.Release|x86.ActiveCfg = Release|Any CPU
 		{616D3690-21D1-4C3D-B3C5-E2FD425728B4}.Release|x86.Build.0 = Release|Any CPU
+		{78A9BB0A-D2BC-4DA0-BFA5-B2D3B5EA7691}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{78A9BB0A-D2BC-4DA0-BFA5-B2D3B5EA7691}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{78A9BB0A-D2BC-4DA0-BFA5-B2D3B5EA7691}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{78A9BB0A-D2BC-4DA0-BFA5-B2D3B5EA7691}.Debug|x64.Build.0 = Debug|Any CPU
+		{78A9BB0A-D2BC-4DA0-BFA5-B2D3B5EA7691}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{78A9BB0A-D2BC-4DA0-BFA5-B2D3B5EA7691}.Debug|x86.Build.0 = Debug|Any CPU
+		{78A9BB0A-D2BC-4DA0-BFA5-B2D3B5EA7691}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{78A9BB0A-D2BC-4DA0-BFA5-B2D3B5EA7691}.Release|Any CPU.Build.0 = Release|Any CPU
+		{78A9BB0A-D2BC-4DA0-BFA5-B2D3B5EA7691}.Release|x64.ActiveCfg = Release|Any CPU
+		{78A9BB0A-D2BC-4DA0-BFA5-B2D3B5EA7691}.Release|x64.Build.0 = Release|Any CPU
+		{78A9BB0A-D2BC-4DA0-BFA5-B2D3B5EA7691}.Release|x86.ActiveCfg = Release|Any CPU
+		{78A9BB0A-D2BC-4DA0-BFA5-B2D3B5EA7691}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
