@@ -48,7 +48,7 @@ internal sealed class GraphicDeviceRessourceFactory
                 windowPtr,
                 in swapChainDesc,
                 in swapChainFullscreenDesc,
-                ref Unsafe.NullRef<IDXGIOutput>(),
+                ref pRestrictToOutput,
                 ref swapChain
             )
         );

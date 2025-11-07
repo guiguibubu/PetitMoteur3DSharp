@@ -16,6 +16,8 @@ internal class D3D11GraphicDevice
 
     private ComPtr<ID3D11Device> _device;
     private ComPtr<ID3D11DeviceContext> _deviceContext;
+    
+    private readonly D3D11 _d3d11Api;
 
     private static readonly D3DFeatureLevel[] FEATURES_LEVELS = {
         D3DFeatureLevel.Level111,
@@ -32,9 +34,9 @@ internal class D3D11GraphicDevice
 
         // Create our D3D11 logical device.
 #pragma warning disable CS0618 // Type or member is obsolete
-        using D3D11 d3d11Api = D3D11.GetApi(DXSwapchainProvider.Win32, forceDxvk);
+        _d3d11Api = D3D11.GetApi(DXSwapchainProvider.Win32, forceDxvk);
 #pragma warning restore CS0618 // Type or member is obsolete
-        InitDevice(d3d11Api);
+        InitDevice(_d3d11Api);
 
         RessourceFactory = new(this);
     }
@@ -96,5 +98,6 @@ internal class D3D11GraphicDevice
         }
         _deviceContext.Dispose();
         _device.Dispose();
+        _d3d11Api.Dispose(); // we need to keep it because in Release build, it can fail to load DXGI ressources id d3d11 is dispose too soon
     }
 }
