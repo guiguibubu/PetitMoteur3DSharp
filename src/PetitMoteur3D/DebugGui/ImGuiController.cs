@@ -56,8 +56,8 @@ internal sealed class ImGuiController : IDisposable
     /// <summary>
     /// Constructs a new ImGuiController.
     /// </summary>
-    public ImGuiController(D3D11GraphicDevice graphicDevice, GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, GraphicPipelineRessourceFactory pipelineFactory, IWindow view, IInputContext? input)
-        : this(new ImGuiImplDX11(graphicDevice, graphicDeviceRessourceFactory, pipelineFactory), view, input, null)
+    public ImGuiController(D3D11GraphicPipeline graphicPipeline, IWindow view, IInputContext? input)
+        : this(new ImGuiImplDX11(graphicPipeline), view, input, null)
     {
     }
 

@@ -2,6 +2,7 @@
 using System;
 using System.Drawing;
 using System.Runtime.CompilerServices;
+using PetitMoteur3D.Graphics.Stages;
 using PetitMoteur3D.Window;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
@@ -16,6 +17,17 @@ public class D3D11GraphicPipeline
     public ref ComPtr<ID3D11DepthStencilView> DepthStencilView { get { return ref _depthStencilView; } }
     public ref ComPtr<ID3D11RasterizerState> SolidCullBackRS { get { return ref _solidCullBackRS; } }
     public ref ComPtr<ID3D11RasterizerState> WireFrameCullBackRS { get { return ref _wireFrameCullBackRS; } }
+
+    internal D3D11GraphicDevice GraphicDevice => _graphicDevice;
+
+    internal InputAssemblerStage InputAssemblerStage { get; init; }
+    internal VertexShaderStage VertexShaderStage { get; init; }
+    internal GeometryShaderStage GeometryShaderStage { get; init; }
+    internal RasterizerStage RasterizerStage { get; init; }
+    internal PixelShaderStage PixelShaderStage { get; init; }
+    internal OutputMergerStage OutputMergerStage { get; init; }
+
+    internal GraphicPipelineRessourceFactory RessourceFactory { get; }
 
     private ComPtr<IDXGISwapChain1> _swapchain;
     private ComPtr<ID3D11RenderTargetView> _renderTargetView;
@@ -42,14 +54,24 @@ public class D3D11GraphicPipeline
     /// </summary>
     /// <param name="window"></param>
     /// <param name="forceDxvk">Whether or not to force use of DXVK on platforms where native DirectX implementations are available</param>
-    internal unsafe D3D11GraphicPipeline(D3D11GraphicDevice graphicDevice, GraphicDeviceRessourceFactory graphicRessourceFactory, GraphicPipelineRessourceFactory graphicPipelineFactory, IWindow window)
+    internal unsafe D3D11GraphicPipeline(D3D11GraphicDevice graphicDevice, IWindow window)
     {
         _graphicDevice = graphicDevice;
-        _graphicRessourceFactory = graphicRessourceFactory;
+        _graphicRessourceFactory = graphicDevice.RessourceFactory;
+        RessourceFactory = new GraphicPipelineRessourceFactory(graphicDevice);
         _isSwapChainComposition = false;
 
         // Initialisation de la swapchain
         InitSwapChain(window, graphicDevice.DxVk);
+
+        // Initialisation des stages
+        InputAssemblerStage = new InputAssemblerStage(_graphicDevice.DeviceContext);
+        VertexShaderStage = new VertexShaderStage(_graphicDevice.DeviceContext);
+        GeometryShaderStage = new GeometryShaderStage(_graphicDevice.DeviceContext);
+        RasterizerStage = new RasterizerStage(_graphicDevice.DeviceContext);
+        PixelShaderStage = new PixelShaderStage(_graphicDevice.DeviceContext);
+        OutputMergerStage = new OutputMergerStage(_graphicDevice.DeviceContext);
+
 
         InitView(window);
 
@@ -59,17 +81,19 @@ public class D3D11GraphicPipeline
             CullMode = CullMode.Back,
             FrontCounterClockwise = false
         };
-        _solidCullBackRS = graphicPipelineFactory.CreateRasterizerState(in rsSolidDesc);
+        _solidCullBackRS = RessourceFactory.CreateRasterizerState(in rsSolidDesc);
         RasterizerDesc rsWireDesc = new()
         {
             FillMode = FillMode.Wireframe,
             CullMode = CullMode.None,
             FrontCounterClockwise = false
         };
-        _wireFrameCullBackRS = graphicPipelineFactory.CreateRasterizerState(in rsWireDesc);
-        graphicDevice.DeviceContext.RSSetState(_solidCullBackRS);
+        _wireFrameCullBackRS = RessourceFactory.CreateRasterizerState(in rsWireDesc);
 
+        RasterizerStage.SetState(_solidCullBackRS);
+        
         _currentSize = new Size();
+
 #if USE_RENDERDOC
         Evergine.Bindings.RenderDoc.RenderDoc.Load(out _renderDoc);
         _renderDoc.API.SetActiveWindow(new IntPtr(_device.Handle), _window.Native!.DXHandle!.Value);
@@ -174,19 +198,19 @@ public class D3D11GraphicPipeline
         _backgroundColour[3] = a;
     }
 
-    public void GetRasterizerState(out ComPtr<ID3D11RasterizerState> result)
+    public void DrawIndexed(uint IndexCount, uint StartIndexLocation, int BaseVertexLocation)
     {
-        result = null;
-        _graphicDevice.DeviceContext.RSGetState(ref result);
+        _graphicDevice.DeviceContext.DrawIndexed(IndexCount, StartIndexLocation, BaseVertexLocation);
     }
 
-    public unsafe void SetRasterizerState(ref readonly ComPtr<ID3D11RasterizerState> rsState)
+    private void SetRenderTarget(bool clear = true)
     {
-        if (rsState.Handle is null)
+        // Tell the output merger about our render target view.
+        _graphicDevice.DeviceContext.OMSetRenderTargets(1, ref _renderTargetView, _depthStencilView);
+        if (clear)
         {
-            return;
+            ClearRenderTarget();
         }
-        _graphicDevice.DeviceContext.RSSetState(rsState);
     }
 
     private unsafe void InitSwapChain(IWindow window, bool forceDxvk)
@@ -252,7 +276,7 @@ public class D3D11GraphicPipeline
         InitView(window.Size.Width, window.Size.Height);
     }
 
-    private unsafe void InitView(float width, float height)
+    private void InitView(float width, float height)
     {
         // Create « render target view » 
         // Obtain the framebuffer for the swapchain's backbuffer.
@@ -265,7 +289,7 @@ public class D3D11GraphicPipeline
 
         // Set the rasterizer state with the current viewport.
         Viewport viewport = new(0, 0, width, height, 0, 1);
-        _graphicDevice.DeviceContext.RSSetViewports(1, in viewport);
+        RasterizerStage.SetViewports(1, in viewport);
     }
 
     private unsafe void InitRenderTargetView()
@@ -316,15 +340,5 @@ public class D3D11GraphicPipeline
         _graphicDevice.DeviceContext.ClearRenderTargetView(_renderTargetView, _backgroundColour.AsSpan());
         // On ré-initialise le tampon de profondeur
         _graphicDevice.DeviceContext.ClearDepthStencilView(_depthStencilView, (uint)ClearFlag.Depth, 1.0f, 0);
-    }
-
-    private void SetRenderTarget(bool clear = true)
-    {
-        // Tell the output merger about our render target view.
-        _graphicDevice.DeviceContext.OMSetRenderTargets(1, ref _renderTargetView, _depthStencilView);
-        if (clear)
-        {
-            ClearRenderTarget();
-        }
     }
 }

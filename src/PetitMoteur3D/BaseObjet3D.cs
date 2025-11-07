@@ -133,17 +133,17 @@ internal abstract class BaseObjet3D : IObjet3D
     }
 
     /// <inheritdoc/>
-    public unsafe void Draw(ref readonly ComPtr<ID3D11DeviceContext> deviceContext, ref readonly System.Numerics.Matrix4x4 matViewProj)
+    public unsafe void Draw(D3D11GraphicPipeline graphicPipeline, ref readonly System.Numerics.Matrix4x4 matViewProj)
     {
         // Choisir la topologie des primitives
-        deviceContext.IASetPrimitiveTopology(D3DPrimitiveTopology.D3D11PrimitiveTopologyTrianglelist);
+        graphicPipeline.InputAssemblerStage.SetPrimitiveTopology(D3DPrimitiveTopology.D3D11PrimitiveTopologyTrianglelist);
         // Source des sommets
 
-        deviceContext.IASetVertexBuffers(0, 1, ref _vertexBuffer, in _vertexStride, in _vertexOffset);
+        graphicPipeline.InputAssemblerStage.SetVertexBuffers(0, 1, ref _vertexBuffer, in _vertexStride, in _vertexOffset);
         // Source des index
-        deviceContext.IASetIndexBuffer(_indexBuffer, Silk.NET.DXGI.Format.FormatR16Uint, 0);
+        graphicPipeline.InputAssemblerStage.SetIndexBuffer(_indexBuffer, Silk.NET.DXGI.Format.FormatR16Uint, 0);
         // input layout des sommets
-        deviceContext.IASetInputLayout(_vertexLayout);
+        graphicPipeline.InputAssemblerStage.SetInputLayout(_vertexLayout);
         foreach (SubObjet3D subObjet3D in GetSubObjets())
         {
             // Initialiser et sélectionner les « constantes » des shaders
@@ -156,29 +156,29 @@ internal abstract class BaseObjet3D : IObjet3D
             shadersParams.hasTexture = Convert.ToInt32(_textureD3D.Handle is not null);
             shadersParams.hasNormalMap = Convert.ToInt32(_normalMap.Handle is not null);
 
-            deviceContext.UpdateSubresource(_constantBuffer, 0, ref Unsafe.NullRef<Box>(), ref shadersParams, 0, 0);
+            graphicPipeline.RessourceFactory.UpdateSubresource(_constantBuffer, 0, in Unsafe.NullRef<Box>(), in shadersParams, 0, 0);
 
             // Activer le VS
-            deviceContext.VSSetShader(_vertexShader, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
-            deviceContext.VSSetConstantBuffers(1, 1, ref _constantBuffer);
+            graphicPipeline.VertexShaderStage.SetShader(_vertexShader, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
+            graphicPipeline.VertexShaderStage.SetConstantBuffers(1, 1, ref _constantBuffer);
             // Activer le GS
-            deviceContext.GSSetShader((ID3D11GeometryShader*)null, (ID3D11ClassInstance**)null, 0);
+            graphicPipeline.GeometryShaderStage.SetShader((ComPtr<ID3D11GeometryShader>)null, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
             // Activer le PS
-            deviceContext.PSSetShader(_pixelShader, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
-            deviceContext.PSSetConstantBuffers(1, 1, ref _constantBuffer);
+            graphicPipeline.PixelShaderStage.SetShader(_pixelShader, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
+            graphicPipeline.PixelShaderStage.SetConstantBuffers(1, 1, ref _constantBuffer);
             // Activation de la texture
             if (_textureD3D.Handle is not null)
             {
-                deviceContext.PSSetShaderResources(0, 1, ref _textureD3D);
+                graphicPipeline.PixelShaderStage.SetShaderResources(0, 1, ref _textureD3D);
             }
             if (_normalMap.Handle is not null)
             {
-                deviceContext.PSSetShaderResources(1, 1, ref _normalMap);
+                graphicPipeline.PixelShaderStage.SetShaderResources(1, 1, ref _normalMap);
             }
             // Le sampler state
-            deviceContext.PSSetSamplers(0, 1, ref _sampleState);
+            graphicPipeline.PixelShaderStage.SetSamplers(0, 1, ref _sampleState);
             // **** Rendu de l’objet
-            deviceContext.DrawIndexed((uint)_indices.Length, 0, 0);
+            graphicPipeline.DrawIndexed((uint)_indices.Length, 0, 0);
 
             _objectShadersParamsPool.Return(shadersParamsWrapper);
         }

@@ -66,59 +66,72 @@ internal sealed class TextureFactory
             ArraySize = 1
         };
 
-        ComPtr<ID3D11Texture2D> texture = default;
-        ComPtr<ID3D11ShaderResourceView> textureView = default;
-        try
+        SubresourceData subresourceData = new()
         {
-            SubresourceData subresourceData = new()
-            {
-                PSysMem = pixels,
-                SysMemPitch = (uint)(width * Marshal.SizeOf<SixLabors.ImageSharp.PixelFormats.Bgra32>()),
-                SysMemSlicePitch = (uint)(width * Marshal.SizeOf<SixLabors.ImageSharp.PixelFormats.Bgra32>() * height)
-            };
+            PSysMem = pixels,
+            SysMemPitch = (uint)(width * Marshal.SizeOf<SixLabors.ImageSharp.PixelFormats.Bgra32>()),
+            SysMemSlicePitch = (uint)(width * Marshal.SizeOf<SixLabors.ImageSharp.PixelFormats.Bgra32>() * height)
+        };
 
-            SilkMarshal.ThrowHResult
-            (
-                _device.CreateTexture2D
-                (
-                    in textureDesc,
-                    in subresourceData,
-                    ref texture
-                )
-            );
+        using ComPtr<ID3D11Texture2D> texture = CreateTexture2D(in textureDesc, in subresourceData);
 
-            // Create a view of the texture for the shader.
-            ShaderResourceViewDesc srvDesc = new()
+        // Create a view of the texture for the shader.
+        ShaderResourceViewDesc srvDesc = new()
+        {
+            Format = textureDesc.Format,
+            ViewDimension = D3DSrvDimension.D3DSrvDimensionTexture2D,
+            Anonymous = new ShaderResourceViewDescUnion
             {
-                Format = textureDesc.Format,
-                ViewDimension = D3DSrvDimension.D3DSrvDimensionTexture2D,
-                Anonymous = new ShaderResourceViewDescUnion
-                {
-                    Texture2D =
+                Texture2D =
                     {
                         MostDetailedMip = 0,
                         MipLevels = 1
                     }
-                }
-            };
+            }
+        };
 
+        ComPtr<ID3D11ShaderResourceView> textureView = CreateShaderResourceView(texture, in srvDesc);
 
-            SilkMarshal.ThrowHResult
+        return new Texture(name, width, height, textureView);
+    }
+
+    public ComPtr<ID3D11Texture2D> CreateTexture2D(in Texture2DDesc pDesc, in SubresourceData pInitialData)
+    {
+        ComPtr<ID3D11Texture2D> texture2D = default;
+        SilkMarshal.ThrowHResult(
+            _device.CreateTexture2D(in pDesc, in pInitialData, ref texture2D)
+        );
+        return texture2D;
+    }
+
+    public ComPtr<ID3D11ShaderResourceView> CreateShaderResourceView(ComPtr<ID3D11Resource> pResource, in ShaderResourceViewDesc pDesc)
+    {
+        ComPtr<ID3D11ShaderResourceView> textureView = default;
+        SilkMarshal.ThrowHResult
             (
                 _device.CreateShaderResourceView
                 (
-                    texture,
-                    in srvDesc,
+                    pResource,
+                    in pDesc,
                     ref textureView
                 )
             );
-        }
-        finally
-        {
-            texture.Dispose();
-        }
+        return textureView;
+    }
 
-        return new Texture(name, width, height, textureView);
+    public ComPtr<ID3D11ShaderResourceView> CreateShaderResourceView(ComPtr<ID3D11Texture2D> pResource, in ShaderResourceViewDesc pDesc)
+    {
+        ComPtr<ID3D11ShaderResourceView> textureView = default;
+        SilkMarshal.ThrowHResult
+            (
+                _device.CreateShaderResourceView
+                (
+                    pResource,
+                    in pDesc,
+                    ref textureView
+                )
+            );
+        return textureView;
     }
 
     public unsafe ComPtr<ID3D11SamplerState> CreateSampler(SamplerDesc desc, string? name = null)

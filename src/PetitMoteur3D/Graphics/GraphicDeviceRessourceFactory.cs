@@ -15,7 +15,8 @@ internal sealed class GraphicDeviceRessourceFactory
     private readonly GraphicBufferFactory _bufferFactory;
     private readonly ShaderManager _shaderManager;
     private readonly TextureManager _textureManager;
-    private readonly D3D11GraphicDevice _graphicDevice;
+    private readonly ComPtr<ID3D11Device> _device;
+    private readonly bool _dxVk;
 
     public GraphicDeviceRessourceFactory(D3D11GraphicDevice graphicDevice)
         : this(graphicDevice, new GraphicBufferFactory(graphicDevice.Device), new ShaderManager(graphicDevice.Device), new TextureManager(graphicDevice.Device))
@@ -26,14 +27,15 @@ internal sealed class GraphicDeviceRessourceFactory
         _bufferFactory = bufferFactory;
         _shaderManager = shaderManager;
         _textureManager = textureManager;
-        _graphicDevice = graphicDevice;
+        _device = graphicDevice.Device;
+        _dxVk = graphicDevice.DxVk;
     }
 
     public ComPtr<IDXGISwapChain1> CreateSwapChainForHwnd(IntPtr windowPtr, in SwapChainDesc1 swapChainDesc, in SwapChainFullscreenDesc swapChainFullscreenDesc, ref IDXGIOutput pRestrictToOutput)
     {
         // Create our DXGI factory to allow us to create a swapchain. 
 #pragma warning disable CS0618 // Type or member is obsolete
-        using DXGI dxgi = DXGI.GetApi(DXSwapchainProvider.Win32, _graphicDevice.DxVk);
+        using DXGI dxgi = DXGI.GetApi(DXSwapchainProvider.Win32, _dxVk);
 #pragma warning restore CS0618 // Type or member is obsolete
         using ComPtr<IDXGIFactory2> factory = dxgi.CreateDXGIFactory<IDXGIFactory2>();
 
@@ -42,7 +44,7 @@ internal sealed class GraphicDeviceRessourceFactory
         (
             factory.CreateSwapChainForHwnd
             (
-                _graphicDevice.Device,
+                _device,
                 windowPtr,
                 in swapChainDesc,
                 in swapChainFullscreenDesc,
@@ -58,7 +60,7 @@ internal sealed class GraphicDeviceRessourceFactory
     {
         // Create our DXGI factory to allow us to create a swapchain. 
 #pragma warning disable CS0618 // Type or member is obsolete
-        using DXGI dxgi = DXGI.GetApi(DXSwapchainProvider.Win32, _graphicDevice.DxVk);
+        using DXGI dxgi = DXGI.GetApi(DXSwapchainProvider.Win32, _dxVk);
 #pragma warning restore CS0618 // Type or member is obsolete
         using ComPtr<IDXGIFactory2> factory = dxgi.CreateDXGIFactory<IDXGIFactory2>();
 
@@ -68,7 +70,7 @@ internal sealed class GraphicDeviceRessourceFactory
         (
             factory.CreateSwapChainForComposition
             (
-                _graphicDevice.Device,
+                _device,
                 in swapChainDesc,
                 ref Unsafe.NullRef<IDXGIOutput>(),
                 ref swapChain
@@ -82,7 +84,7 @@ internal sealed class GraphicDeviceRessourceFactory
     {
         ComPtr<ID3D11RenderTargetView> renderTargetView = default;
         SilkMarshal.ThrowHResult(
-            _graphicDevice.Device.CreateRenderTargetView(pResource, ref Unsafe.NullRef<RenderTargetViewDesc>(), ref renderTargetView)
+            _device.CreateRenderTargetView(pResource, ref Unsafe.NullRef<RenderTargetViewDesc>(), ref renderTargetView)
         );
         return renderTargetView;
     }
@@ -91,7 +93,7 @@ internal sealed class GraphicDeviceRessourceFactory
     {
         ComPtr<ID3D11Texture2D> texture2D = default;
         SilkMarshal.ThrowHResult(
-            _graphicDevice.Device.CreateTexture2D(in pDesc, ref Unsafe.NullRef<SubresourceData>(), ref texture2D)
+            _device.CreateTexture2D(in pDesc, ref Unsafe.NullRef<SubresourceData>(), ref texture2D)
         );
         return texture2D;
     }
@@ -100,7 +102,7 @@ internal sealed class GraphicDeviceRessourceFactory
     {
         ComPtr<ID3D11DepthStencilView> depthStencilView = default;
         SilkMarshal.ThrowHResult(
-            _graphicDevice.Device.CreateDepthStencilView(pResource, in pDesc, ref depthStencilView)
+            _device.CreateDepthStencilView(pResource, in pDesc, ref depthStencilView)
         );
         return depthStencilView;
     }

@@ -66,7 +66,7 @@ internal sealed class Scene : IDrawableObjet
         _camera.Update(elapsedTime);
     }
 
-    public void Draw(ref readonly ComPtr<ID3D11DeviceContext> deviceContext, ref readonly System.Numerics.Matrix4x4 matViewProj)
+    public void Draw(D3D11GraphicPipeline graphicPipeline, ref readonly System.Numerics.Matrix4x4 matViewProj)
     {
         // Initialiser et sélectionner les « constantes » des shaders
         ref Vector4D<float> cameraPosParam = ref _shadersParams.CameraPos;
@@ -75,12 +75,12 @@ internal sealed class Scene : IDrawableObjet
         cameraPosParam.Y = cameraPos.Y;
         cameraPosParam.Z = cameraPos.Z;
 
-        deviceContext.UpdateSubresource(_constantBuffer, 0, ref Unsafe.NullRef<Box>(), in _shadersParams, 0, 0);
-        deviceContext.VSSetConstantBuffers(0, 1, ref _constantBuffer);
-        deviceContext.PSSetConstantBuffers(0, 1, ref _constantBuffer);
+        graphicPipeline.RessourceFactory.UpdateSubresource(_constantBuffer, 0, in Unsafe.NullRef<Box>(), in _shadersParams, 0, 0);
+        graphicPipeline.VertexShaderStage.SetConstantBuffers(0, 1, ref _constantBuffer);
+        graphicPipeline.PixelShaderStage.SetConstantBuffers(0, 1, ref _constantBuffer);
         foreach (IObjet3D obj in _objects3D)
         {
-            obj.Draw(in deviceContext, in matViewProj);
+            obj.Draw(graphicPipeline, in matViewProj);
         }
     }
 }

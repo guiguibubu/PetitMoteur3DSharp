@@ -11,6 +11,9 @@ internal class D3D11GraphicDevice
     public ref readonly ComPtr<ID3D11Device> Device { get { return ref _device; } }
     public ref readonly ComPtr<ID3D11DeviceContext> DeviceContext { get { return ref _deviceContext; } }
     public bool DxVk { get; }
+
+    public GraphicDeviceRessourceFactory RessourceFactory { get; }
+
     private ComPtr<ID3D11Device> _device;
     private ComPtr<ID3D11DeviceContext> _deviceContext;
 
@@ -23,7 +26,7 @@ internal class D3D11GraphicDevice
     /// 
     /// </summary>
     /// <param name="forceDxvk">Whether or not to force use of DXVK on platforms where native DirectX implementations are available</param>
-    public unsafe D3D11GraphicDevice(bool forceDxvk = false)
+    public D3D11GraphicDevice(bool forceDxvk = false)
     {
         DxVk = forceDxvk;
 
@@ -32,6 +35,8 @@ internal class D3D11GraphicDevice
         using D3D11 d3d11Api = D3D11.GetApi(DXSwapchainProvider.Win32, forceDxvk);
 #pragma warning restore CS0618 // Type or member is obsolete
         InitDevice(d3d11Api);
+
+        RessourceFactory = new(this);
     }
 
     public void SetMaximumFrameLatency(uint maxLatency)

@@ -279,20 +279,20 @@ public class Engine
 
                         if (wireFrameChanged)
                         {
+                            ComPtr<ID3D11RasterizerState> rasterizerState = default;
+                            _graphicPipeline.RasterizerStage.GetState(ref rasterizerState);
                             if (_showWireFrame)
                             {
-                                _graphicPipeline.GetRasterizerState(out ComPtr<ID3D11RasterizerState> rasterizerState);
                                 if (rasterizerState.Handle != _graphicPipeline.WireFrameCullBackRS.Handle)
                                 {
-                                    _graphicPipeline.SetRasterizerState(in _graphicPipeline.WireFrameCullBackRS);
+                                    _graphicPipeline.RasterizerStage.SetState(_graphicPipeline.WireFrameCullBackRS);
                                 }
                             }
-                            if (!_showWireFrame)
+                            else
                             {
-                                _graphicPipeline.GetRasterizerState(out ComPtr<ID3D11RasterizerState> rasterizerState);
                                 if (rasterizerState.Handle != _graphicPipeline.SolidCullBackRS.Handle)
                                 {
-                                    _graphicPipeline.SetRasterizerState(in _graphicPipeline.SolidCullBackRS);
+                                    _graphicPipeline.RasterizerStage.SetState(_graphicPipeline.SolidCullBackRS);
                                 }
                             }
                         }
@@ -348,9 +348,9 @@ public class Engine
     private void InitRendering()
     {
         _graphicDevice = new D3D11GraphicDevice(!_onNativeDxPlatform);
-        _graphicDeviceRessourceFactory = new GraphicDeviceRessourceFactory(_graphicDevice);
-        _graphicPipelineRessourceFactory = new GraphicPipelineRessourceFactory(_graphicDevice.Device);
-        _graphicPipeline = new D3D11GraphicPipeline(_graphicDevice, _graphicDeviceRessourceFactory, _graphicPipelineRessourceFactory, _window);
+        _graphicDeviceRessourceFactory = _graphicDevice.RessourceFactory;
+        _graphicPipelineRessourceFactory = new GraphicPipelineRessourceFactory(_graphicDevice);
+        _graphicPipeline = new D3D11GraphicPipeline(_graphicDevice, _window);
         _graphicPipeline.GetBackgroundColour(out Vector4 backgroundColor);
         _backgroundColour = backgroundColor;
         _meshLoader = new MeshLoader();
@@ -358,9 +358,9 @@ public class Engine
 
     private void InitScene()
     {
-        //_camera = new FixedCamera(Vector3.Zero);
+        _camera = new FixedCamera(Vector3.Zero);
         //_camera = new ArcCamera(Vector3.Zero);
-        _camera = new FreeCamera(_window);
+        //_camera = new FreeCamera(_window);
         _camera.Move(-10 * Vector3.UnitZ);
 
         _scene = new Scene(_graphicDeviceRessourceFactory.BufferFactory, _camera);
@@ -446,7 +446,7 @@ public class Engine
 
     private void InitDebugTools()
     {
-        _imGuiController = new ImGuiController(_graphicDevice, _graphicDeviceRessourceFactory, _graphicPipelineRessourceFactory, _window, _inputContext);
+        _imGuiController = new ImGuiController(_graphicPipeline, _window, _inputContext);
     }
 
     private void AnimeScene(float tempsEcoule)
@@ -461,7 +461,7 @@ public class Engine
         {
             _camera.GetViewMatrix(out _matView);
             Matrix4x4 matViewProj = _matView * _matProj;
-            _scene.Draw(in _graphicDevice.DeviceContext, in matViewProj);
+            _scene.Draw(_graphicPipeline, in matViewProj);
         }
     }
 

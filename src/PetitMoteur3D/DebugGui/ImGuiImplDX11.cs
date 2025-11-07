@@ -31,8 +31,9 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
     private BackupDX11State _oldDxState = new();
 
     private readonly D3D11GraphicDevice _graphicDevice;
+    private readonly D3D11GraphicPipeline _graphicPipeline;
     private readonly GraphicDeviceRessourceFactory _graphicDeviceRessourceFactory;
-    private readonly GraphicPipelineRessourceFactory _pipelineFactory;
+    private readonly GraphicPipelineRessourceFactory _pipelineRessourceFactory;
 
     private static readonly IObjectPool<System.Numerics.Vector2> _vector2Pool = ObjectPoolFactory.Create<System.Numerics.Vector2>();
     private static readonly IObjectPool<Box2D<int>> _box2DPool = ObjectPoolFactory.Create<Box2D<int>>();
@@ -43,13 +44,14 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
     private static unsafe readonly uint IndexBufferStride = (uint)Unsafe.SizeOf<ImDrawIdx>();
     private static readonly uint VertexBufferOffset = 0;
 
-    public ImGuiImplDX11(D3D11GraphicDevice graphicDevice, GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, GraphicPipelineRessourceFactory pipelineFactory)
+    public ImGuiImplDX11(D3D11GraphicPipeline graphicPipeline)
     {
-        _graphicDevice = graphicDevice;
+        _graphicPipeline = graphicPipeline;
+        _pipelineRessourceFactory = graphicPipeline.RessourceFactory;
+        _graphicDevice = graphicPipeline.GraphicDevice;
+        _graphicDeviceRessourceFactory = graphicPipeline.GraphicDevice.RessourceFactory;
         _backendRendererName = Marshal.StringToHGlobalAuto("imgui_impl_dx11");
         _backendRendererUserData = new();
-        _graphicDeviceRessourceFactory = graphicDeviceRessourceFactory;
-        _pipelineFactory = pipelineFactory;
         _backendInitialized = false;
         _disposed = false;
     }
@@ -61,10 +63,10 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
 
     public bool Init(ref readonly ImGuiIOPtr io)
     {
-        return InitImpl(in io, in _graphicDevice.Device, in _graphicDevice.DeviceContext);
+        return InitImpl(in io, _graphicDevice);
     }
 
-    private unsafe bool InitImpl(ref readonly ImGuiIOPtr io, ref readonly ComPtr<ID3D11Device> device, ref readonly ComPtr<ID3D11DeviceContext> deviceContext)
+    private unsafe bool InitImpl(ref readonly ImGuiIOPtr io, D3D11GraphicDevice graphicDevice)
     {
         if (io.BackendRendererUserData != IntPtr.Zero || _backendInitialized)
         {
@@ -85,7 +87,7 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
 
         SilkMarshal.ThrowHResult
         (
-            device.QueryInterface(out dxgiDevice)
+            graphicDevice.Device.QueryInterface(out dxgiDevice)
         );
         SilkMarshal.ThrowHResult(
             dxgiDevice.GetParent(out dxgiAdapter)
@@ -94,8 +96,8 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
             dxgiAdapter.GetParent(out factory)
         );
         {
-            _backendRendererUserData.D3dDevice = device;
-            _backendRendererUserData.D3dDeviceContext = deviceContext;
+            _backendRendererUserData.D3dDevice = graphicDevice.Device;
+            _backendRendererUserData.D3dDeviceContext = graphicDevice.DeviceContext;
             _backendRendererUserData.Factory = factory;
         }
         dxgiDevice.Dispose();
@@ -134,7 +136,7 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
         }
 
         if (_backendRendererUserData.FontSampler.Handle is null)
-            CreateDeviceObjects(_graphicDeviceRessourceFactory, _pipelineFactory);
+            CreateDeviceObjects(_graphicDeviceRessourceFactory, _pipelineRessourceFactory);
     }
 
     public unsafe void RenderDrawData(ref readonly ImDrawDataPtr drawDataPtr)
@@ -144,8 +146,6 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
         // Avoid rendering when minimized
         if (displaySize.X <= 0.0f || displaySize.Y <= 0.0f)
             return;
-
-        ComPtr<ID3D11DeviceContext> deviceContext = _backendRendererUserData.D3dDeviceContext;
 
         // Create and grow vertex/index buffers if needed
         if (_backendRendererUserData.VertexBuffer.Handle is null || _backendRendererUserData.VertexBufferSize < drawData.TotalVtxCount)
@@ -257,12 +257,8 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
         {
             MappedSubresource vertexResource = default;
             MappedSubresource indexResource = default;
-            SilkMarshal.ThrowHResult(
-                deviceContext.Map(_backendRendererUserData.VertexBuffer, 0, Map.WriteDiscard, 0, ref vertexResource)
-            );
-            SilkMarshal.ThrowHResult(
-                deviceContext.Map(_backendRendererUserData.IndexBuffer, 0, Map.WriteDiscard, 0, ref indexResource)
-            );
+            _pipelineRessourceFactory.Map(_backendRendererUserData.VertexBuffer, 0, Map.WriteDiscard, 0, ref vertexResource);
+            _pipelineRessourceFactory.Map(_backendRendererUserData.IndexBuffer, 0, Map.WriteDiscard, 0, ref indexResource);
             ImDrawVert* vertexDest = (ImDrawVert*)(vertexResource.PData);
             ImDrawIdx* indexDest = (ImDrawIdx*)(indexResource.PData);
             int remainingVertexBufferSpace = _backendRendererUserData.VertexBufferSize;
@@ -284,17 +280,15 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
                 indexDest += cmdIndexBuffer.Size;
             }
 
-            deviceContext.Unmap(_backendRendererUserData.VertexBuffer, 0);
-            deviceContext.Unmap(_backendRendererUserData.IndexBuffer, 0);
+            _pipelineRessourceFactory.Unmap(_backendRendererUserData.VertexBuffer, 0);
+            _pipelineRessourceFactory.Unmap(_backendRendererUserData.IndexBuffer, 0);
         }
 
         // Setup orthographic projection matrix into our constant buffer
         // Our visible imgui space lies from drawData->DisplayPos (top left) to drawData->DisplayPos+data_data->DisplaySize (bottom right). DisplayPos is (0,0) for single viewport apps.
         {
             MappedSubresource mappedResource = default;
-            SilkMarshal.ThrowHResult(
-                deviceContext.Map(_backendRendererUserData.VertexConstantBuffer, 0, Map.WriteDiscard, 0, ref mappedResource)
-            );
+            _pipelineRessourceFactory.Map(_backendRendererUserData.VertexConstantBuffer, 0, Map.WriteDiscard, 0, ref mappedResource);
             void* constantBufferPtr = mappedResource.PData;
             float left = drawData.DisplayPos.X;
             float right = drawData.DisplayPos.X + drawData.DisplaySize.X;
@@ -305,14 +299,14 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
             Matrix4X4<float> matriceProjection = CreateOrthographicOffCenterLH(left, right, bottom, top, nearPlane, 3);
             Matrix4X4<float> mvp = matriceMonde * matriceProjection;
             System.Buffer.MemoryCopy(Unsafe.AsPointer(ref mvp), constantBufferPtr, (uint)sizeof(Matrix4X4<float>), (uint)sizeof(Matrix4X4<float>));
-            deviceContext.Unmap(_backendRendererUserData.VertexConstantBuffer, 0);
+            _pipelineRessourceFactory.Unmap(_backendRendererUserData.VertexConstantBuffer, 0);
         }
 
         // Saveold DX conf
-        GetCurrentDX11State(in deviceContext, ref _oldDxState);
+        GetCurrentDX11State(_graphicPipeline, ref _oldDxState);
 
         // Setup desired DX state
-        SetupRenderState(in drawData, in deviceContext);
+        SetupRenderState(in drawData, _graphicPipeline);
 
         // Render command lists
         // (Because we merged all buffers into a single one, we maintain our own offset into them)
@@ -336,7 +330,7 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
                         // #define ImDrawCallback_ResetRenderState     (ImDrawCallback)(-8)
                         if (cmd.UserCallback == -8)
                         {
-                            SetupRenderState(in drawData, in deviceContext);
+                            SetupRenderState(in drawData, _graphicPipeline);
                         }
                         else
                         {
@@ -365,7 +359,7 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
                         r.Min.Y = (int)clipMin.Y;
                         r.Max.X = (int)clipMax.X;
                         r.Max.Y = (int)clipMax.Y;
-                        deviceContext.RSSetScissorRects(1, ref r);
+                        _graphicPipeline.RasterizerStage.SetScissorRects(1, in r);
 
                         _vector2Pool.Return(clipMinWrapper);
                         _vector2Pool.Return(clipMaxWrapper);
@@ -374,13 +368,13 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
                         // Bind texture, Draw
                         fixed (ImDrawCmd* cmdPtr = &cmd)
                         {
-                            ID3D11ShaderResourceView* texture_srv = (ID3D11ShaderResourceView*)ImGuiNative.ImDrawCmd_GetTexID(cmdPtr);
-                            deviceContext.PSSetShaderResources(0, 1, in texture_srv);
+                            ComPtr<ID3D11ShaderResourceView> texture_srv = (ID3D11ShaderResourceView*)ImGuiNative.ImDrawCmd_GetTexID(cmdPtr);
+                            _graphicPipeline.PixelShaderStage.SetShaderResources(0, 1, ref texture_srv);
                         }
                         uint nbIndexToDraw = cmd.ElemCount;
                         uint indexOffset = (uint)(cmd.IdxOffset + globalIdxOffset);
                         int baseVertexLocation = (int)(cmd.VtxOffset + globalVtxOffset);
-                        deviceContext.DrawIndexed(nbIndexToDraw, indexOffset, baseVertexLocation);
+                        _graphicPipeline.DrawIndexed(nbIndexToDraw, indexOffset, baseVertexLocation);
                     }
                 }
                 ref readonly ImVector cmdVertexBuffer = ref cmdList.VtxBuffer;
@@ -392,7 +386,7 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
         }
 
         // Restore modified DX state
-        SetDX11State(in deviceContext, ref _oldDxState);
+        SetDX11State(_graphicPipeline, ref _oldDxState);
     }
 
     private unsafe bool CreateDeviceObjects(GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, GraphicPipelineRessourceFactory pipelineFactory)
@@ -604,7 +598,7 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
         return true;
     }
 
-    private unsafe void SetupRenderState(ref readonly ImDrawData drawData, ref readonly ComPtr<ID3D11DeviceContext> deviceContext)
+    private unsafe void SetupRenderState(ref readonly ImDrawData drawData, D3D11GraphicPipeline graphicPipeline)
     {
         // Setup viewport
         _viewPortPool.Get(out ObjectPoolWrapper<Viewport> viewPortWrapper);
@@ -615,68 +609,68 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
         viewPort.MaxDepth = 1f;
         viewPort.TopLeftX = 0f;
         viewPort.TopLeftY = 0f;
-        deviceContext.RSSetViewports(1, ref viewPort);
+        graphicPipeline.RasterizerStage.SetViewports(1, in viewPort);
 
         _viewPortPool.Return(viewPortWrapper);
 
         // Setup shader and vertex buffers
 
-        deviceContext.IASetInputLayout(_backendRendererUserData.InputLayout);
-        deviceContext.IASetVertexBuffers(0, 1, ref _backendRendererUserData.VertexBuffer, in VertexBufferStride, in VertexBufferOffset);
-        deviceContext.IASetIndexBuffer(_backendRendererUserData.IndexBuffer, sizeof(ImDrawIdx) == 2 ? Format.FormatR16Uint : Format.FormatR32Uint, 0);
-        deviceContext.IASetPrimitiveTopology(D3DPrimitiveTopology.D3D11PrimitiveTopologyTrianglelist);
-        deviceContext.VSSetShader(_backendRendererUserData.VertexShader, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
-        deviceContext.VSSetConstantBuffers(0, 1, ref _backendRendererUserData.VertexConstantBuffer);
-        deviceContext.PSSetShader(_backendRendererUserData.PixelShader, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
-        deviceContext.PSSetSamplers(0, 1, ref _backendRendererUserData.FontSampler);
-        // deviceContext.GSSetShader(Unsafe.NullRef<ComPtr<ID3D11GeometryShader>>(), ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
+        graphicPipeline.InputAssemblerStage.SetInputLayout(_backendRendererUserData.InputLayout);
+        graphicPipeline.InputAssemblerStage.SetVertexBuffers(0, 1, ref _backendRendererUserData.VertexBuffer, in VertexBufferStride, in VertexBufferOffset);
+        graphicPipeline.InputAssemblerStage.SetIndexBuffer(_backendRendererUserData.IndexBuffer, sizeof(ImDrawIdx) == 2 ? Format.FormatR16Uint : Format.FormatR32Uint, 0);
+        graphicPipeline.InputAssemblerStage.SetPrimitiveTopology(D3DPrimitiveTopology.D3D11PrimitiveTopologyTrianglelist);
+        graphicPipeline.VertexShaderStage.SetShader(_backendRendererUserData.VertexShader, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
+        graphicPipeline.VertexShaderStage.SetConstantBuffers(0, 1, ref _backendRendererUserData.VertexConstantBuffer);
+        graphicPipeline.PixelShaderStage.SetShader(_backendRendererUserData.PixelShader, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
+        graphicPipeline.PixelShaderStage.SetSamplers(0, 1, ref _backendRendererUserData.FontSampler);
+        // graphicPipeline.GeometryShaderStage.SetShader(Unsafe.NullRef<ComPtr<ID3D11GeometryShader>>(), ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
         // deviceContext.HSSetShader(Unsafe.NullRef<ComPtr<ID3D11HullShader>>(), ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0); // In theory we should backup and restore this as well.. very infrequently used..
         // deviceContext.DSSetShader(Unsafe.NullRef<ComPtr<ID3D11DomainShader>>(), ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0); // In theory we should backup and restore this as well.. very infrequently used..
         // deviceContext.CSSetShader(Unsafe.NullRef<ComPtr<ID3D11ComputeShader>>(), ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0); // In theory we should backup and restore this as well.. very infrequently used..
 
         // Setup blend state
         float[] blendFactor = { 0f, 0f, 0f, 0f };
-        deviceContext.OMSetBlendState(_backendRendererUserData.BlendState, blendFactor, 0xffffffff);
-        deviceContext.OMSetDepthStencilState(_backendRendererUserData.DepthStencilState, 0);
-        deviceContext.RSSetState(_backendRendererUserData.RasterizerState);
+        graphicPipeline.OutputMergerStage.SetBlendState(_backendRendererUserData.BlendState, ref blendFactor[0], 0xffffffff);
+        graphicPipeline.OutputMergerStage.SetDepthStencilState(_backendRendererUserData.DepthStencilState, 0);
+        graphicPipeline.RasterizerStage.SetState(_backendRendererUserData.RasterizerState);
     }
 
-    private static void GetCurrentDX11State(ref readonly ComPtr<ID3D11DeviceContext> deviceContext, ref BackupDX11State curentState)
+    private static void GetCurrentDX11State(D3D11GraphicPipeline graphicPipeline, ref BackupDX11State curentState)
     {
-        deviceContext.RSGetScissorRects(ref curentState.ScissorRectsCount, ref curentState.ScissorRects.Value);
-        deviceContext.RSGetViewports(ref curentState.ViewportsCount, ref curentState.Viewports.Value);
-        deviceContext.RSGetState(ref curentState.RasterizerState);
-        deviceContext.OMGetBlendState(ref curentState.BlendState, ref curentState.BlendFactor.Value, ref curentState.SampleMask);
-        deviceContext.OMGetDepthStencilState(ref curentState.DepthStencilState, ref curentState.StencilRef);
-        deviceContext.PSGetShaderResources(0, 1, ref curentState.PSShaderResource);
-        deviceContext.PSGetSamplers(0, 1, ref curentState.PSSampler);
-        deviceContext.PSGetShader(ref curentState.PixelShader, ref curentState.PSInstances, ref curentState.PSInstancesCount);
-        deviceContext.VSGetShader(ref curentState.VertexShader, ref curentState.VSInstances, ref curentState.VSInstancesCount);
-        deviceContext.VSGetConstantBuffers(0, 1, ref curentState.VSConstantBuffer);
-        deviceContext.GSGetShader(ref curentState.GeometryShader, ref curentState.GSInstances, ref curentState.GSInstancesCount);
-        deviceContext.IAGetPrimitiveTopology(ref curentState.PrimitiveTopology);
-        deviceContext.IAGetIndexBuffer(ref curentState.IndexBuffer, ref curentState.IndexBufferFormat, ref curentState.IndexBufferOffset);
-        deviceContext.IAGetVertexBuffers(0, 1, ref curentState.VertexBuffer, ref curentState.VertexBufferStride, ref curentState.VertexBufferOffset);
-        deviceContext.IAGetInputLayout(ref curentState.InputLayout);
+        graphicPipeline.RasterizerStage.GetScissorRects(ref curentState.ScissorRectsCount, ref curentState.ScissorRects.Value);
+        graphicPipeline.RasterizerStage.GetViewports(ref curentState.ViewportsCount, ref curentState.Viewports.Value);
+        graphicPipeline.RasterizerStage.GetState(ref curentState.RasterizerState);
+        graphicPipeline.OutputMergerStage.GetBlendState(ref curentState.BlendState, ref curentState.BlendFactor.Value, ref curentState.SampleMask);
+        graphicPipeline.OutputMergerStage.GetDepthStencilState(ref curentState.DepthStencilState, ref curentState.StencilRef);
+        graphicPipeline.PixelShaderStage.GetShaderResources(0, 1, ref curentState.PSShaderResource);
+        graphicPipeline.PixelShaderStage.GetSamplers(0, 1, ref curentState.PSSampler);
+        graphicPipeline.PixelShaderStage.GetShader(ref curentState.PixelShader, ref curentState.PSInstances, ref curentState.PSInstancesCount);
+        graphicPipeline.VertexShaderStage.GetShader(ref curentState.VertexShader, ref curentState.VSInstances, ref curentState.VSInstancesCount);
+        graphicPipeline.VertexShaderStage.GetConstantBuffers(0, 1, ref curentState.VSConstantBuffer);
+        graphicPipeline.GeometryShaderStage.GetShader(ref curentState.GeometryShader, ref curentState.GSInstances, ref curentState.GSInstancesCount);
+        graphicPipeline.InputAssemblerStage.GetPrimitiveTopology(ref curentState.PrimitiveTopology);
+        graphicPipeline.InputAssemblerStage.GetIndexBuffer(ref curentState.IndexBuffer, ref curentState.IndexBufferFormat, ref curentState.IndexBufferOffset);
+        graphicPipeline.InputAssemblerStage.GetVertexBuffers(0, 1, ref curentState.VertexBuffer, ref curentState.VertexBufferStride, ref curentState.VertexBufferOffset);
+        graphicPipeline.InputAssemblerStage.GetInputLayout(ref curentState.InputLayout);
     }
 
-    private static unsafe void SetDX11State(ref readonly ComPtr<ID3D11DeviceContext> deviceContext, ref BackupDX11State newDxState)
+    private static unsafe void SetDX11State(D3D11GraphicPipeline graphicPipeline, ref BackupDX11State newDxState)
     {
-        deviceContext.RSSetScissorRects(newDxState.ScissorRectsCount, newDxState.ScissorRects);
-        deviceContext.RSSetViewports(newDxState.ViewportsCount, newDxState.Viewports);
-        deviceContext.RSSetState(newDxState.RasterizerState);
-        deviceContext.OMSetBlendState(newDxState.BlendState, newDxState.BlendFactor, newDxState.SampleMask);
-        deviceContext.OMSetDepthStencilState(newDxState.DepthStencilState, newDxState.StencilRef);
-        deviceContext.PSSetShaderResources(0, 1, ref newDxState.PSShaderResource);
-        deviceContext.PSSetSamplers(0, 1, ref newDxState.PSSampler);
-        deviceContext.PSSetShader(newDxState.PixelShader, ref newDxState.PSInstances, newDxState.PSInstancesCount);
-        deviceContext.VSSetShader(newDxState.VertexShader, ref newDxState.VSInstances, newDxState.VSInstancesCount);
-        deviceContext.VSSetConstantBuffers(0, 1, ref newDxState.VSConstantBuffer);
-        deviceContext.GSSetShader(newDxState.GeometryShader, ref newDxState.GSInstances, newDxState.GSInstancesCount);
-        deviceContext.IASetPrimitiveTopology(newDxState.PrimitiveTopology);
-        deviceContext.IASetIndexBuffer(newDxState.IndexBuffer, newDxState.IndexBufferFormat, newDxState.IndexBufferOffset);
-        deviceContext.IASetVertexBuffers(0, 1, ref newDxState.VertexBuffer, ref newDxState.VertexBufferStride, ref newDxState.VertexBufferOffset);
-        deviceContext.IASetInputLayout(newDxState.InputLayout);
+        graphicPipeline.RasterizerStage.SetScissorRects(newDxState.ScissorRectsCount, newDxState.ScissorRects);
+        graphicPipeline.RasterizerStage.SetViewports(newDxState.ViewportsCount, newDxState.Viewports);
+        graphicPipeline.RasterizerStage.SetState(newDxState.RasterizerState);
+        graphicPipeline.OutputMergerStage.SetBlendState(newDxState.BlendState, ref newDxState.BlendFactor[0], newDxState.SampleMask);
+        graphicPipeline.OutputMergerStage.SetDepthStencilState(newDxState.DepthStencilState, newDxState.StencilRef);
+        graphicPipeline.PixelShaderStage.SetShaderResources(0, 1, ref newDxState.PSShaderResource);
+        graphicPipeline.PixelShaderStage.SetSamplers(0, 1, ref newDxState.PSSampler);
+        graphicPipeline.PixelShaderStage.SetShader(newDxState.PixelShader, ref newDxState.PSInstances, newDxState.PSInstancesCount);
+        graphicPipeline.VertexShaderStage.SetShader(newDxState.VertexShader, ref newDxState.VSInstances, newDxState.VSInstancesCount);
+        graphicPipeline.VertexShaderStage.SetConstantBuffers(0, 1, ref newDxState.VSConstantBuffer);
+        graphicPipeline.GeometryShaderStage.SetShader(newDxState.GeometryShader, ref newDxState.GSInstances, newDxState.GSInstancesCount);
+        graphicPipeline.InputAssemblerStage.SetPrimitiveTopology(newDxState.PrimitiveTopology);
+        graphicPipeline.InputAssemblerStage.SetIndexBuffer(newDxState.IndexBuffer, newDxState.IndexBufferFormat, newDxState.IndexBufferOffset);
+        graphicPipeline.InputAssemblerStage.SetVertexBuffers(0, 1, ref newDxState.VertexBuffer, in newDxState.VertexBufferStride, in newDxState.VertexBufferOffset);
+        graphicPipeline.InputAssemblerStage.SetInputLayout(newDxState.InputLayout);
     }
 
     private unsafe void InvalidateDeviceObjects()
