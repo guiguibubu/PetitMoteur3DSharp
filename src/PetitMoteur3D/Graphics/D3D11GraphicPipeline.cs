@@ -2,28 +2,21 @@
 using System;
 using System.Drawing;
 using System.Runtime.CompilerServices;
-using PetitMoteur3D.Logging;
 using PetitMoteur3D.Window;
 using Silk.NET.Core.Native;
-using Silk.NET.Direct3D.Compilers;
 using Silk.NET.Direct3D11;
 using Silk.NET.DXGI;
 
 namespace PetitMoteur3D.Graphics;
 
-public class DeviceD3D11
+public class D3D11GraphicPipeline
 {
-    public ref readonly ComPtr<ID3D11Device> Device { get { return ref _device; } }
-    public ref ComPtr<ID3D11DeviceContext> DeviceContext { get { return ref _deviceContext; } }
     public ref ComPtr<IDXGISwapChain1> Swapchain { get { return ref _swapchain; } }
     public ref ComPtr<ID3D11RenderTargetView> RenderTargetView { get { return ref _renderTargetView; } }
     public ref ComPtr<ID3D11DepthStencilView> DepthStencilView { get { return ref _depthStencilView; } }
     public ref ComPtr<ID3D11RasterizerState> SolidCullBackRS { get { return ref _solidCullBackRS; } }
     public ref ComPtr<ID3D11RasterizerState> WireFrameCullBackRS { get { return ref _wireFrameCullBackRS; } }
-    public D3DCompiler ShaderCompiler { get { return _compiler; } }
 
-    private ComPtr<ID3D11Device> _device;
-    private ComPtr<ID3D11DeviceContext> _deviceContext;
     private ComPtr<IDXGISwapChain1> _swapchain;
     private ComPtr<ID3D11RenderTargetView> _renderTargetView;
     private ComPtr<ID3D11DepthStencilView> _depthStencilView;
@@ -31,18 +24,11 @@ public class DeviceD3D11
     private ComPtr<ID3D11RasterizerState> _solidCullBackRS;
     private ComPtr<ID3D11RasterizerState> _wireFrameCullBackRS;
 
+    private readonly D3D11GraphicDevice _graphicDevice;
+    private readonly GraphicDeviceRessourceFactory _graphicRessourceFactory;
+
     private SwapChainDesc1 _swapchainDescription;
 
-    private readonly D3DCompiler _compiler;
-    private readonly D3D11 _d3d11Api;
-
-    private static readonly D3DFeatureLevel[] FEATURES_LEVELS = {
-        D3DFeatureLevel.Level111,
-        D3DFeatureLevel.Level110
-    };
-
-
-    private readonly IWindow _window;
     private Size _currentSize;
     private readonly float[] _backgroundColour = new[] { 0.0f, 0.5f, 0.0f, 1.0f };
 
@@ -56,22 +42,14 @@ public class DeviceD3D11
     /// </summary>
     /// <param name="window"></param>
     /// <param name="forceDxvk">Whether or not to force use of DXVK on platforms where native DirectX implementations are available</param>
-    public unsafe DeviceD3D11(IWindow window, bool forceDxvk = false)
+    internal unsafe D3D11GraphicPipeline(D3D11GraphicDevice graphicDevice, GraphicDeviceRessourceFactory graphicRessourceFactory, GraphicPipelineRessourceFactory graphicPipelineFactory, IWindow window)
     {
-        _window = window;
-
-        _compiler = D3DCompiler.GetApi();
-
-        // Create our D3D11 logical device.
-#pragma warning disable CS0618 // Type or member is obsolete
-        _d3d11Api = D3D11.GetApi(DXSwapchainProvider.Win32, forceDxvk);
-#pragma warning restore CS0618 // Type or member is obsolete
-
-        InitDevice(_d3d11Api);
-
+        _graphicDevice = graphicDevice;
+        _graphicRessourceFactory = graphicRessourceFactory;
         _isSwapChainComposition = false;
+
         // Initialisation de la swapchain
-        InitSwapChain(window, forceDxvk);
+        InitSwapChain(window, graphicDevice.DxVk);
 
         InitView(window);
 
@@ -81,15 +59,15 @@ public class DeviceD3D11
             CullMode = CullMode.Back,
             FrontCounterClockwise = false
         };
-        SilkMarshal.ThrowHResult(_device.CreateRasterizerState(in rsSolidDesc, ref _solidCullBackRS));
+        _solidCullBackRS = graphicPipelineFactory.CreateRasterizerState(in rsSolidDesc);
         RasterizerDesc rsWireDesc = new()
         {
             FillMode = FillMode.Wireframe,
             CullMode = CullMode.None,
             FrontCounterClockwise = false
         };
-        SilkMarshal.ThrowHResult(_device.CreateRasterizerState(in rsWireDesc, ref _wireFrameCullBackRS));
-        _deviceContext.RSSetState(_solidCullBackRS);
+        _wireFrameCullBackRS = graphicPipelineFactory.CreateRasterizerState(in rsWireDesc);
+        graphicDevice.DeviceContext.RSSetState(_solidCullBackRS);
 
         _currentSize = new Size();
 #if USE_RENDERDOC
@@ -101,25 +79,16 @@ public class DeviceD3D11
 #endif
     }
 
-    unsafe ~DeviceD3D11()
+    unsafe ~D3D11GraphicPipeline()
     {
         // passer en mode fenêtré
         _swapchain.SetFullscreenState(false, ref Unsafe.NullRef<IDXGIOutput>());
-
-        if (_deviceContext.Handle is not null)
-        {
-            _deviceContext.ClearState();
-        }
 
         _solidCullBackRS.Dispose();
         _depthStencilView.Dispose();
         _depthTexture.Dispose();
         _renderTargetView.Dispose();
-        _deviceContext.Dispose();
         _swapchain.Dispose();
-        _device.Dispose();
-        _compiler.Dispose();
-        _d3d11Api.Dispose();
     }
 
     public unsafe void BeforePresent()
@@ -145,7 +114,7 @@ public class DeviceD3D11
         {
             return;
         }
-        _deviceContext.ClearState();
+        _graphicDevice.DeviceContext.ClearState();
 
         _renderTargetView.Dispose();
         _depthTexture.Dispose();
@@ -208,7 +177,7 @@ public class DeviceD3D11
     public void GetRasterizerState(out ComPtr<ID3D11RasterizerState> result)
     {
         result = null;
-        _deviceContext.RSGetState(ref result);
+        _graphicDevice.DeviceContext.RSGetState(ref result);
     }
 
     public unsafe void SetRasterizerState(ref readonly ComPtr<ID3D11RasterizerState> rsState)
@@ -217,47 +186,7 @@ public class DeviceD3D11
         {
             return;
         }
-        _deviceContext.RSSetState(rsState);
-    }
-
-    private unsafe void InitDevice(D3D11 d3d11Api)
-    {
-        uint createDeviceFlags = (uint)CreateDeviceFlag.BgraSupport;
-        createDeviceFlags |= (uint)CreateDeviceFlag.Singlethreaded;
-        createDeviceFlags |= (uint)CreateDeviceFlag.PreventInternalThreadingOptimizations;
-#if DEBUG
-        createDeviceFlags |= (uint)CreateDeviceFlag.Debug;
-#endif
-        SilkMarshal.ThrowHResult
-        (
-            d3d11Api.CreateDevice
-            (
-                default(ComPtr<IDXGIAdapter>),
-                D3DDriverType.Hardware,
-                0,
-                createDeviceFlags,
-                in FEATURES_LEVELS[0],
-                2,
-                D3D11.SdkVersion,
-                ref _device,
-                null,
-                ref _deviceContext
-            )
-        );
-
-#if DEBUG
-        //This is not supported under DXVK 
-        //TODO: PR a stub into DXVK for this maybe?
-        if (OperatingSystem.IsWindows())
-        {
-            // Log debug messages for this device (given that we've enabled the debug flag). Don't do this in release code!
-            _device.SetInfoQueueCallback(msg =>
-            {
-                string? msgStr = SilkMarshal.PtrToString((nint)msg.PDescription);
-                Log.Information(msgStr);
-            });
-        }
-#endif
+        _graphicDevice.DeviceContext.RSSetState(rsState);
     }
 
     private unsafe void InitSwapChain(IWindow window, bool forceDxvk)
@@ -269,8 +198,7 @@ public class DeviceD3D11
             // Ensure that DXGI does not queue more than one frame at a time. This both reduces 
             // latency and ensures that the application will only render after each VSync, minimizing 
             // power consumption.
-            ComPtr<IDXGIDevice1> dxgiDevice = Device.QueryInterface<IDXGIDevice1>();
-            dxgiDevice.SetMaximumFrameLatency(1);
+            _graphicDevice.SetMaximumFrameLatency(1);
         }
         else
         {
@@ -294,33 +222,14 @@ public class DeviceD3D11
             Flags = (uint)SwapChainFlag.AllowModeSwitch
         };
 
-        SwapChainFullscreenDesc swapChainFullscreenDesc = new()
-        {
-            Windowed = true
-        };
-
-        // Create our DXGI factory to allow us to create a swapchain. 
-#pragma warning disable CS0618 // Type or member is obsolete
-        DXGI dxgi = DXGI.GetApi(DXSwapchainProvider.Win32, forceDxvk);
-#pragma warning restore CS0618 // Type or member is obsolete
-        ComPtr<IDXGIFactory2> factory = dxgi.CreateDXGIFactory<IDXGIFactory2>();
-        dxgi.Dispose();
-
         // Create the swapchain.
         if (windowPtr != nint.Zero)
         {
-            SilkMarshal.ThrowHResult
-            (
-                factory.CreateSwapChainForHwnd
-                (
-                    _device,
-                    windowPtr,
-                    in swapChainDesc,
-                    in swapChainFullscreenDesc,
-                    ref Unsafe.NullRef<IDXGIOutput>(),
-                    ref _swapchain
-                )
-            );
+            SwapChainFullscreenDesc swapChainFullscreenDesc = new()
+            {
+                Windowed = true
+            };
+            _swapchain = _graphicRessourceFactory.CreateSwapChainForHwnd(windowPtr, in swapChainDesc, in swapChainFullscreenDesc, ref Unsafe.NullRef<IDXGIOutput>());
         }
         else
         {
@@ -334,19 +243,8 @@ public class DeviceD3D11
             swapChainDesc.BufferCount = 2;
             //swapChainDesc.Flags = 0;
             //swapChainDesc.AlphaMode = AlphaMode.Premultiplied;
-            SilkMarshal.ThrowHResult
-            (
-                factory.CreateSwapChainForComposition
-                (
-                    _device,
-                    in swapChainDesc,
-                    ref Unsafe.NullRef<IDXGIOutput>(),
-                    ref _swapchain
-                )
-            );
+            _swapchain = _graphicRessourceFactory.CreateSwapChainForComposition(in swapChainDesc, ref Unsafe.NullRef<IDXGIOutput>());
         }
-
-        factory.Dispose();
     }
 
     private unsafe void InitView(IWindow window)
@@ -367,14 +265,14 @@ public class DeviceD3D11
 
         // Set the rasterizer state with the current viewport.
         Viewport viewport = new(0, 0, width, height, 0, 1);
-        _deviceContext.RSSetViewports(1, in viewport);
+        _graphicDevice.DeviceContext.RSSetViewports(1, in viewport);
     }
 
     private unsafe void InitRenderTargetView()
     {
         using (ComPtr<ID3D11Texture2D> framebuffer = _swapchain.GetBuffer<ID3D11Texture2D>(0))
         {
-            SilkMarshal.ThrowHResult(_device.CreateRenderTargetView(framebuffer, ref Unsafe.NullRef<RenderTargetViewDesc>(), ref _renderTargetView));
+            _renderTargetView = _graphicRessourceFactory.CreateRenderTargetView(framebuffer, in Unsafe.NullRef<RenderTargetViewDesc>());
         }
     }
 
@@ -400,9 +298,7 @@ public class DeviceD3D11
             MiscFlags = 0
         };
 
-        SilkMarshal.ThrowHResult(
-            _device.CreateTexture2D(ref depthTextureDesc, ref Unsafe.NullRef<SubresourceData>(), ref _depthTexture)
-        );
+        _depthTexture = _graphicRessourceFactory.CreateTexture2D(in depthTextureDesc, in Unsafe.NullRef<SubresourceData>());
 
         DepthStencilViewDesc descDSView = new()
         {
@@ -410,23 +306,22 @@ public class DeviceD3D11
             ViewDimension = DsvDimension.Texture2D,
             Texture2D = new Tex2DDsv() { MipSlice = 0 }
         };
-        SilkMarshal.ThrowHResult(
-            _device.CreateDepthStencilView(_depthTexture, in descDSView, ref _depthStencilView)
-        );
+
+        _depthStencilView = _graphicRessourceFactory.CreateDepthStencilView(_depthTexture, in descDSView);
     }
 
     private unsafe void ClearRenderTarget()
     {
         // On efface la surface de rendu
-        _deviceContext.ClearRenderTargetView(_renderTargetView, _backgroundColour.AsSpan());
+        _graphicDevice.DeviceContext.ClearRenderTargetView(_renderTargetView, _backgroundColour.AsSpan());
         // On ré-initialise le tampon de profondeur
-        _deviceContext.ClearDepthStencilView(_depthStencilView, (uint)ClearFlag.Depth, 1.0f, 0);
+        _graphicDevice.DeviceContext.ClearDepthStencilView(_depthStencilView, (uint)ClearFlag.Depth, 1.0f, 0);
     }
 
     private void SetRenderTarget(bool clear = true)
     {
         // Tell the output merger about our render target view.
-        _deviceContext.OMSetRenderTargets(1, ref _renderTargetView, _depthStencilView);
+        _graphicDevice.DeviceContext.OMSetRenderTargets(1, ref _renderTargetView, _depthStencilView);
         if (clear)
         {
             ClearRenderTarget();

@@ -4,11 +4,11 @@ using Silk.NET.Direct3D11;
 
 namespace PetitMoteur3D.Graphics;
 
-internal sealed class GraphicPipelineFactory
+internal sealed class GraphicPipelineRessourceFactory
 {
     private readonly ComPtr<ID3D11Device> _device;
 
-    public GraphicPipelineFactory(ComPtr<ID3D11Device> device)
+    public GraphicPipelineRessourceFactory(ComPtr<ID3D11Device> device)
     {
         _device = device;
     }
@@ -50,7 +50,7 @@ internal sealed class GraphicPipelineFactory
         return depthStencilState;
     }
 
-    public unsafe ComPtr<ID3D11RasterizerState> CreateRasterizerState(RasterizerDesc desc, string name = "")
+    public unsafe ComPtr<ID3D11RasterizerState> CreateRasterizerState(in RasterizerDesc desc, string name = "")
     {
         ComPtr<ID3D11RasterizerState> rasterizerState = default;
         SilkMarshal.ThrowHResult(_device.CreateRasterizerState(in desc, ref rasterizerState));

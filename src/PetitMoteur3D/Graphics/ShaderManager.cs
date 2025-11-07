@@ -17,10 +17,10 @@ internal sealed class ShaderManager
     private readonly Dictionary<string, ComPtr<ID3D11InputLayout>> _vertexLayoutsCache = new();
     private readonly Dictionary<string, ComPtr<ID3D11PixelShader>> _pixelShadersCache = new();
 
-    public ShaderManager(ComPtr<ID3D11Device> device, D3DCompiler compiler)
+    public ShaderManager(ComPtr<ID3D11Device> device)
     {
         _device = device;
-        _compiler = compiler;
+        _compiler = D3DCompiler.GetApi();
     }
 
     #region Public Methods
@@ -322,5 +322,10 @@ internal sealed class ShaderManager
         {
             return shaderFile.FilePath;
         }
+    }
+
+    ~ShaderManager()
+    {
+        _compiler.Dispose();
     }
 }

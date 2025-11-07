@@ -103,7 +103,7 @@ public sealed partial class MainWindow : global::Microsoft.UI.Xaml.Window
                 ABI.WinUIDesktopInterop.ISwapChainPanelNative swapChainPanelNative = nativeReference.AsInterface<ABI.WinUIDesktopInterop.ISwapChainPanelNative>();
                 int errorCode = swapChainPanelNative.SetSwapChain((nint)engine.DeviceD3D11.Swapchain.Handle);
 #else
-                int errorCode = ABI.WinUIDesktopInterop.SetSwapchain(nativeReference.ThisPtr, (nint)engine.DeviceD3D11.Swapchain.Handle);
+                int errorCode = ABI.WinUIDesktopInterop.SetSwapchain(nativeReference.ThisPtr, (nint)engine.GraphicPipeline.Swapchain.Handle);
 #endif
                 Logging.Log.Information("[PetitMoteur3D] SetSwapwhain errorCode = " + errorCode);
                 System.Runtime.InteropServices.Marshal.ThrowExceptionForHR(errorCode);

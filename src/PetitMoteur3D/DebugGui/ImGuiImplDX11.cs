@@ -30,9 +30,9 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
     private bool _backendInitialized;
     private BackupDX11State _oldDxState = new();
 
-    private readonly DeviceD3D11 _renderDevice;
+    private readonly D3D11GraphicDevice _graphicDevice;
     private readonly GraphicDeviceRessourceFactory _graphicDeviceRessourceFactory;
-    private readonly GraphicPipelineFactory _pipelineFactory;
+    private readonly GraphicPipelineRessourceFactory _pipelineFactory;
 
     private static readonly IObjectPool<System.Numerics.Vector2> _vector2Pool = ObjectPoolFactory.Create<System.Numerics.Vector2>();
     private static readonly IObjectPool<Box2D<int>> _box2DPool = ObjectPoolFactory.Create<Box2D<int>>();
@@ -43,9 +43,9 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
     private static unsafe readonly uint IndexBufferStride = (uint)Unsafe.SizeOf<ImDrawIdx>();
     private static readonly uint VertexBufferOffset = 0;
 
-    public ImGuiImplDX11(DeviceD3D11 renderDevice, GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, GraphicPipelineFactory pipelineFactory)
+    public ImGuiImplDX11(D3D11GraphicDevice graphicDevice, GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, GraphicPipelineRessourceFactory pipelineFactory)
     {
-        _renderDevice = renderDevice;
+        _graphicDevice = graphicDevice;
         _backendRendererName = Marshal.StringToHGlobalAuto("imgui_impl_dx11");
         _backendRendererUserData = new();
         _graphicDeviceRessourceFactory = graphicDeviceRessourceFactory;
@@ -61,7 +61,7 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
 
     public bool Init(ref readonly ImGuiIOPtr io)
     {
-        return InitImpl(in io, in _renderDevice.Device, in _renderDevice.DeviceContext);
+        return InitImpl(in io, in _graphicDevice.Device, in _graphicDevice.DeviceContext);
     }
 
     private unsafe bool InitImpl(ref readonly ImGuiIOPtr io, ref readonly ComPtr<ID3D11Device> device, ref readonly ComPtr<ID3D11DeviceContext> deviceContext)
@@ -395,7 +395,7 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
         SetDX11State(in deviceContext, ref _oldDxState);
     }
 
-    private unsafe bool CreateDeviceObjects(GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, GraphicPipelineFactory pipelineFactory)
+    private unsafe bool CreateDeviceObjects(GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, GraphicPipelineRessourceFactory pipelineFactory)
     {
         if (_backendRendererUserData.D3dDevice.Handle is null)
             return false;
@@ -537,7 +537,7 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
         return true;
     }
 
-    private bool InitBlendingState(GraphicPipelineFactory graphicPipelineFactory)
+    private bool InitBlendingState(GraphicPipelineRessourceFactory graphicPipelineFactory)
     {
         RenderTargetBlendDesc renderTargetBlendDesc = new()
         {
@@ -566,7 +566,7 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
         return true;
     }
 
-    private bool InitRasterizerState(GraphicPipelineFactory graphicPipelineFactory)
+    private bool InitRasterizerState(GraphicPipelineRessourceFactory graphicPipelineFactory)
     {
         RasterizerDesc desc = new()
         {
@@ -575,11 +575,11 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
             ScissorEnable = true,
             DepthClipEnable = false
         };
-        _backendRendererUserData.RasterizerState = graphicPipelineFactory.CreateRasterizerState(desc, name: "ImGuiRasterizerState");
+        _backendRendererUserData.RasterizerState = graphicPipelineFactory.CreateRasterizerState(in desc, name: "ImGuiRasterizerState");
         return true;
     }
 
-    private bool InitDepthStencil(GraphicPipelineFactory graphicPipelineFactory)
+    private bool InitDepthStencil(GraphicPipelineRessourceFactory graphicPipelineFactory)
     {
         DepthStencilopDesc frontFace = new()
         {

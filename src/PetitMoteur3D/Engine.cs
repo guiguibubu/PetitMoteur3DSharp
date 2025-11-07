@@ -18,15 +18,16 @@ namespace PetitMoteur3D;
 
 public class Engine
 {
-    public DeviceD3D11 DeviceD3D11 => _deviceD3D11;
+    public D3D11GraphicPipeline GraphicPipeline => _graphicPipeline;
 
     private readonly IWindow _window = default!;
     private readonly IInputContext? _inputContext = default!;
 
     private ImGuiController _imGuiController = default!;
-    private DeviceD3D11 _deviceD3D11 = default!;
+    private D3D11GraphicDevice _graphicDevice = default!;
+    private D3D11GraphicPipeline _graphicPipeline = default!;
     private GraphicDeviceRessourceFactory _graphicDeviceRessourceFactory = default!;
-    private GraphicPipelineFactory _graphicPipelineFactory = default!;
+    private GraphicPipelineRessourceFactory _graphicPipelineRessourceFactory = default!;
 
     private MeshLoader _meshLoader = default!;
     private Scene _scene = default!;
@@ -200,7 +201,7 @@ public class Engine
             if (tempsEcouleEngine > ECART_TEMPS_ENGINE)
             {
                 // Affichage optimisé
-                _deviceD3D11.Present();
+                _graphicPipeline.Present();
                 // On relance l'horloge pour être certain de garder la fréquence d'affichage
                 _horlogeEngine.Restart();
                 // On prépare la prochaine image
@@ -273,25 +274,25 @@ public class Engine
 
                         if (colorChanged)
                         {
-                            _deviceD3D11.SetBackgroundColour(_backgroundColour.X / _backgroundColour.W, _backgroundColour.Y / _backgroundColour.W, _backgroundColour.Z / _backgroundColour.W, _backgroundColour.W);
+                            _graphicPipeline.SetBackgroundColour(_backgroundColour.X / _backgroundColour.W, _backgroundColour.Y / _backgroundColour.W, _backgroundColour.Z / _backgroundColour.W, _backgroundColour.W);
                         }
 
                         if (wireFrameChanged)
                         {
                             if (_showWireFrame)
                             {
-                                _deviceD3D11.GetRasterizerState(out ComPtr<ID3D11RasterizerState> rasterizerState);
-                                if (rasterizerState.Handle != _deviceD3D11.WireFrameCullBackRS.Handle)
+                                _graphicPipeline.GetRasterizerState(out ComPtr<ID3D11RasterizerState> rasterizerState);
+                                if (rasterizerState.Handle != _graphicPipeline.WireFrameCullBackRS.Handle)
                                 {
-                                    _deviceD3D11.SetRasterizerState(in _deviceD3D11.WireFrameCullBackRS);
+                                    _graphicPipeline.SetRasterizerState(in _graphicPipeline.WireFrameCullBackRS);
                                 }
                             }
                             if (!_showWireFrame)
                             {
-                                _deviceD3D11.GetRasterizerState(out ComPtr<ID3D11RasterizerState> rasterizerState);
-                                if (rasterizerState.Handle != _deviceD3D11.SolidCullBackRS.Handle)
+                                _graphicPipeline.GetRasterizerState(out ComPtr<ID3D11RasterizerState> rasterizerState);
+                                if (rasterizerState.Handle != _graphicPipeline.SolidCullBackRS.Handle)
                                 {
-                                    _deviceD3D11.SetRasterizerState(in _deviceD3D11.SolidCullBackRS);
+                                    _graphicPipeline.SetRasterizerState(in _graphicPipeline.SolidCullBackRS);
                                 }
                             }
                         }
@@ -323,7 +324,7 @@ public class Engine
     private void OnResize(Size newSize)
     {
         // If the window resizes, we need to be sure to update the swapchain's back buffers.
-        _deviceD3D11.Resize(in newSize);
+        _graphicPipeline.Resize(in newSize);
 
         // Update projection matrix
         float windowWidth = newSize.Width;
@@ -341,16 +342,17 @@ public class Engine
 
     private void BeginRender()
     {
-        _deviceD3D11.BeforePresent();
+        _graphicPipeline.BeforePresent();
     }
 
     private void InitRendering()
     {
-        _deviceD3D11 = new DeviceD3D11(_window, !_onNativeDxPlatform);
-        _deviceD3D11.GetBackgroundColour(out Vector4 backgroundColor);
+        _graphicDevice = new D3D11GraphicDevice(!_onNativeDxPlatform);
+        _graphicDeviceRessourceFactory = new GraphicDeviceRessourceFactory(_graphicDevice);
+        _graphicPipelineRessourceFactory = new GraphicPipelineRessourceFactory(_graphicDevice.Device);
+        _graphicPipeline = new D3D11GraphicPipeline(_graphicDevice, _graphicDeviceRessourceFactory, _graphicPipelineRessourceFactory, _window);
+        _graphicPipeline.GetBackgroundColour(out Vector4 backgroundColor);
         _backgroundColour = backgroundColor;
-        _graphicDeviceRessourceFactory = new GraphicDeviceRessourceFactory(_deviceD3D11.Device, _deviceD3D11.ShaderCompiler);
-        _graphicPipelineFactory = new GraphicPipelineFactory(_deviceD3D11.Device);
         _meshLoader = new MeshLoader();
     }
 
@@ -444,7 +446,7 @@ public class Engine
 
     private void InitDebugTools()
     {
-        _imGuiController = new ImGuiController(_deviceD3D11, _graphicDeviceRessourceFactory, _graphicPipelineFactory, _window, _inputContext);
+        _imGuiController = new ImGuiController(_graphicDevice, _graphicDeviceRessourceFactory, _graphicPipelineRessourceFactory, _window, _inputContext);
     }
 
     private void AnimeScene(float tempsEcoule)
@@ -459,7 +461,7 @@ public class Engine
         {
             _camera.GetViewMatrix(out _matView);
             Matrix4x4 matViewProj = _matView * _matProj;
-            _scene.Draw(in _deviceD3D11.DeviceContext, in matViewProj);
+            _scene.Draw(in _graphicDevice.DeviceContext, in matViewProj);
         }
     }
 
