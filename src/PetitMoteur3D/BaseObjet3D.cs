@@ -38,6 +38,7 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
 
     private Sommet[] _sommets;
     private ushort[] _indices;
+    private SubObjet3D[] _subObjects;
 
     private unsafe readonly uint _vertexStride = (uint)sizeof(Sommet);
     private static readonly uint _vertexOffset = 0;
@@ -144,7 +145,7 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
         graphicPipeline.InputAssemblerStage.SetIndexBuffer(_indexBuffer, Silk.NET.DXGI.Format.FormatR16Uint, 0);
         // input layout des sommets
         graphicPipeline.InputAssemblerStage.SetInputLayout(_vertexLayout);
-        foreach (SubObjet3D subObjet3D in GetSubObjets())
+        foreach (SubObjet3D subObjet3D in _subObjects)
         {
             // Initialiser et sélectionner les « constantes » des shaders
             _objectShadersParamsPool.Get(out ObjectPoolWrapper<ObjectShadersParams> shadersParamsWrapper);
@@ -196,8 +197,9 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
 
     protected void Initialisation()
     {
-        _sommets = InitVertex().ToArray();
-        _indices = InitIndex().ToArray();
+        _sommets = InitVertex();
+        _indices = InitIndex();
+        _subObjects = InitSubObjets();
 
         InitBuffers(_bufferFactory, _sommets, _indices);
         InitShaders(_shaderManager);
@@ -208,19 +210,19 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
     /// Initialise les vertex
     /// </summary>
     /// <returns></returns>
-    protected abstract IReadOnlyList<Sommet> InitVertex();
+    protected abstract Sommet[] InitVertex();
 
     /// <summary>
     /// Initialise l'index de rendu
     /// </summary>
     /// <returns></returns>
-    protected abstract IReadOnlyList<ushort> InitIndex();
+    protected abstract ushort[] InitIndex();
 
     /// <summary>
-    /// Renvoie la liste des parties de l'objet pour le rendu
+    /// Initialise les parties de l'objet pour le rendu
     /// </summary>
     /// <returns></returns>
-    protected abstract IReadOnlyList<SubObjet3D> GetSubObjets();
+    protected abstract SubObjet3D[] InitSubObjets();
 
     private unsafe void InitShaders(ShaderManager shaderManager)
     {

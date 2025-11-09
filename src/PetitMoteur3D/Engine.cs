@@ -402,18 +402,22 @@ public class Engine
 
         MeshLoader meshLoader = new();
         IReadOnlyList<SceneMesh>? meshes = meshLoader.Load("models\\teapot.obj");
-        ObjetMesh objetMesh = new(meshes[0], ressourceFactory);
-        BoundingBox boundingBox = objetMesh.Mesh.GetBoundingBox();
+        
+        SceneMesh rootMesh = meshes[0];
+        BoundingBox boundingBox = rootMesh.GetBoundingBox();
         float centerX = (boundingBox.Min.X + boundingBox.Max.X) / 2f;
         float centerY = (boundingBox.Min.Y + boundingBox.Max.Y) / 2f;
         float centerZ = (boundingBox.Min.Z + boundingBox.Max.Z) / 2f;
         float dimX = boundingBox.Max.X - boundingBox.Min.X;
         float dimY = boundingBox.Max.Y - boundingBox.Min.Y;
         float dimZ = boundingBox.Max.Z - boundingBox.Min.Z;
+
+        rootMesh.AddTransform(Matrix4x4.CreateScale(4f / float.Max(float.Max(dimX, dimY), dimZ)));
+
+        ObjetMesh objetMesh = new(rootMesh, ressourceFactory);
         Vector3 sceneCenter = new(centerX, centerY, centerZ);
         Vector3 sceneDim = new(dimX, dimY, dimZ);
 
-        objetMesh.Mesh.AddTransform(Matrix4x4.CreateScale(4f / float.Max(float.Max(dimX, dimY), dimZ)));
         objetMesh.Move(0f, 2f, 0f);
 
         Plane ground = new(10f, 10f, ressourceFactory);

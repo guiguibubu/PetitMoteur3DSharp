@@ -43,6 +43,7 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
     private static unsafe readonly uint VertexBufferStride = (uint)Unsafe.SizeOf<ImDrawVert>();
     private static unsafe readonly uint IndexBufferStride = (uint)Unsafe.SizeOf<ImDrawIdx>();
     private static readonly uint VertexBufferOffset = 0;
+    private static readonly float[] BlendFactorDefault = { 0f, 0f, 0f, 0f };
 
     public ImGuiImplDX11(D3D11GraphicPipeline graphicPipeline)
     {
@@ -629,8 +630,7 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
         // deviceContext.CSSetShader(Unsafe.NullRef<ComPtr<ID3D11ComputeShader>>(), ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0); // In theory we should backup and restore this as well.. very infrequently used..
 
         // Setup blend state
-        float[] blendFactor = { 0f, 0f, 0f, 0f };
-        graphicPipeline.OutputMergerStage.SetBlendState(_backendRendererUserData.BlendState, ref blendFactor[0], 0xffffffff);
+        graphicPipeline.OutputMergerStage.SetBlendState(_backendRendererUserData.BlendState, ref BlendFactorDefault[0], 0xffffffff);
         graphicPipeline.OutputMergerStage.SetDepthStencilState(_backendRendererUserData.DepthStencilState, 0);
         graphicPipeline.RasterizerStage.SetState(_backendRendererUserData.RasterizerState);
     }

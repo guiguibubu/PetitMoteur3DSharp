@@ -132,7 +132,7 @@ public class WinUIWindow : IWindow, ICompositionWindow
             if (engine is not null)
             {
                 // We push in dispatccher queue only 5 frames in advance
-                runFrame = engine.CurrentFrameCount - _lastFramePushed < 5;
+                runFrame = engine.CurrentFrameCount - _lastFramePushed < 5L;
             }
             if (runFrame)
             {

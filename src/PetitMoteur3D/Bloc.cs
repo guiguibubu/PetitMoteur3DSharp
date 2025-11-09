@@ -121,18 +121,18 @@ internal sealed class Bloc : BaseObjet3D
     }
 
     /// <inheritdoc/>
-    protected override IReadOnlyList<Sommet> InitVertex()
+    protected override Sommet[] InitVertex()
     {
         return _sommets;
     }
 
     /// <inheritdoc/>
-    protected override IReadOnlyList<ushort> InitIndex()
+    protected override ushort[] InitIndex()
     {
         return _indices;
     }
 
-    protected override IReadOnlyList<SubObjet3D> GetSubObjets()
+    protected override SubObjet3D[] InitSubObjets()
     {
         return _subObjects;
     }

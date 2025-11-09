@@ -1,48 +1,44 @@
 using System.Collections.Generic;
+using System.Linq;
 using PetitMoteur3D.Graphics;
 
 namespace PetitMoteur3D;
 
 internal sealed class ObjetMesh : BaseObjet3D
 {
-    public SceneMesh Mesh => _sceneMesh;
     private readonly SceneMesh _sceneMesh;
 
-    private List<SubObjet3D>? _subObjects;
+    private readonly SubObjet3D[] _subObjects;
 
     public ObjetMesh(SceneMesh sceneMesh, GraphicDeviceRessourceFactory graphicDeviceRessourceFactory)
         : base(graphicDeviceRessourceFactory)
     {
         _sceneMesh = sceneMesh;
 
-        _subObjects = null;
+        _subObjects = GetSubObjets(_sceneMesh);
 
         Initialisation();
     }
 
     /// <inheritdoc/>
-    protected override IReadOnlyList<Sommet> InitVertex()
+    protected override Sommet[] InitVertex()
     {
-        return _sceneMesh.GetAllVertices();
+        return _sceneMesh.GetAllVertices().ToArray();
     }
 
     /// <inheritdoc/>
-    protected override IReadOnlyList<ushort> InitIndex()
+    protected override ushort[] InitIndex()
     {
-        return _sceneMesh.GetAllIndices();
+        return _sceneMesh.GetAllIndices().ToArray();
     }
 
     /// <inheritdoc/>
-    protected override IReadOnlyList<SubObjet3D> GetSubObjets()
+    protected override SubObjet3D[] InitSubObjets()
     {
-        if (_subObjects is null)
-        {
-            _subObjects = GetSubObjets(_sceneMesh);
-        }
         return _subObjects;
     }
 
-    private static List<SubObjet3D> GetSubObjets(SceneMesh sceneMesh)
+    private static SubObjet3D[] GetSubObjets(SceneMesh sceneMesh)
     {
         List<SubObjet3D> subObjects = new();
         subObjects.Add(ToSubObjet3D(sceneMesh, System.Numerics.Matrix4x4.Identity));
@@ -50,7 +46,7 @@ internal sealed class ObjetMesh : BaseObjet3D
         {
             subObjects.AddRange(GetSubObjets(child));
         }
-        return subObjects;
+        return subObjects.ToArray();
     }
 
     private static SubObjet3D ToSubObjet3D(SceneMesh sceneMesh, System.Numerics.Matrix4x4 parentTransform)
