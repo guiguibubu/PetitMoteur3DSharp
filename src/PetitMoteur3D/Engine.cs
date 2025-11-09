@@ -72,9 +72,6 @@ public class Engine
         _window = conf.Window;
         _inputContext = conf.InputContext;
 
-        _window = default!;
-        _inputContext = default!;
-
         _imGuiController = default!;
         _graphicDevice = default!;
         _graphicPipeline = default!;
