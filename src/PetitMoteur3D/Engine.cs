@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using ImGuiNET;
 using PetitMoteur3D.Camera;
@@ -26,9 +27,7 @@ public class Engine
     private ImGuiController _imGuiController = default!;
     private D3D11GraphicDevice _graphicDevice = default!;
     private D3D11GraphicPipeline _graphicPipeline = default!;
-    private GraphicDeviceRessourceFactory _graphicDeviceRessourceFactory = default!;
 
-    private MeshLoader _meshLoader = default!;
     private Scene _scene = default!;
     private ICamera _camera = default!;
     private Matrix4x4 _matView = default;
@@ -349,11 +348,9 @@ public class Engine
     private void InitRendering()
     {
         _graphicDevice = new D3D11GraphicDevice(!_onNativeDxPlatform);
-        _graphicDeviceRessourceFactory = _graphicDevice.RessourceFactory;
         _graphicPipeline = new D3D11GraphicPipeline(_graphicDevice, _window);
         _graphicPipeline.GetBackgroundColour(out Vector4 backgroundColor);
         _backgroundColour = backgroundColor;
-        _meshLoader = new MeshLoader();
     }
 
     private void InitScene()
@@ -363,34 +360,7 @@ public class Engine
         //_camera = new FreeCamera(_window);
         _camera.Move(-10 * Vector3.UnitZ);
 
-        _scene = new Scene(_graphicDeviceRessourceFactory.BufferFactory, _camera);
-
-        Bloc bloc1 = new(4.0f, 4.0f, 4.0f, _graphicDeviceRessourceFactory);
-        bloc1.SetTexture(_graphicDeviceRessourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall.jpg"));
-        bloc1.SetNormalMapTexture(_graphicDeviceRessourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall_normal.jpg"));
-        bloc1.Move(-4f, 0f, 0f);
-
-        Bloc bloc2 = new(4.0f, 4.0f, 4.0f, _graphicDeviceRessourceFactory);
-        bloc2.SetTexture(_graphicDeviceRessourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall.jpg"));
-        bloc2.Move(4f, 0f, 0f);
-
-        IReadOnlyList<SceneMesh>? meshes = _meshLoader.Load("models\\teapot.obj");
-        ObjetMesh objetMesh = new(meshes[0], _graphicDeviceRessourceFactory);
-        BoundingBox boundingBox = objetMesh.Mesh.GetBoundingBox();
-        float centerX = (boundingBox.Min.X + boundingBox.Max.X) / 2f;
-        float centerY = (boundingBox.Min.Y + boundingBox.Max.Y) / 2f;
-        float centerZ = (boundingBox.Min.Z + boundingBox.Max.Z) / 2f;
-        float dimX = boundingBox.Max.X - boundingBox.Min.X;
-        float dimY = boundingBox.Max.Y - boundingBox.Min.Y;
-        float dimZ = boundingBox.Max.Z - boundingBox.Min.Z;
-        Vector3 sceneCenter = new(centerX, centerY, centerZ);
-        Vector3 sceneDim = new(dimX, dimY, dimZ);
-
-        objetMesh.Mesh.AddTransform(Matrix4x4.CreateScale(4f / float.Max(float.Max(dimX, dimY), dimZ)));
-
-        _scene.AddObjet(bloc1);
-        _scene.AddObjet(bloc2);
-        _scene.AddObjet(objetMesh);
+        _scene = InitDefaultScene(_graphicDevice.RessourceFactory, _camera);
 
         // Initialisation des matrices View et Proj
         // Dans notre cas, ces matrices sont fixes
@@ -406,6 +376,40 @@ public class Engine
             planRapproche,
             planEloigne
         );
+    }
+
+    private static Scene InitDefaultScene(GraphicDeviceRessourceFactory ressourceFactory, ICamera camera)
+    {
+        Scene scene = new(ressourceFactory.BufferFactory, camera);
+        Bloc bloc1 = new(4.0f, 4.0f, 4.0f, ressourceFactory);
+        bloc1.SetTexture(ressourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall.jpg"));
+        bloc1.SetNormalMapTexture(ressourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall_normal.jpg"));
+        bloc1.Move(-4f, 0f, 0f);
+
+        Bloc bloc2 = new(4.0f, 4.0f, 4.0f, ressourceFactory);
+        bloc2.SetTexture(ressourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall.jpg"));
+        bloc2.Move(4f, 0f, 0f);
+
+        MeshLoader meshLoader = new();
+        IReadOnlyList<SceneMesh>? meshes = meshLoader.Load("models\\teapot.obj");
+        ObjetMesh objetMesh = new(meshes[0], ressourceFactory);
+        BoundingBox boundingBox = objetMesh.Mesh.GetBoundingBox();
+        float centerX = (boundingBox.Min.X + boundingBox.Max.X) / 2f;
+        float centerY = (boundingBox.Min.Y + boundingBox.Max.Y) / 2f;
+        float centerZ = (boundingBox.Min.Z + boundingBox.Max.Z) / 2f;
+        float dimX = boundingBox.Max.X - boundingBox.Min.X;
+        float dimY = boundingBox.Max.Y - boundingBox.Min.Y;
+        float dimZ = boundingBox.Max.Z - boundingBox.Min.Z;
+        Vector3 sceneCenter = new(centerX, centerY, centerZ);
+        Vector3 sceneDim = new(dimX, dimY, dimZ);
+
+        objetMesh.Mesh.AddTransform(Matrix4x4.CreateScale(4f / float.Max(float.Max(dimX, dimY), dimZ)));
+
+        scene.AddObjet(bloc1);
+        scene.AddObjet(bloc2);
+        scene.AddObjet(objetMesh);
+
+        return scene;
     }
 
     private void InitAnimation()
