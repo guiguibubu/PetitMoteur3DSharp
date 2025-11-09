@@ -13,6 +13,8 @@ internal sealed class Texture : IDisposable
     public ComPtr<ID3D11ShaderResourceView> TextureView { get { return _textureView; } }
     private readonly ComPtr<ID3D11ShaderResourceView> _textureView;
 
+    private bool _disposed;
+
     /// <summary>
     /// 
     /// </summary>
@@ -47,8 +49,6 @@ internal sealed class Texture : IDisposable
         Dispose(disposing: false);
     }
 
-    private bool _disposed;
-
     /// <inheritdoc/>
     public void Dispose()
     {
@@ -78,13 +78,13 @@ internal sealed class Texture : IDisposable
             if (disposing)
             {
                 // Dispose managed resources.
-                _textureView.Dispose();
             }
 
             // Call the appropriate methods to clean up
             // unmanaged resources here.
             // If disposing is false,
             // only the following code is executed.
+            _textureView.Dispose();
 
             // Note disposing has been done.
             _disposed = true;

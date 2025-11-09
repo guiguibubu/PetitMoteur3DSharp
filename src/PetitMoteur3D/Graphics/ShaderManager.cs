@@ -9,18 +9,20 @@ using Silk.NET.Direct3D11;
 
 namespace PetitMoteur3D.Graphics;
 
-internal sealed class ShaderManager
+internal sealed class ShaderManager : IDisposable
 {
     private readonly D3DCompiler _compiler;
     private readonly ComPtr<ID3D11Device> _device;
     private readonly Dictionary<string, ComPtr<ID3D11VertexShader>> _vertexShadersCache = new();
     private readonly Dictionary<string, ComPtr<ID3D11InputLayout>> _vertexLayoutsCache = new();
     private readonly Dictionary<string, ComPtr<ID3D11PixelShader>> _pixelShadersCache = new();
+    private bool _disposed;
 
     public ShaderManager(ComPtr<ID3D11Device> device)
     {
         _device = device;
         _compiler = D3DCompiler.GetApi();
+        _disposed = false;
     }
 
     #region Public Methods
@@ -326,6 +328,55 @@ internal sealed class ShaderManager
 
     ~ShaderManager()
     {
-        _compiler.Dispose();
+        Dispose(disposing: false);
+    }
+
+    private void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                // TODO: dispose managed state (managed objects)
+            }
+
+            // TODO: free unmanaged resources (unmanaged objects) and override finalizer
+            // TODO: set large fields to null
+            _compiler.Dispose();
+
+            foreach (ComPtr<ID3D11VertexShader> shader in _vertexShadersCache.Values)
+            {
+                shader.Dispose();
+            }
+            _vertexShadersCache.Clear();
+
+            foreach (ComPtr<ID3D11InputLayout> layout in _vertexLayoutsCache.Values)
+            {
+                layout.Dispose();
+            }
+            _vertexLayoutsCache.Clear();
+
+            foreach (ComPtr<ID3D11PixelShader> shader in _pixelShadersCache.Values)
+            {
+                shader.Dispose();
+            }
+            _pixelShadersCache.Clear();
+
+            _disposed = true;
+        }
+    }
+
+    // // TODO: override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
+    // ~ShaderManager()
+    // {
+    //     // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+    //     Dispose(disposing: false);
+    // }
+
+    public void Dispose()
+    {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
     }
 }

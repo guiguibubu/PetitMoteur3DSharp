@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Silk.NET.Core.Native;
@@ -5,17 +6,19 @@ using Silk.NET.Direct3D11;
 
 namespace PetitMoteur3D.Graphics;
 
-internal sealed class TextureManager
+internal sealed class TextureManager : IDisposable
 {
     public TextureFactory Factory => _textureFactory;
 
     private readonly TextureFactory _textureFactory;
     private readonly Dictionary<string, Texture> _textures;
+    private bool _disposed;
 
     public TextureManager(ComPtr<ID3D11Device> device)
     {
         _textureFactory = new TextureFactory(device);
         _textures = new Dictionary<string, Texture>();
+        _disposed = false;
     }
 
     public Texture GetOrLoadTexture(string fileName)
@@ -65,5 +68,39 @@ internal sealed class TextureManager
     public bool TryGet(string name, [NotNullWhen(true)][MaybeNullWhen(false)] out Texture? texture)
     {
         return _textures.TryGetValue(name, out texture);
+    }
+
+    private void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                // TODO: dispose managed state (managed objects)
+                foreach (Texture texture in _textures.Values)
+                {
+                    texture.Dispose();
+                }
+                _textures.Clear();
+            }
+
+            // TODO: free unmanaged resources (unmanaged objects) and override finalizer
+            // TODO: set large fields to null
+            _disposed = true;
+        }
+    }
+
+    // // TODO: override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
+    // ~TextureManager()
+    // {
+    //     // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+    //     Dispose(disposing: false);
+    // }
+
+    public void Dispose()
+    {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
     }
 }

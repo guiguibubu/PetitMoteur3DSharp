@@ -6,7 +6,7 @@ using Silk.NET.DXGI;
 
 namespace PetitMoteur3D.Graphics;
 
-internal sealed class GraphicDeviceRessourceFactory
+internal sealed class GraphicDeviceRessourceFactory : IDisposable
 {
     public GraphicBufferFactory BufferFactory => _bufferFactory;
     public ShaderManager ShaderManager => _shaderManager;
@@ -17,6 +17,7 @@ internal sealed class GraphicDeviceRessourceFactory
     private readonly TextureManager _textureManager;
     private readonly ComPtr<ID3D11Device> _device;
     private readonly bool _dxVk;
+    private bool _disposed;
 
     public GraphicDeviceRessourceFactory(D3D11GraphicDevice graphicDevice)
         : this(graphicDevice, new GraphicBufferFactory(graphicDevice.Device), new ShaderManager(graphicDevice.Device), new TextureManager(graphicDevice.Device))
@@ -29,6 +30,7 @@ internal sealed class GraphicDeviceRessourceFactory
         _textureManager = textureManager;
         _device = graphicDevice.Device;
         _dxVk = graphicDevice.DxVk;
+        _disposed = false;
     }
 
     public ComPtr<IDXGISwapChain1> CreateSwapChainForHwnd(IntPtr windowPtr, in SwapChainDesc1 swapChainDesc, in SwapChainFullscreenDesc swapChainFullscreenDesc, ref IDXGIOutput pRestrictToOutput)
@@ -105,5 +107,36 @@ internal sealed class GraphicDeviceRessourceFactory
             _device.CreateDepthStencilView(pResource, in pDesc, ref depthStencilView)
         );
         return depthStencilView;
+    }
+
+    private void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                // TODO: dispose managed state (managed objects)
+                _shaderManager.Dispose();
+                _textureManager.Dispose();
+            }
+
+            // TODO: free unmanaged resources (unmanaged objects) and override finalizer
+            // TODO: set large fields to null
+            _disposed = true;
+        }
+    }
+
+    // // TODO: override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
+    // ~GraphicDeviceRessourceFactory()
+    // {
+    //     // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+    //     Dispose(disposing: false);
+    // }
+
+    public void Dispose()
+    {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
     }
 }

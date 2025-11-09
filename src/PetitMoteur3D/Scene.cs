@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using PetitMoteur3D.Camera;
 using PetitMoteur3D.Graphics;
@@ -8,15 +9,17 @@ using Silk.NET.Maths;
 
 namespace PetitMoteur3D;
 
-internal sealed class Scene : IDrawableObjet
+internal sealed class Scene : IDrawableObjet, IDisposable
 {
     private readonly List<IObjet3D> _objects3D;
     private ICamera _camera;
 
-    private ComPtr<ID3D11Buffer> _constantBuffer = default;
+    private ComPtr<ID3D11Buffer> _constantBuffer;
 
     private LightShadersParams _light;
     private SceneShadersParams _shadersParams;
+
+    private bool _disposed;
 
     /// <summary>
     /// Constructeur par défaut
@@ -45,11 +48,7 @@ internal sealed class Scene : IDrawableObjet
 
         // Create our constant buffer.
         _constantBuffer = bufferFactory.CreateConstantBuffer<SceneShadersParams>(Usage.Default, CpuAccessFlag.None, name: "SceneConstantBuffer");
-    }
-
-    ~Scene()
-    {
-        _constantBuffer.Dispose();
+        _disposed = false;
     }
 
     public void AddObjet(IObjet3D obj)
@@ -82,5 +81,35 @@ internal sealed class Scene : IDrawableObjet
         {
             obj.Draw(graphicPipeline, in matViewProj);
         }
+    }
+
+    ~Scene()
+    {
+        Dispose(disposing: false);
+    }
+
+    private void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                // TODO: dispose managed state (managed objects)
+                _objects3D.Clear();
+            }
+
+            // TODO: free unmanaged resources (unmanaged objects) and override finalizer
+            // TODO: set large fields to null
+            _constantBuffer.Dispose();
+
+            _disposed = true;
+        }
+    }
+
+    public void Dispose()
+    {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
     }
 }

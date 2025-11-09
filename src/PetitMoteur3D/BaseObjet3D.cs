@@ -11,24 +11,24 @@ using Silk.NET.Maths;
 
 namespace PetitMoteur3D;
 
-internal abstract class BaseObjet3D : IObjet3D
+internal abstract class BaseObjet3D : IObjet3D, IDisposable
 {
     /// <inheritdoc/>
     public ref readonly System.Numerics.Vector3 Position { get { return ref _position; } }
 
-    private ComPtr<ID3D11Buffer> _vertexBuffer = default;
-    private ComPtr<ID3D11Buffer> _indexBuffer = default;
-    private ComPtr<ID3D11Buffer> _constantBuffer = default;
+    private ComPtr<ID3D11Buffer> _vertexBuffer;
+    private ComPtr<ID3D11Buffer> _indexBuffer;
+    private ComPtr<ID3D11Buffer> _constantBuffer;
 
-    private ComPtr<ID3D11VertexShader> _vertexShader = default;
-    private ComPtr<ID3D11InputLayout> _vertexLayout = default;
-    private ComPtr<ID3D11PixelShader> _pixelShader = default;
+    private ComPtr<ID3D11VertexShader> _vertexShader;
+    private ComPtr<ID3D11InputLayout> _vertexLayout;
+    private ComPtr<ID3D11PixelShader> _pixelShader;
 
     private ComPtr<ID3D11ShaderResourceView> _textureD3D;
     private ComPtr<ID3D11ShaderResourceView> _normalMap;
     private ComPtr<ID3D11SamplerState> _sampleState;
 
-    private System.Numerics.Matrix4x4 _matWorld = default;
+    private System.Numerics.Matrix4x4 _matWorld;
 
     private System.Numerics.Vector3 _position;
     private readonly Orientation3D _orientation;
@@ -44,9 +44,9 @@ internal abstract class BaseObjet3D : IObjet3D
 
     private readonly string _name;
 
-    private static IObjectPool<ObjectShadersParams> _objectShadersParamsPool = ObjectPoolFactory.Create<ObjectShadersParams>();
-    private static IObjectPool<SamplerDesc> _shaderDescPool = ObjectPoolFactory.Create<SamplerDesc>();
-
+    private static readonly IObjectPool<ObjectShadersParams> _objectShadersParamsPool = ObjectPoolFactory.Create<ObjectShadersParams>();
+    private static readonly IObjectPool<SamplerDesc> _shaderDescPool = ObjectPoolFactory.Create<SamplerDesc>();
+    private bool _disposed;
     private readonly GraphicBufferFactory _bufferFactory;
     private readonly ShaderManager _shaderManager;
     private readonly TextureManager _textureManager;
@@ -72,17 +72,16 @@ internal abstract class BaseObjet3D : IObjet3D
         _bufferFactory = graphicDeviceRessourceFactory.BufferFactory;
         _shaderManager = graphicDeviceRessourceFactory.ShaderManager;
         _textureManager = graphicDeviceRessourceFactory.TextureManager;
-    }
 
-    ~BaseObjet3D()
-    {
-        _vertexBuffer.Dispose();
-        _indexBuffer.Dispose();
-        _constantBuffer.Dispose();
+        _vertexBuffer = default;
+        _indexBuffer = default;
+        _constantBuffer = default;
 
-        _vertexShader.Dispose();
-        _vertexLayout.Dispose();
-        _pixelShader.Dispose();
+        _vertexShader = default;
+        _vertexLayout = default;
+        _pixelShader = default;
+
+        _disposed = false;
     }
 
     /// <inheritdoc/>
@@ -339,5 +338,49 @@ internal abstract class BaseObjet3D : IObjet3D
         public IReadOnlyList<ushort> Indices;
         public System.Numerics.Matrix4x4 Transformation;
         public Material Material;
+    }
+
+
+    ~BaseObjet3D()
+    {
+        Dispose(disposing: false);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                // TODO: dispose managed state (managed objects)
+            }
+
+            // TODO: free unmanaged resources (unmanaged objects) and override finalizer
+            // TODO: set large fields to null
+
+            _vertexBuffer.Dispose();
+            _indexBuffer.Dispose();
+            _constantBuffer.Dispose();
+
+            _vertexShader.Dispose();
+            _vertexLayout.Dispose();
+            _pixelShader.Dispose();
+
+            _disposed = true;
+        }
+    }
+
+    // // TODO: override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
+    // ~BaseObjet3D()
+    // {
+    //     // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+    //     Dispose(disposing: false);
+    // }
+
+    public void Dispose()
+    {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
     }
 }

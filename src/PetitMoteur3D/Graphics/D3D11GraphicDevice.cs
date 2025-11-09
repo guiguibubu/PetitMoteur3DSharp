@@ -1,12 +1,11 @@
 ﻿using System;
-using PetitMoteur3D.Logging;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
 using Silk.NET.DXGI;
 
 namespace PetitMoteur3D.Graphics;
 
-internal class D3D11GraphicDevice
+internal sealed class D3D11GraphicDevice : IDisposable
 {
     public ref readonly ComPtr<ID3D11Device> Device { get { return ref _device; } }
     public ref readonly ComPtr<ID3D11DeviceContext> DeviceContext { get { return ref _deviceContext; } }
@@ -16,13 +15,14 @@ internal class D3D11GraphicDevice
 
     private ComPtr<ID3D11Device> _device;
     private ComPtr<ID3D11DeviceContext> _deviceContext;
-    
     private readonly D3D11 _d3d11Api;
 
     private static readonly D3DFeatureLevel[] FEATURES_LEVELS = {
         D3DFeatureLevel.Level111,
         D3DFeatureLevel.Level110
     };
+
+    private bool _disposed;
 
     /// <summary>
     /// 
@@ -39,6 +39,8 @@ internal class D3D11GraphicDevice
         InitDevice(_d3d11Api);
 
         RessourceFactory = new(this);
+
+        _disposed = false;
     }
 
     public void SetMaximumFrameLatency(uint maxLatency)
@@ -90,14 +92,39 @@ internal class D3D11GraphicDevice
 #endif
     }
 
-    unsafe ~D3D11GraphicDevice()
+    ~D3D11GraphicDevice()
     {
-        if (_deviceContext.Handle is not null)
+        Dispose(disposing: false);
+    }
+
+    private unsafe void Dispose(bool disposing)
+    {
+        if (!_disposed)
         {
-            _deviceContext.ClearState();
+            if (disposing)
+            {
+                // TODO: dispose managed state (managed objects)
+                RessourceFactory.Dispose();
+            }
+
+            // TODO: free unmanaged resources (unmanaged objects) and override finalizer
+            // TODO: set large fields to null
+
+            if (_deviceContext.Handle is not null)
+            {
+                _deviceContext.ClearState();
+            }
+            _deviceContext.Dispose();
+            _device.Dispose();
+            _d3d11Api.Dispose(); // we need to keep it because in Release build, it can fail to load DXGI ressources id d3d11 is dispose too soon
+            _disposed = true;
         }
-        _deviceContext.Dispose();
-        _device.Dispose();
-        _d3d11Api.Dispose(); // we need to keep it because in Release build, it can fail to load DXGI ressources id d3d11 is dispose too soon
+    }
+
+    public void Dispose()
+    {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
     }
 }

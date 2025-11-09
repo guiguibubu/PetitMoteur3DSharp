@@ -10,7 +10,7 @@ using Silk.NET.DXGI;
 
 namespace PetitMoteur3D.Graphics;
 
-public class D3D11GraphicPipeline
+public class D3D11GraphicPipeline : IDisposable
 {
     public ref ComPtr<IDXGISwapChain1> Swapchain { get { return ref _swapchain; } }
     public ref ComPtr<ID3D11RenderTargetView> RenderTargetView { get { return ref _renderTargetView; } }
@@ -45,6 +45,7 @@ public class D3D11GraphicPipeline
     private readonly float[] _backgroundColour = new[] { 0.0f, 0.5f, 0.0f, 1.0f };
 
     private bool _isSwapChainComposition;
+    private bool _disposed;
 #if USE_RENDERDOC
     private readonly Evergine.Bindings.RenderDoc.RenderDoc _renderDoc;
 #endif
@@ -91,9 +92,10 @@ public class D3D11GraphicPipeline
         _wireFrameCullBackRS = RessourceFactory.CreateRasterizerState(in rsWireDesc);
 
         RasterizerStage.SetState(_solidCullBackRS);
-        
+
         _currentSize = new Size();
 
+        _disposed = false;
 #if USE_RENDERDOC
         Evergine.Bindings.RenderDoc.RenderDoc.Load(out _renderDoc);
         _renderDoc.API.SetActiveWindow(new IntPtr(_device.Handle), _window.Native!.DXHandle!.Value);
@@ -340,5 +342,42 @@ public class D3D11GraphicPipeline
         _graphicDevice.DeviceContext.ClearRenderTargetView(_renderTargetView, _backgroundColour.AsSpan());
         // On ré-initialise le tampon de profondeur
         _graphicDevice.DeviceContext.ClearDepthStencilView(_depthStencilView, (uint)ClearFlag.Depth, 1.0f, 0);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                // TODO: dispose managed state (managed objects)
+            }
+
+            // TODO: free unmanaged resources (unmanaged objects) and override finalizer
+            // TODO: set large fields to null
+
+            _swapchain.Dispose();
+            _renderTargetView.Dispose();
+            _depthStencilView.Dispose();
+            _depthTexture.Dispose();
+            _solidCullBackRS.Dispose();
+            _wireFrameCullBackRS.Dispose();
+
+            _disposed = true;
+        }
+    }
+
+    // // TODO: override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
+    // ~D3D11GraphicPipeline()
+    // {
+    //     // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+    //     Dispose(disposing: false);
+    // }
+
+    public void Dispose()
+    {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
     }
 }

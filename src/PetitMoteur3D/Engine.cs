@@ -27,7 +27,6 @@ public class Engine
     private D3D11GraphicDevice _graphicDevice = default!;
     private D3D11GraphicPipeline _graphicPipeline = default!;
     private GraphicDeviceRessourceFactory _graphicDeviceRessourceFactory = default!;
-    private GraphicPipelineRessourceFactory _graphicPipelineRessourceFactory = default!;
 
     private MeshLoader _meshLoader = default!;
     private Scene _scene = default!;
@@ -178,6 +177,8 @@ public class Engine
     {
         Log.Information("[PetitMoteur3D] OnClosing");
         _imGuiController?.Dispose();
+        _graphicPipeline?.Dispose();
+        _graphicDevice?.Dispose();
         Log.Information("[PetitMoteur3D] OnClosing ImGuiController.Dispose Finished");
     }
 
@@ -349,7 +350,6 @@ public class Engine
     {
         _graphicDevice = new D3D11GraphicDevice(!_onNativeDxPlatform);
         _graphicDeviceRessourceFactory = _graphicDevice.RessourceFactory;
-        _graphicPipelineRessourceFactory = new GraphicPipelineRessourceFactory(_graphicDevice);
         _graphicPipeline = new D3D11GraphicPipeline(_graphicDevice, _window);
         _graphicPipeline.GetBackgroundColour(out Vector4 backgroundColor);
         _backgroundColour = backgroundColor;
