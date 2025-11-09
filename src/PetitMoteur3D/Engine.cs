@@ -21,17 +21,17 @@ public class Engine
 {
     public D3D11GraphicPipeline GraphicPipeline => _graphicPipeline;
 
-    private readonly IWindow _window = default!;
-    private readonly IInputContext? _inputContext = default!;
+    private readonly IWindow _window;
+    private readonly IInputContext? _inputContext;
 
-    private ImGuiController _imGuiController = default!;
-    private D3D11GraphicDevice _graphicDevice = default!;
-    private D3D11GraphicPipeline _graphicPipeline = default!;
+    private ImGuiController _imGuiController;
+    private D3D11GraphicDevice _graphicDevice;
+    private D3D11GraphicPipeline _graphicPipeline;
 
-    private Scene _scene = default!;
-    private ICamera _camera = default!;
-    private Matrix4x4 _matView = default;
-    private Matrix4x4 _matProj = default;
+    private Scene _scene;
+    private ICamera _camera;
+    private Matrix4x4 _matView;
+    private Matrix4x4 _matProj;
 
     private bool _imGuiShowDemo;
     private bool _imGuiShowDebugLogs;
@@ -41,7 +41,7 @@ public class Engine
     private bool _showDebugTool;
     private bool _showWireFrame;
     private bool _showScene;
-    private Vector4 _backgroundColour = default!;
+    private Vector4 _backgroundColour;
 
     private readonly Stopwatch _horlogeEngine;
     private readonly Stopwatch _horlogeScene;
@@ -66,12 +66,21 @@ public class Engine
 
     public ulong CurrentFrameCount;
 
-    public Engine(ref readonly EngineConfiguration conf)
+    public Engine(EngineConfiguration conf)
     {
         _memoryAtStartUp = _currentProcess.WorkingSet64;
         _onNativeDxPlatform = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
         _window = conf.Window;
         _inputContext = conf.InputContext;
+
+        _window = default!;
+        _inputContext = default!;
+
+        _imGuiController = default!;
+        _graphicDevice = default!;
+        _graphicPipeline = default!;
+
+        _backgroundColour = default;
 
         _isInitializing = false;
         _isInitialized = false;
@@ -90,6 +99,11 @@ public class Engine
         _horlogeEngine = new Stopwatch();
         _horlogeScene = new Stopwatch();
         _horlogeDebugTool = new Stopwatch();
+
+        _scene = default!;
+        _camera = default!;
+        _matView = default;
+        _matProj = default;
     }
 
     public void Initialize()

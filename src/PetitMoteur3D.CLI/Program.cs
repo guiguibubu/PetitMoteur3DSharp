@@ -43,7 +43,7 @@ try
             Window = window,
             InputContext = inputContext
         };
-        Engine engine = new(in conf);
+        Engine engine = new(conf);
         engine.Initialize();
         engine.Run();
     }

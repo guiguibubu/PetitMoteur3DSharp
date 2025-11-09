@@ -64,7 +64,7 @@ public sealed partial class MainWindow : global::Microsoft.UI.Xaml.Window
                 Window = window,
                 InputContext = inputContext
             };
-            Engine engine = new(in conf);
+            Engine engine = new(conf);
             engine.Initialized += () =>
             {
                 bool success = DXSwapChainPanel.DispatcherQueue.TryEnqueue(DispatcherQueuePriority.High, () =>
