@@ -27,6 +27,32 @@ public static class Log
         }
     }
 
+    public static void Warning(string? format, params object?[] args)
+    {
+        Warning(string.Format(format ?? "", args));
+    }
+
+    public static void Warning(string? message)
+    {
+        if (message is not null)
+        {
+            Serilog.Log.Warning(message);
+        }
+    }
+
+    public static void Error(string? format, params object?[] args)
+    {
+        Error(string.Format(format ?? "", args));
+    }
+
+    public static void Error(string? message)
+    {
+        if (message is not null)
+        {
+            Serilog.Log.Error(message);
+        }
+    }
+
     public static void Fatal(Exception ex)
     {
         Serilog.Log.Fatal(ex, "Exception");
