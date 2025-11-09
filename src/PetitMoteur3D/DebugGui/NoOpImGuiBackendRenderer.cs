@@ -2,7 +2,7 @@
 
 namespace PetitMoteur3D.DebugGui;
 
-internal class NoOpImGuiBackendRenderer : IImGuiBackendRenderer
+internal sealed class NoOpImGuiBackendRenderer : IImGuiBackendRenderer
 {
     public void Dispose()
     {

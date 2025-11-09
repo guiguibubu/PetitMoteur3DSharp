@@ -4,7 +4,7 @@ using Silk.NET.Direct3D11;
 
 namespace PetitMoteur3D.Graphics.Stages;
 
-internal class RasterizerStage
+internal sealed class RasterizerStage
 {
     private readonly ComPtr<ID3D11DeviceContext> _deviceContext;
     public RasterizerStage(ComPtr<ID3D11DeviceContext> deviceContext) { _deviceContext = deviceContext; }

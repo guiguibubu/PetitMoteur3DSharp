@@ -3,7 +3,7 @@ using Silk.NET.Direct3D11;
 
 namespace PetitMoteur3D.Graphics.Stages;
 
-internal class VertexShaderStage
+internal sealed class VertexShaderStage
 {
     private readonly ComPtr<ID3D11DeviceContext> _deviceContext;
     public VertexShaderStage(ComPtr<ID3D11DeviceContext> deviceContext) { _deviceContext = deviceContext; }

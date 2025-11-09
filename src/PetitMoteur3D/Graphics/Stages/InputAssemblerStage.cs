@@ -3,7 +3,7 @@ using Silk.NET.Direct3D11;
 
 namespace PetitMoteur3D.Graphics.Stages;
 
-internal class InputAssemblerStage
+internal sealed class InputAssemblerStage
 {
     private readonly ComPtr<ID3D11DeviceContext> _deviceContext;
     public InputAssemblerStage(ComPtr<ID3D11DeviceContext> deviceContext) { _deviceContext = deviceContext; }
