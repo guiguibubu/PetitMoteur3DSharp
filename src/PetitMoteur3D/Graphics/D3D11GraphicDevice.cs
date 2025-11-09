@@ -86,7 +86,7 @@ internal sealed class D3D11GraphicDevice : IDisposable
             _device.SetInfoQueueCallback(msg =>
             {
                 string? msgStr = SilkMarshal.PtrToString((nint)msg.PDescription);
-                Log.Information(msgStr);
+                PetitMoteur3D.Logging.Log.Information(msgStr);
             });
         }
 #endif

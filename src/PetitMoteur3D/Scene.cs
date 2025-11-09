@@ -35,7 +35,7 @@ internal sealed class Scene : IDrawableObjet, IDisposable
         _light = new LightShadersParams()
         {
             Position = new Vector4D<float>(0f, 0f, 0f, 1f),
-            Direction = new Vector4D<float>(1f, 0f, 1f, 1f),
+            Direction = new Vector4D<float>(1f, -1f, 1f, 1f),
             AmbiantColor = new Vector4D<float>(0.2f, 0.2f, 0.2f, 1.0f),
             DiffuseColor = new Vector4D<float>(1.0f, 1.0f, 1.0f, 1.0f),
         };

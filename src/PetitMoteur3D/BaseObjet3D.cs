@@ -15,6 +15,7 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
 {
     /// <inheritdoc/>
     public ref readonly System.Numerics.Vector3 Position { get { return ref _position; } }
+    public Orientation3D Orientation { get { return _orientation; } }
 
     private ComPtr<ID3D11Buffer> _vertexBuffer;
     private ComPtr<ID3D11Buffer> _indexBuffer;
@@ -34,7 +35,6 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
     private readonly Orientation3D _orientation;
 
     private static readonly System.Numerics.Vector3 ZeroRotation = System.Numerics.Vector3.Zero;
-    private static readonly System.Numerics.Vector3 AxisRotation = System.Numerics.Vector3.UnitY;
 
     private Sommet[] _sommets;
     private ushort[] _indices;
@@ -90,6 +90,7 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
         _position.X += dx;
         _position.Y += dy;
         _position.Z += dz;
+        UpdateMatWorld();
         return ref _position;
     }
 
@@ -111,6 +112,7 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
     {
         System.Numerics.Quaternion quaternion = System.Numerics.Quaternion.CreateFromYawPitchRoll(rotation.Y, rotation.X, rotation.Z);
         _orientation.Rotate(in quaternion);
+        UpdateMatWorld();
         return ref ZeroRotation;
     }
 
@@ -120,15 +122,14 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
     public ref readonly System.Numerics.Vector3 Rotate(ref readonly System.Numerics.Vector3 axis, float angle)
     {
         _orientation.Rotate(in axis, angle);
+        UpdateMatWorld();
         return ref ZeroRotation;
     }
 
     /// <inheritdoc/>
     public virtual void Update(float elapsedTime)
     {
-        _orientation.Rotate(in AxisRotation, (float)((Math.PI * 2.0f) / 24.0f * elapsedTime / 1000f));
-        // modifier la matrice de l’objet bloc
-        _matWorld = System.Numerics.Matrix4x4.CreateFromQuaternion(_orientation.Quaternion) * System.Numerics.Matrix4x4.CreateTranslation(_position);
+        
     }
 
     /// <inheritdoc/>
@@ -264,6 +265,11 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
 
         // Create our constant buffer.
         _constantBuffer = bufferFactory.CreateConstantBuffer<ObjectShadersParams>(Usage.Default, CpuAccessFlag.None, $"{_name}_IndexBuffer");
+    }
+
+    protected void UpdateMatWorld()
+    {
+        _matWorld = System.Numerics.Matrix4x4.CreateFromQuaternion(_orientation.Quaternion) * System.Numerics.Matrix4x4.CreateTranslation(_position);
     }
 
     /// <summary>

@@ -365,10 +365,10 @@ public class Engine
 
     private void InitScene()
     {
-        _camera = new FixedCamera(Vector3.Zero);
+        _camera = new FixedCamera(new Vector3(0f, 2f, 0f));
         //_camera = new ArcCamera(Vector3.Zero);
         //_camera = new FreeCamera(_window);
-        _camera.Move(-10 * Vector3.UnitZ);
+        _camera.Move(0f, 2f, -10f);
 
         _scene = InitDefaultScene(_graphicDevice.RessourceFactory, _camera);
 
@@ -394,11 +394,11 @@ public class Engine
         Bloc bloc1 = new(4.0f, 4.0f, 4.0f, ressourceFactory);
         bloc1.SetTexture(ressourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall.jpg"));
         bloc1.SetNormalMapTexture(ressourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall_normal.jpg"));
-        bloc1.Move(-4f, 0f, 0f);
+        bloc1.Move(-4f, 2f, 0f);
 
         Bloc bloc2 = new(4.0f, 4.0f, 4.0f, ressourceFactory);
         bloc2.SetTexture(ressourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall.jpg"));
-        bloc2.Move(4f, 0f, 0f);
+        bloc2.Move(4f, 2f, 0f);
 
         MeshLoader meshLoader = new();
         IReadOnlyList<SceneMesh>? meshes = meshLoader.Load("models\\teapot.obj");
@@ -414,10 +414,16 @@ public class Engine
         Vector3 sceneDim = new(dimX, dimY, dimZ);
 
         objetMesh.Mesh.AddTransform(Matrix4x4.CreateScale(4f / float.Max(float.Max(dimX, dimY), dimZ)));
+        objetMesh.Move(0f, 2f, 0f);
+
+        Plane ground = new(10f, 10f, ressourceFactory);
+        ground.SetTexture(ressourceFactory.TextureManager.GetOrLoadTexture("textures\\silk.png"));
+        ground.Rotate(Vector3.UnitX, (float)(Math.PI / 2f));
 
         scene.AddObjet(bloc1);
         scene.AddObjet(bloc2);
         scene.AddObjet(objetMesh);
+        scene.AddObjet(ground);
 
         return scene;
     }

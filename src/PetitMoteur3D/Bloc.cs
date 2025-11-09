@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using PetitMoteur3D.Graphics;
 using Silk.NET.Maths;
 
@@ -134,5 +135,16 @@ internal sealed class Bloc : BaseObjet3D
     protected override IReadOnlyList<SubObjet3D> GetSubObjets()
     {
         return _subObjects;
+    }
+
+    private static readonly System.Numerics.Vector3 AxisRotation = System.Numerics.Vector3.UnitY;
+
+    /// <inheritdoc/>
+    public override void Update(float elapsedTime)
+    {
+        base.Update(elapsedTime);
+        Orientation.Rotate(in AxisRotation, (float)((Math.PI * 2.0f) / 24.0f * elapsedTime / 1000f));
+        // modifier la matrice de l’objet bloc
+        UpdateMatWorld();
     }
 }
