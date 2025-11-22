@@ -29,8 +29,7 @@ public class Engine
 
     private Scene _scene;
     private ICamera _camera;
-    private Matrix4x4 _matView;
-    private Matrix4x4 _matProj;
+    private FrustrumView _frustrumView;
 
     private bool _imGuiShowDemo;
     private bool _imGuiShowDebugLogs;
@@ -40,6 +39,7 @@ public class Engine
     private bool _showDebugTool;
     private bool _showWireFrame;
     private bool _showScene;
+    private bool _showShadow;
     private Vector4 _backgroundColour;
 
     private readonly Stopwatch _horlogeEngine;
@@ -91,6 +91,7 @@ public class Engine
         _showDebugTool = false;
         _showWireFrame = false;
         _showScene = true;
+        _showShadow = false;
 
         _horlogeEngine = new Stopwatch();
         _horlogeScene = new Stopwatch();
@@ -98,8 +99,7 @@ public class Engine
 
         _scene = default!;
         _camera = default!;
-        _matView = default;
-        _matProj = default;
+        _frustrumView = default!;
     }
 
     public void Initialize()
@@ -261,6 +261,7 @@ public class Engine
                         ImGui.Checkbox("Show Debug Logs", ref _imGuiShowDebugLogs);     // Edit bool
                         ImGui.Checkbox("Show Metrics", ref _imGuiShowMetrics);     // Edit bool
                         ImGui.Checkbox("Show Scene", ref _showScene);     // Edit bool
+                        ImGui.Checkbox("Show Shadow", ref _showShadow);     // Edit bool
                         ImGui.Checkbox("Show Logs", ref _imGuiShowEngineLogs);     // Edit bool
                         ImGui.End();
 
@@ -289,20 +290,19 @@ public class Engine
 
                         if (wireFrameChanged)
                         {
-                            ComPtr<ID3D11RasterizerState> rasterizerState = default;
-                            _graphicPipeline.RasterizerStage.GetState(ref rasterizerState);
+                            ComPtr<ID3D11RasterizerState> rasterizerState = _scene.RasterizerState;
                             if (_showWireFrame)
                             {
                                 if (rasterizerState.Handle != _graphicPipeline.WireFrameCullBackRS.Handle)
                                 {
-                                    _graphicPipeline.RasterizerStage.SetState(_graphicPipeline.WireFrameCullBackRS);
+                                    _scene.RasterizerState = _graphicPipeline.WireFrameCullBackRS;
                                 }
                             }
                             else
                             {
                                 if (rasterizerState.Handle != _graphicPipeline.SolidCullBackRS.Handle)
                                 {
-                                    _graphicPipeline.RasterizerStage.SetState(_graphicPipeline.SolidCullBackRS);
+                                    _scene.RasterizerState = _graphicPipeline.SolidCullBackRS;
                                 }
                             }
                         }
@@ -342,12 +342,10 @@ public class Engine
         float aspectRatio = windowWidth / windowHeight;
         float planRapproche = 2.0f;
         float planEloigne = 100.0f;
-        _matProj = CreatePerspectiveFieldOfViewLH(
-            _camera.ChampVision,
+        _frustrumView.Update(_camera.ChampVision,
             aspectRatio,
             planRapproche,
-            planEloigne
-        );
+            planEloigne);
     }
 
     private void BeginRender()
@@ -371,16 +369,17 @@ public class Engine
         _camera.Move(0f, 2f, -10f);
 
         _scene = InitDefaultScene(_graphicDevice.RessourceFactory, _camera);
+        // Set default rasterizer state
+        _scene.RasterizerState = _graphicPipeline.SolidCullBackRS;
 
         // Initialisation des matrices View et Proj
         // Dans notre cas, ces matrices sont fixes
-        _camera.GetViewMatrix(out _matView);
         float windowWidth = _window.Size.Width;
         float windowHeight = _window.Size.Height;
         float aspectRatio = windowWidth / windowHeight;
         float planRapproche = 2.0f;
         float planEloigne = 100.0f;
-        _matProj = CreatePerspectiveFieldOfViewLH(
+        _frustrumView = new FrustrumView(
             _camera.ChampVision,
             aspectRatio,
             planRapproche,
@@ -390,7 +389,7 @@ public class Engine
 
     private static Scene InitDefaultScene(GraphicDeviceRessourceFactory ressourceFactory, ICamera camera)
     {
-        Scene scene = new(ressourceFactory.BufferFactory, camera);
+        Scene scene = new(ressourceFactory, camera);
         Bloc bloc1 = new(4.0f, 4.0f, 4.0f, ressourceFactory);
         bloc1.SetTexture(ressourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall.jpg"));
         bloc1.SetNormalMapTexture(ressourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall_normal.jpg"));
@@ -402,7 +401,7 @@ public class Engine
 
         MeshLoader meshLoader = new();
         IReadOnlyList<SceneMesh>? meshes = meshLoader.Load("models\\teapot.obj");
-        
+
         SceneMesh rootMesh = meshes[0];
         BoundingBox boundingBox = rootMesh.GetBoundingBox();
         float centerX = (boundingBox.Min.X + boundingBox.Max.X) / 2f;
@@ -483,19 +482,14 @@ public class Engine
         BeginRender();
         if (_initAnimationFinished)
         {
-            _camera.GetViewMatrix(out _matView);
-            Matrix4x4 matViewProj = _matView * _matProj;
+            if (_showShadow)
+            {
+                _scene.DrawShadow(_graphicPipeline);
+            }
+            _camera.GetViewMatrix(out Matrix4x4 matView);
+            ref readonly Matrix4x4 matProj = ref _frustrumView.MatProj;
+            Matrix4x4 matViewProj = matView * matProj;
             _scene.Draw(_graphicPipeline, in matViewProj);
         }
-    }
-
-    public static Matrix4x4 CreatePerspectiveFieldOfViewLH(float fieldOfView, float aspectRatio, float nearPlaneDistance, float farPlaneDistance)
-    {
-        Matrix4x4 result = Matrix4x4.CreatePerspectiveFieldOfView(fieldOfView, aspectRatio, nearPlaneDistance, farPlaneDistance);
-        result.M31 = -result.M31;
-        result.M32 = -result.M32;
-        result.M33 = -result.M33;
-        result.M34 = -result.M34;
-        return result;
     }
 }

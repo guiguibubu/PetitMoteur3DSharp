@@ -1,11 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Linq;
 using PetitMoteur3D.Graphics;
 using Silk.NET.Maths;
 
 namespace PetitMoteur3D;
 
-internal sealed class Bloc : BaseObjet3D
+internal sealed class Bloc : BaseObjet3DWithShadow
 {
     private readonly Vector3D<float>[] _vertices;
     private readonly Vector3D<float>[] _normales;
@@ -124,6 +124,12 @@ internal sealed class Bloc : BaseObjet3D
     protected override Sommet[] InitVertex()
     {
         return _sommets;
+    }
+
+    /// <inheritdoc/>
+    protected override SommetShadowMap[] InitVertexShadowMap()
+    {
+        return _sommets.Select(s => new SommetShadowMap(s.Position)).ToArray();
     }
 
     /// <inheritdoc/>

@@ -1,5 +1,4 @@
-﻿using System;
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using PetitMoteur3D.Core.Memory;
 using Silk.NET.Maths;
 

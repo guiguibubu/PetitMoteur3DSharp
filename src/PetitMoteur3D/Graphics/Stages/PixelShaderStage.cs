@@ -28,9 +28,9 @@ internal sealed class PixelShaderStage
         _deviceContext.PSSetShaderResources(StartSlot, NumViews, ref ppShaderResourceViews);
     }
 
-    public void SetSamplers(uint StartSlot, uint NumSamplers, ref ComPtr<ID3D11SamplerState> ppSamplers)
+    public unsafe void SetSamplers(uint StartSlot, uint NumSamplers, ref readonly ComPtr<ID3D11SamplerState> ppSamplers)
     {
-        _deviceContext.PSSetSamplers(StartSlot, NumSamplers, ref ppSamplers);
+        _deviceContext.PSSetSamplers(StartSlot, NumSamplers, (ID3D11SamplerState**)ppSamplers.GetAddressOf()); ;
     }
 
     public void GetConstantBuffers(uint StartSlot, uint NumBuffers, ref ComPtr<ID3D11Buffer> ppConstantBuffers)

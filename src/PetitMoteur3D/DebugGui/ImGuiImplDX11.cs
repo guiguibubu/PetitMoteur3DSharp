@@ -623,7 +623,7 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
         graphicPipeline.VertexShaderStage.SetShader(_backendRendererUserData.VertexShader, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
         graphicPipeline.VertexShaderStage.SetConstantBuffers(0, 1, ref _backendRendererUserData.VertexConstantBuffer);
         graphicPipeline.PixelShaderStage.SetShader(_backendRendererUserData.PixelShader, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
-        graphicPipeline.PixelShaderStage.SetSamplers(0, 1, ref _backendRendererUserData.FontSampler);
+        graphicPipeline.PixelShaderStage.SetSamplers(0, 1, in _backendRendererUserData.FontSampler);
         // graphicPipeline.GeometryShaderStage.SetShader(Unsafe.NullRef<ComPtr<ID3D11GeometryShader>>(), ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
         // deviceContext.HSSetShader(Unsafe.NullRef<ComPtr<ID3D11HullShader>>(), ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0); // In theory we should backup and restore this as well.. very infrequently used..
         // deviceContext.DSSetShader(Unsafe.NullRef<ComPtr<ID3D11DomainShader>>(), ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0); // In theory we should backup and restore this as well.. very infrequently used..
@@ -662,7 +662,7 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
         graphicPipeline.OutputMergerStage.SetBlendState(newDxState.BlendState, ref newDxState.BlendFactor[0], newDxState.SampleMask);
         graphicPipeline.OutputMergerStage.SetDepthStencilState(newDxState.DepthStencilState, newDxState.StencilRef);
         graphicPipeline.PixelShaderStage.SetShaderResources(0, 1, ref newDxState.PSShaderResource);
-        graphicPipeline.PixelShaderStage.SetSamplers(0, 1, ref newDxState.PSSampler);
+        graphicPipeline.PixelShaderStage.SetSamplers(0, 1, in newDxState.PSSampler);
         graphicPipeline.PixelShaderStage.SetShader(newDxState.PixelShader, ref newDxState.PSInstances, newDxState.PSInstancesCount);
         graphicPipeline.VertexShaderStage.SetShader(newDxState.VertexShader, ref newDxState.VSInstances, newDxState.VSInstancesCount);
         graphicPipeline.VertexShaderStage.SetConstantBuffers(0, 1, ref newDxState.VSConstantBuffer);

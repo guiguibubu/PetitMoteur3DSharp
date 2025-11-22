@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using PetitMoteur3D.Core.Math;
 using PetitMoteur3D.Core.Memory;
@@ -13,9 +12,21 @@ namespace PetitMoteur3D;
 
 internal abstract class BaseObjet3D : IObjet3D, IDisposable
 {
+    #region Public Properties
     /// <inheritdoc/>
     public ref readonly System.Numerics.Vector3 Position { get { return ref _position; } }
     public Orientation3D Orientation { get { return _orientation; } }
+    /// <inheritdoc/>
+    public string Name { get { return _name; } }
+    #endregion
+
+    #region Protected Properties
+    protected ref readonly System.Numerics.Matrix4x4 MatWorld { get { return ref _matWorld; } }
+    protected ref readonly SubObjet3D[] SubObjects { get { return ref _subObjects; } }
+    protected ComPtr<ID3D11Buffer> IndexBuffer { get { return _indexBuffer; } }
+    protected int NbIndices { get { return _indices.Length; } }
+    protected GraphicBufferFactory BufferFactory { get { return _bufferFactory; } }
+    #endregion
 
     private ComPtr<ID3D11Buffer> _vertexBuffer;
     private ComPtr<ID3D11Buffer> _indexBuffer;
@@ -130,7 +141,7 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
     /// <inheritdoc/>
     public virtual void Update(float elapsedTime)
     {
-        
+
     }
 
     /// <inheritdoc/>
@@ -139,7 +150,6 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
         // Choisir la topologie des primitives
         graphicPipeline.InputAssemblerStage.SetPrimitiveTopology(D3DPrimitiveTopology.D3D11PrimitiveTopologyTrianglelist);
         // Source des sommets
-
         graphicPipeline.InputAssemblerStage.SetVertexBuffers(0, 1, ref _vertexBuffer, in _vertexStride, in _vertexOffset);
         // Source des index
         graphicPipeline.InputAssemblerStage.SetIndexBuffer(_indexBuffer, Silk.NET.DXGI.Format.FormatR16Uint, 0);
@@ -177,7 +187,7 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
                 graphicPipeline.PixelShaderStage.SetShaderResources(1, 1, ref _normalMap);
             }
             // Le sampler state
-            graphicPipeline.PixelShaderStage.SetSamplers(0, 1, ref _sampleState);
+            graphicPipeline.PixelShaderStage.SetSamplers(0, 1, in _sampleState);
             // **** Rendu de l’objet
             graphicPipeline.DrawIndexed((uint)_indices.Length, 0, 0);
 
@@ -195,7 +205,7 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
         _normalMap = texture.TextureView;
     }
 
-    protected void Initialisation()
+    protected virtual void Initialisation()
     {
         _sommets = InitVertex();
         _indices = InitIndex();

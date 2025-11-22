@@ -91,22 +91,9 @@ internal sealed class GraphicDeviceRessourceFactory : IDisposable
         return renderTargetView;
     }
 
-    public ComPtr<ID3D11Texture2D> CreateTexture2D(in Texture2DDesc pDesc, in SubresourceData pInitialData)
+    public TextureBuilder CreateBuilder(Texture2DDesc textureDesc)
     {
-        ComPtr<ID3D11Texture2D> texture2D = default;
-        SilkMarshal.ThrowHResult(
-            _device.CreateTexture2D(in pDesc, ref Unsafe.NullRef<SubresourceData>(), ref texture2D)
-        );
-        return texture2D;
-    }
-
-    public ComPtr<ID3D11DepthStencilView> CreateDepthStencilView(ComPtr<ID3D11Texture2D> pResource, in DepthStencilViewDesc pDesc)
-    {
-        ComPtr<ID3D11DepthStencilView> depthStencilView = default;
-        SilkMarshal.ThrowHResult(
-            _device.CreateDepthStencilView(pResource, in pDesc, ref depthStencilView)
-        );
-        return depthStencilView;
+        return new TextureBuilder(_textureManager.Factory, textureDesc);
     }
 
     private void Dispose(bool disposing)

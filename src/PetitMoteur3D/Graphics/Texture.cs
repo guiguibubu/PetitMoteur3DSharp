@@ -10,8 +10,12 @@ internal sealed class Texture : IDisposable
     public string Name { get; private set; }
     public int Width { get; private set; }
     public int Height { get; private set; }
+    public ComPtr<ID3D11Texture2D> TextureRessource { get { return _texture; } }
+    private readonly ComPtr<ID3D11Texture2D> _texture;
     public ComPtr<ID3D11ShaderResourceView> TextureView { get { return _textureView; } }
-    private readonly ComPtr<ID3D11ShaderResourceView> _textureView;
+    private ComPtr<ID3D11ShaderResourceView> _textureView;
+    public ComPtr<ID3D11DepthStencilView> TextureDepthStencilView { get { return _textureDepthStencilView; } }
+    private ComPtr<ID3D11DepthStencilView> _textureDepthStencilView;
 
     private bool _disposed;
 
@@ -21,13 +25,15 @@ internal sealed class Texture : IDisposable
     /// <param name="name"></param>
     /// <param name="width"></param>
     /// <param name="heigth"></param>
-    /// <param name="textureView">Released when Texture is disposed</param>
-    public unsafe Texture(string name, int width, int heigth, ComPtr<ID3D11ShaderResourceView> textureView)
+    /// <param name="texture">Released when Texture is disposed</param>
+    public unsafe Texture(string name, int width, int heigth, ComPtr<ID3D11Texture2D> texture)
     {
         Name = name;
         Width = width;
         Height = heigth;
-        _textureView = textureView;
+        _texture = texture;
+        _textureView = null;
+        _textureDepthStencilView = null;
 
         if (!string.IsNullOrEmpty(Name))
         {
@@ -37,11 +43,20 @@ internal sealed class Texture : IDisposable
                 nint namePtr = unmanagedName.Handle;
                 fixed (Guid* guidPtr = &Windows.Win32.PInvoke.WKPDID_D3DDebugObjectName)
                 {
-                    _textureView.SetPrivateData(guidPtr, (uint)name.Length, namePtr.ToPointer());
+                    _texture.SetPrivateData(guidPtr, (uint)name.Length, namePtr.ToPointer());
                 }
             }
         }
         _disposed = false;
+    }
+
+    public void SetTextureView(ComPtr<ID3D11ShaderResourceView> textureView)
+    {
+        _textureView = textureView;
+    }
+    public void SetTextureDepthStencilView(ComPtr<ID3D11DepthStencilView> textureDepthStencilView)
+    {
+        _textureDepthStencilView = textureDepthStencilView;
     }
 
     ~Texture()
@@ -84,7 +99,9 @@ internal sealed class Texture : IDisposable
             // unmanaged resources here.
             // If disposing is false,
             // only the following code is executed.
+            _texture.Dispose();
             _textureView.Dispose();
+            _textureDepthStencilView.Dispose();
 
             // Note disposing has been done.
             _disposed = true;

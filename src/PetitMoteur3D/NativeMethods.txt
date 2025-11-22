@@ -1,1 +1,2 @@
 ﻿WKPDID_D3DDebugObjectName
+D3D11_CLEAR_DEPTH
