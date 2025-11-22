@@ -49,6 +49,62 @@ internal sealed class TextureManager : IDisposable
         }
     }
 
+    public Texture GetOrCreateTexture(string name, Texture2DDesc textureDesc, Func<TextureBuilder, TextureBuilder> builderFunc)
+    {
+        if (TryGet(name, out Texture? texture))
+        {
+            return texture;
+        }
+        else
+        {
+            Texture newTexture = builderFunc.Invoke(_textureFactory.CreateBuilder(textureDesc).WithName(name)).Build();
+            _textures.Add(name, newTexture);
+            return newTexture;
+        }
+    }
+
+    public Texture GetOrCreateEmptyTexture(string name, int width, int height)
+    {
+        if (TryGet(name, out Texture? texture))
+        {
+            return texture;
+        }
+        else
+        {
+            Texture newTexture = _textureFactory.CreateEmpty(name, width, height);
+            _textures.Add(name, newTexture);
+            return newTexture;
+        }
+    }
+
+    public Texture GetOrCreateEmptyTexture(string name, int width, int height, in Texture2DDesc textureDesc)
+    {
+        if (TryGet(name, out Texture? texture))
+        {
+            return texture;
+        }
+        else
+        {
+            Texture newTexture = _textureFactory.CreateEmpty(name, width, height, in textureDesc);
+            _textures.Add(name, newTexture);
+            return newTexture;
+        }
+    }
+    
+    public Texture GetOrCreateEmptyTexture(string name, int width, int height, in Texture2DDesc textureDesc, in ShaderResourceViewDesc shaderResourceViewDesc)
+    {
+        if (TryGet(name, out Texture? texture))
+        {
+            return texture;
+        }
+        else
+        {
+            Texture newTexture = _textureFactory.CreateEmpty(name, width, height, in textureDesc, in shaderResourceViewDesc);
+            _textures.Add(name, newTexture);
+            return newTexture;
+        }
+    }
+
     public Texture? Get(string name)
     {
         if (string.IsNullOrEmpty(name))

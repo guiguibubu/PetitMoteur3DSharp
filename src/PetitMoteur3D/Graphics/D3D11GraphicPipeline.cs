@@ -1,5 +1,6 @@
 ﻿//#define USE_RENDERDOC
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.Runtime.CompilerServices;
 using PetitMoteur3D.Graphics.Stages;
@@ -12,11 +13,12 @@ namespace PetitMoteur3D.Graphics;
 
 public class D3D11GraphicPipeline : IDisposable
 {
-    public ref ComPtr<IDXGISwapChain1> Swapchain { get { return ref _swapchain; } }
-    public ref ComPtr<ID3D11RenderTargetView> RenderTargetView { get { return ref _renderTargetView; } }
-    public ref ComPtr<ID3D11DepthStencilView> DepthStencilView { get { return ref _depthStencilView; } }
-    public ref ComPtr<ID3D11RasterizerState> SolidCullBackRS { get { return ref _solidCullBackRS; } }
-    public ref ComPtr<ID3D11RasterizerState> WireFrameCullBackRS { get { return ref _wireFrameCullBackRS; } }
+    public ComPtr<IDXGISwapChain1> Swapchain { get { return _swapchain; } }
+    public ComPtr<ID3D11RenderTargetView> RenderTargetView { get { return _renderTargetView; } }
+    public ComPtr<ID3D11DepthStencilView> DepthStencilView { get { return _depthTexture.TextureDepthStencilView; } }
+    public ComPtr<ID3D11RasterizerState> SolidCullFrontRS { get { return _solidCullFrontRS; } }
+    public ComPtr<ID3D11RasterizerState> SolidCullBackRS { get { return _solidCullBackRS; } }
+    public ComPtr<ID3D11RasterizerState> WireFrameCullBackRS { get { return _wireFrameCullBackRS; } }
 
     internal D3D11GraphicDevice GraphicDevice => _graphicDevice;
 
@@ -31,8 +33,8 @@ public class D3D11GraphicPipeline : IDisposable
 
     private ComPtr<IDXGISwapChain1> _swapchain;
     private ComPtr<ID3D11RenderTargetView> _renderTargetView;
-    private ComPtr<ID3D11DepthStencilView> _depthStencilView;
-    private ComPtr<ID3D11Texture2D> _depthTexture;
+    private Texture _depthTexture;
+    private ComPtr<ID3D11RasterizerState> _solidCullFrontRS;
     private ComPtr<ID3D11RasterizerState> _solidCullBackRS;
     private ComPtr<ID3D11RasterizerState> _wireFrameCullBackRS;
 
@@ -76,13 +78,20 @@ public class D3D11GraphicPipeline : IDisposable
 
         InitView(window);
 
-        RasterizerDesc rsSolidDesc = new()
+        RasterizerDesc rsSolidBackDesc = new()
         {
             FillMode = FillMode.Solid,
             CullMode = CullMode.Back,
             FrontCounterClockwise = false
         };
-        _solidCullBackRS = RessourceFactory.CreateRasterizerState(in rsSolidDesc);
+        _solidCullBackRS = RessourceFactory.CreateRasterizerState(in rsSolidBackDesc);
+        RasterizerDesc rsSolidFrontDesc = new()
+        {
+            FillMode = FillMode.Solid,
+            CullMode = CullMode.Front,
+            FrontCounterClockwise = false
+        };
+        _solidCullFrontRS = RessourceFactory.CreateRasterizerState(in rsSolidFrontDesc);
         RasterizerDesc rsWireDesc = new()
         {
             FillMode = FillMode.Wireframe,
@@ -105,16 +114,9 @@ public class D3D11GraphicPipeline : IDisposable
 #endif
     }
 
-    unsafe ~D3D11GraphicPipeline()
+    ~D3D11GraphicPipeline()
     {
-        // passer en mode fenêtré
-        _swapchain.SetFullscreenState(false, ref Unsafe.NullRef<IDXGIOutput>());
-
-        _solidCullBackRS.Dispose();
-        _depthStencilView.Dispose();
-        _depthTexture.Dispose();
-        _renderTargetView.Dispose();
-        _swapchain.Dispose();
+        Dispose(disposing: false);
     }
 
     public unsafe void BeforePresent()
@@ -144,7 +146,6 @@ public class D3D11GraphicPipeline : IDisposable
 
         _renderTargetView.Dispose();
         _depthTexture.Dispose();
-        _depthStencilView.Dispose();
 
         if (_isSwapChainComposition)
         {
@@ -208,7 +209,7 @@ public class D3D11GraphicPipeline : IDisposable
     private void SetRenderTarget(bool clear = true)
     {
         // Tell the output merger about our render target view.
-        _graphicDevice.DeviceContext.OMSetRenderTargets(1, ref _renderTargetView, _depthStencilView);
+        _graphicDevice.DeviceContext.OMSetRenderTargets(1, ref _renderTargetView, _depthTexture.TextureDepthStencilView);
         if (clear)
         {
             ClearRenderTarget();
@@ -273,11 +274,13 @@ public class D3D11GraphicPipeline : IDisposable
         }
     }
 
+    [MemberNotNull(nameof(_depthTexture))]
     private unsafe void InitView(IWindow window)
     {
         InitView(window.Size.Width, window.Size.Height);
     }
 
+    [MemberNotNull(nameof(_depthTexture))]
     private void InitView(float width, float height)
     {
         // Create « render target view » 
@@ -302,13 +305,8 @@ public class D3D11GraphicPipeline : IDisposable
         }
     }
 
-    private unsafe void InitDepthBuffer(IWindow window)
-    {
-
-        InitDepthBuffer((uint)window.Size.Width, (uint)window.Size.Height);
-    }
-
-    private unsafe void InitDepthBuffer(uint width, uint height)
+    [MemberNotNull(nameof(_depthTexture))]
+    private void InitDepthBuffer(uint width, uint height)
     {
         Texture2DDesc depthTextureDesc = new()
         {
@@ -324,8 +322,6 @@ public class D3D11GraphicPipeline : IDisposable
             MiscFlags = 0
         };
 
-        _depthTexture = _graphicRessourceFactory.CreateTexture2D(in depthTextureDesc, in Unsafe.NullRef<SubresourceData>());
-
         DepthStencilViewDesc descDSView = new()
         {
             Format = depthTextureDesc.Format,
@@ -333,7 +329,10 @@ public class D3D11GraphicPipeline : IDisposable
             Texture2D = new Tex2DDsv() { MipSlice = 0 }
         };
 
-        _depthStencilView = _graphicRessourceFactory.CreateDepthStencilView(_depthTexture, in descDSView);
+        _depthTexture = _graphicRessourceFactory.TextureManager.GetOrCreateTexture("GraphicPipeline_DepthTexture", depthTextureDesc, 
+            builder => builder
+            .WithDepthStencilView(descDSView)
+            .WithName("GraphicPipeline_DepthTexture"));
     }
 
     private unsafe void ClearRenderTarget()
@@ -341,7 +340,7 @@ public class D3D11GraphicPipeline : IDisposable
         // On efface la surface de rendu
         _graphicDevice.DeviceContext.ClearRenderTargetView(_renderTargetView, _backgroundColour.AsSpan());
         // On ré-initialise le tampon de profondeur
-        _graphicDevice.DeviceContext.ClearDepthStencilView(_depthStencilView, (uint)ClearFlag.Depth, 1.0f, 0);
+        _graphicDevice.DeviceContext.ClearDepthStencilView(_depthTexture.TextureDepthStencilView, (uint)ClearFlag.Depth, 1.0f, 0);
     }
 
     protected virtual void Dispose(bool disposing)
@@ -356,10 +355,13 @@ public class D3D11GraphicPipeline : IDisposable
             // TODO: free unmanaged resources (unmanaged objects) and override finalizer
             // TODO: set large fields to null
 
+            // passer en mode fenêtré
+            _swapchain.SetFullscreenState(false, ref Unsafe.NullRef<IDXGIOutput>());
+
             _swapchain.Dispose();
             _renderTargetView.Dispose();
-            _depthStencilView.Dispose();
             _depthTexture.Dispose();
+            _solidCullFrontRS.Dispose();
             _solidCullBackRS.Dispose();
             _wireFrameCullBackRS.Dispose();
 

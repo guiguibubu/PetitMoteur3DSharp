@@ -1,6 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Numerics;
 using PetitMoteur3D.Graphics;
+using Silk.NET.Direct3D11;
 using Silk.NET.Maths;
 
 namespace PetitMoteur3D;
@@ -146,5 +147,18 @@ internal sealed class Bloc : BaseObjet3D
         Orientation.Rotate(in AxisRotation, (float)((Math.PI * 2.0f) / 24.0f * elapsedTime / 1000f));
         // modifier la matrice de l’objet bloc
         UpdateMatWorld();
+    }
+
+    public void DrawShadow(D3D11GraphicPipeline graphicPipeline, ref readonly Matrix4x4 matViewProjLight)
+    {
+        // Utiliser la surface de la texture comme surface de rendu
+        graphicPipeline.OutputMergerStage.SetRenderTarget(0, in System.Runtime.CompilerServices.Unsafe.NullRef<Silk.NET.Direct3D11.ID3D11RenderTargetView>(), pDepthStencilView);
+        // Effacer le shadow map
+        graphicPipeline.GraphicDevice.DeviceContext.ClearDepthStencilView (pDepthStencilView, Windows.Win32.Graphics.Direct3D11.D3D11_CLEAR_FLAG.D3D11_CLEAR_DEPTH, 1.0f, 0);
+        // Modifier les dimension du viewport
+        // Set the rasterizer state with the current viewport.
+        const int SHADOW_MAP_DIM = 2048;
+        Silk.NET.Direct3D11.Viewport viewport = new(0, 0, SHADOW_MAP_DIM, SHADOW_MAP_DIM, 0, 1);
+        graphicPipeline.RasterizerStage.SetViewports(1, in viewport);
     }
 }

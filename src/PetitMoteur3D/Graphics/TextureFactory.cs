@@ -1,5 +1,6 @@
 using System;
 using System.Buffers;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
@@ -9,7 +10,7 @@ namespace PetitMoteur3D.Graphics;
 
 internal sealed class TextureFactory
 {
-    private ComPtr<ID3D11Device> _device;
+    private readonly ComPtr<ID3D11Device> _device;
 
     public TextureFactory(ComPtr<ID3D11Device> device)
     {
@@ -52,47 +53,50 @@ internal sealed class TextureFactory
 
     public unsafe Texture Create(string name, void* pixels, int width, int height, int bytesPerPixel)
     {
-        Texture2DDesc textureDesc = new()
-        {
-            Width = (uint)width,
-            Height = (uint)height,
-            Format = Format.FormatB8G8R8A8Unorm,
-            MipLevels = 1,
-            BindFlags = (uint)BindFlag.ShaderResource,
-            Usage = Usage.Default,
-            CPUAccessFlags = 0,
-            MiscFlags = (uint)ResourceMiscFlag.None,
-            SampleDesc = new SampleDesc(1, 0),
-            ArraySize = 1
-        };
+        Texture2DDesc textureDesc = CreateDefaultTextureDesc((uint)width, (uint)height);
 
-        SubresourceData subresourceData = new()
+        SubresourceData initialData = new()
         {
             PSysMem = pixels,
-            SysMemPitch = (uint)(width * Marshal.SizeOf<SixLabors.ImageSharp.PixelFormats.Bgra32>()),
-            SysMemSlicePitch = (uint)(width * Marshal.SizeOf<SixLabors.ImageSharp.PixelFormats.Bgra32>() * height)
+            SysMemPitch = (uint)(width * bytesPerPixel),
+            SysMemSlicePitch = (uint)(width * bytesPerPixel * height)
         };
-
-        using ComPtr<ID3D11Texture2D> texture = CreateTexture2D(in textureDesc, in subresourceData);
 
         // Create a view of the texture for the shader.
-        ShaderResourceViewDesc srvDesc = new()
-        {
-            Format = textureDesc.Format,
-            ViewDimension = D3DSrvDimension.D3DSrvDimensionTexture2D,
-            Anonymous = new ShaderResourceViewDescUnion
-            {
-                Texture2D =
-                    {
-                        MostDetailedMip = 0,
-                        MipLevels = 1
-                    }
-            }
-        };
+        ShaderResourceViewDesc srvDesc = CreateDefaultShaderResourceViewDesc(textureDesc);
 
-        ComPtr<ID3D11ShaderResourceView> textureView = CreateShaderResourceView(texture, in srvDesc);
+        TextureBuilder textureBuilder = new(this, textureDesc);
+        return textureBuilder
+            .InitializeWith(initialData)
+            .WithName(name)
+            .WithShaderRessourceView(srvDesc)
+            .Build();
+    }
 
-        return new Texture(name, width, height, textureView);
+    public TextureBuilder CreateBuilder(Texture2DDesc textureDesc)
+    {
+        return new TextureBuilder(this, textureDesc);
+    }
+
+    public unsafe Texture CreateEmpty(string name, int width, int height)
+    {
+        Texture2DDesc textureDesc = CreateDefaultTextureDesc((uint)width, (uint)height);
+        return CreateEmpty(name, width, height, in textureDesc);
+    }
+
+    public unsafe Texture CreateEmpty(string name, int width, int height, in Texture2DDesc textureDesc)
+    {
+        ShaderResourceViewDesc srvDesc = CreateDefaultShaderResourceViewDesc(textureDesc);
+        return CreateEmpty(name, width, height, in textureDesc, in srvDesc);
+    }
+
+    public unsafe Texture CreateEmpty(string name, int width, int height, in Texture2DDesc textureDesc, in ShaderResourceViewDesc shaderResourceViewDesc)
+    {
+        TextureBuilder textureBuilder = new(this, textureDesc);
+        return textureBuilder
+            .WithName(name)
+            .WithShaderRessourceView(shaderResourceViewDesc)
+            .Build();
     }
 
     public ComPtr<ID3D11Texture2D> CreateTexture2D(in Texture2DDesc pDesc, in SubresourceData pInitialData)
@@ -100,6 +104,15 @@ internal sealed class TextureFactory
         ComPtr<ID3D11Texture2D> texture2D = default;
         SilkMarshal.ThrowHResult(
             _device.CreateTexture2D(in pDesc, in pInitialData, ref texture2D)
+        );
+        return texture2D;
+    }
+
+    public ComPtr<ID3D11Texture2D> CreateEmptyTexture2D(in Texture2DDesc pDesc)
+    {
+        ComPtr<ID3D11Texture2D> texture2D = default;
+        SilkMarshal.ThrowHResult(
+            _device.CreateTexture2D(in pDesc, in Unsafe.NullRef<SubresourceData>(), ref texture2D)
         );
         return texture2D;
     }
@@ -151,5 +164,48 @@ internal sealed class TextureFactory
             }
         }
         return sampler;
+    }
+
+    public ComPtr<ID3D11DepthStencilView> CreateDepthStencilView(ComPtr<ID3D11Texture2D> pResource, in DepthStencilViewDesc pDesc)
+    {
+        ComPtr<ID3D11DepthStencilView> depthStencilView = default;
+        SilkMarshal.ThrowHResult(
+            _device.CreateDepthStencilView(pResource, in pDesc, ref depthStencilView)
+        );
+        return depthStencilView;
+    }
+
+    private static Texture2DDesc CreateDefaultTextureDesc(uint width, uint height)
+    {
+        return new Texture2DDesc()
+        {
+            Width = width,
+            Height = height,
+            Format = Format.FormatB8G8R8A8Unorm,
+            MipLevels = 1,
+            BindFlags = (uint)BindFlag.ShaderResource,
+            Usage = Usage.Default,
+            CPUAccessFlags = 0,
+            MiscFlags = (uint)ResourceMiscFlag.None,
+            SampleDesc = new SampleDesc(1, 0),
+            ArraySize = 1
+        };
+    }
+
+    private static ShaderResourceViewDesc CreateDefaultShaderResourceViewDesc(Texture2DDesc textureDesc)
+    {
+        return new ShaderResourceViewDesc()
+        {
+            Format = textureDesc.Format,
+            ViewDimension = D3DSrvDimension.D3DSrvDimensionTexture2D,
+            Anonymous = new ShaderResourceViewDescUnion
+            {
+                Texture2D =
+                {
+                    MostDetailedMip = 0,
+                    MipLevels = 1
+                }
+            }
+        };
     }
 }

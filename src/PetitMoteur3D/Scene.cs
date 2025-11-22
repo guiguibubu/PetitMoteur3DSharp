@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using PetitMoteur3D.Camera;
 using PetitMoteur3D.Graphics;
@@ -11,25 +13,36 @@ namespace PetitMoteur3D;
 
 internal sealed class Scene : IDrawableObjet, IDisposable
 {
-    private readonly List<IObjet3D> _objects3D;
+    private readonly List<IShadowDrawableObjet> _objectsWithShadow;
+    private readonly List<IUpdatableObjet> _objectsUpdatable;
+    private readonly List<IDrawableObjet> _objectsDrawable;
     private ICamera _camera;
 
     private ComPtr<ID3D11Buffer> _constantBuffer;
 
+    public ComPtr<ID3D11RasterizerState> RasterizerState { get { return _rasterizerState; } set { _rasterizerState = value; } }
+    private ComPtr<ID3D11RasterizerState> _rasterizerState;
+
     private LightShadersParams _light;
     private SceneShadersParams _shadersParams;
+
+    private readonly ShadowMap _shadowMap;
+    private readonly FrustrumView _frustrumViewLight;
+    private readonly FreeCamera _cameraLigth;
 
     private bool _disposed;
 
     /// <summary>
     /// Constructeur par défaut
     /// </summary>
-    public Scene(GraphicBufferFactory bufferFactory) : this(bufferFactory, new FixedCamera(System.Numerics.Vector3.Zero))
+    public Scene(GraphicDeviceRessourceFactory graphicDeviceRessourceFactory) : this(graphicDeviceRessourceFactory, new FixedCamera(Vector3.Zero))
     { }
 
-    public Scene(GraphicBufferFactory bufferFactory, ICamera camera)
+    public Scene(GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, ICamera camera)
     {
-        _objects3D = new List<IObjet3D>();
+        _objectsWithShadow = new List<IShadowDrawableObjet>();
+        _objectsUpdatable = new List<IUpdatableObjet>();
+        _objectsDrawable = new List<IDrawableObjet>();
         _camera = camera;
 
         _light = new LightShadersParams()
@@ -47,18 +60,42 @@ internal sealed class Scene : IDrawableObjet, IDisposable
         };
 
         // Create our constant buffer.
-        _constantBuffer = bufferFactory.CreateConstantBuffer<SceneShadersParams>(Usage.Default, CpuAccessFlag.None, name: "SceneConstantBuffer");
+        _constantBuffer = graphicDeviceRessourceFactory.BufferFactory.CreateConstantBuffer<SceneShadersParams>(Usage.Default, CpuAccessFlag.None, name: "SceneConstantBuffer");
+
+        _shadowMap = new ShadowMap(graphicDeviceRessourceFactory, name: "SceneShadowMap");
+        _cameraLigth = new FreeCamera((float)(Math.PI / 4));
+
+        ref readonly Size shadowMapDimension = ref _shadowMap.Dimension;
+        float windowWidth = shadowMapDimension.Width;
+        float windowHeight = shadowMapDimension.Height;
+        float aspectRatio = windowWidth / windowHeight;
+        float planRapproche = 2.0f;
+        float planEloigne = 100.0f;
+
+        _frustrumViewLight = new FrustrumView(_camera.ChampVision, aspectRatio, planRapproche, planEloigne);
+
         _disposed = false;
     }
 
     public void AddObjet(IObjet3D obj)
     {
-        _objects3D.Add(obj);
+        if (obj is IShadowDrawableObjet shadowDrawableObjet)
+        {
+            _objectsWithShadow.Add(shadowDrawableObjet);
+        }
+        if (obj is IUpdatableObjet updatableObjet)
+        {
+            _objectsUpdatable.Add(updatableObjet);
+        }
+        if (obj is IDrawableObjet drawableObjet)
+        {
+            _objectsDrawable.Add(drawableObjet);
+        }
     }
 
     public void Anime(float elapsedTime)
     {
-        foreach (IObjet3D obj in _objects3D)
+        foreach (IUpdatableObjet obj in _objectsUpdatable)
         {
             obj.Update(elapsedTime);
         }
@@ -77,9 +114,26 @@ internal sealed class Scene : IDrawableObjet, IDisposable
         graphicPipeline.RessourceFactory.UpdateSubresource(_constantBuffer, 0, in Unsafe.NullRef<Box>(), in _shadersParams, 0, 0);
         graphicPipeline.VertexShaderStage.SetConstantBuffers(0, 1, ref _constantBuffer);
         graphicPipeline.PixelShaderStage.SetConstantBuffers(0, 1, ref _constantBuffer);
-        foreach (IObjet3D obj in _objects3D)
+        graphicPipeline.RasterizerStage.SetState(_rasterizerState);
+        foreach (IDrawableObjet obj in _objectsDrawable)
         {
             obj.Draw(graphicPipeline, in matViewProj);
+        }
+    }
+
+    public void DrawShadow(D3D11GraphicPipeline graphicPipeline, ref readonly Matrix4x4 matViewProjLight)
+    {
+        // input layout des sommets
+        graphicPipeline.InputAssemblerStage.SetInputLayout(ref _shadowMap.VertexLayout);
+        // Activer le VS
+        graphicPipeline.VertexShaderStage.SetShader(ref _shadowMap.VertexShader, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
+        // Le sampler state
+        graphicPipeline.PixelShaderStage.SetSamplers(0, 1, ref _shadowMap.SampleState);
+        // Rasterizer
+        graphicPipeline.RasterizerStage.SetState(graphicPipeline.SolidCullFrontRS);
+        foreach (IShadowDrawableObjet obj in _objectsWithShadow)
+        {
+            obj.DrawShadow(graphicPipeline, in matViewProjLight);
         }
     }
 
@@ -95,7 +149,9 @@ internal sealed class Scene : IDrawableObjet, IDisposable
             if (disposing)
             {
                 // TODO: dispose managed state (managed objects)
-                _objects3D.Clear();
+                _objectsWithShadow.Clear();
+                _objectsUpdatable.Clear();
+                _objectsDrawable.Clear();
             }
 
             // TODO: free unmanaged resources (unmanaged objects) and override finalizer

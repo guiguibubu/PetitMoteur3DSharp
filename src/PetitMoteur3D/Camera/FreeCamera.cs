@@ -3,7 +3,6 @@ using System.Drawing;
 using System.Numerics;
 using PetitMoteur3D.Core.Math;
 using PetitMoteur3D.Input;
-using PetitMoteur3D.Logging;
 using PetitMoteur3D.Window;
 
 namespace PetitMoteur3D.Camera;
@@ -20,8 +19,8 @@ internal sealed class FreeCamera : ICamera, IRotationObjet
 
     private Vector3 _position;
 
-    private IWindow _window;
-    private Orientation3D _orientation;
+    private readonly IWindow? _window;
+    private readonly Orientation3D _orientation;
 
     private IInputContext? _inputContext;
 
@@ -33,7 +32,7 @@ internal sealed class FreeCamera : ICamera, IRotationObjet
     /// <summary>
     /// Constructeur par defaut
     /// </summary>
-    public FreeCamera(IWindow window) : this(window, (float)(Math.PI / 4))
+    public FreeCamera() : this(null, (float)(Math.PI / 4))
     {
 
     }
@@ -42,7 +41,25 @@ internal sealed class FreeCamera : ICamera, IRotationObjet
     /// Constructeur
     /// </summary>
     /// <param name="champVision"></param>
-    public FreeCamera(IWindow window, float champVision) : this(window, champVision, Vector3.Zero)
+    public FreeCamera(float champVision) : this(null, champVision)
+    {
+
+
+    }
+    /// <summary>
+    /// Constructeur
+    /// </summary>
+    /// <param name="window"></param>
+    public FreeCamera(IWindow? window) : this(window, (float)(Math.PI / 4))
+    {
+
+    }
+
+    /// <summary>
+    /// Constructeur
+    /// </summary>
+    /// <param name="champVision"></param>
+    public FreeCamera(IWindow? window, float champVision) : this(window, champVision, Vector3.Zero)
     {
 
     }
@@ -51,8 +68,9 @@ internal sealed class FreeCamera : ICamera, IRotationObjet
     /// Constructeur
     /// </summary>
     /// <param name="position"></param>
-    /// <param name="rotation"></param>
-    public FreeCamera(IWindow window, float champVision, Vector3 position)
+    /// <param name="champVision"></param>
+    /// <param name="position"></param>
+    public FreeCamera(IWindow? window, float champVision, Vector3 position)
     {
         _window = window;
         ChampVision = champVision;
@@ -105,14 +123,16 @@ internal sealed class FreeCamera : ICamera, IRotationObjet
         Move(in move);
 
         IMouse mouse = _inputContext.Mice[0];
-        Size windowsSize = _window.Size;
+        Size? windowsSize = _window?.Size;
 
         Vector2 positionMouse = mouse.Position;
 
-        bool intoWindow = positionMouse.X >= 0 
-            && positionMouse.X <= windowsSize.Width
+        bool intoWindow = windowsSize is null
+            || (positionMouse.X >= 0 
+            && positionMouse.X <= windowsSize.Value.Width
             && positionMouse.Y >= 0
-            && positionMouse.Y <= windowsSize.Height;
+            && positionMouse.Y <= windowsSize.Value.Height
+            );
 
         if (!intoWindow)
         {
@@ -120,7 +140,7 @@ internal sealed class FreeCamera : ICamera, IRotationObjet
         }
 
         // Normalize mouse position into [-1, 1] in window space
-        Vector2 positionNormalized = ((mouse.Position / new Vector2(windowsSize.Width, windowsSize.Height)) - new Vector2(0.5f)) * 2;
+        Vector2 positionNormalized = ((mouse.Position / new Vector2(windowsSize?.Width ?? 1, windowsSize?.Height ?? 1)) - new Vector2(0.5f)) * 2;
 
         bool isInCenter = Math.Abs(positionNormalized.X) <= WindowCenterOffset && Math.Abs(positionNormalized.Y) <= WindowCenterOffset;
         if (!isInCenter)
@@ -175,6 +195,33 @@ internal sealed class FreeCamera : ICamera, IRotationObjet
     public ref readonly Vector3 Rotate(ref readonly Vector3 axis, float angle)
     {
         _orientation.Rotate(in axis, angle);
+        return ref ZeroRotation;
+    }
+
+    /// <summary>
+    /// Set rotation
+    /// </summary>
+    /// <remarks>Currently only return zero vector</remarks>
+    /// <param name="rotation"></param>
+    /// <returns></returns>
+    public ref readonly Vector3 SetRotationEuler(ref readonly Vector3 rotation)
+    {
+        Quaternion quaternion = Quaternion.CreateFromYawPitchRoll(rotation.Y, rotation.X, rotation.Z);
+        _orientation.SetRotation(in quaternion);
+        return ref ZeroRotation;
+    }
+
+
+    /// <summary>
+    /// Set rotation
+    /// </summary>
+    /// <remarks>Currently only return zero vector</remarks>
+    /// <param name="axis"></param>
+    /// <param name="angle"></param>
+    /// <returns></returns>
+    public ref readonly Vector3 SetRotation(ref readonly Vector3 axis, float angle)
+    {
+        _orientation.SetRotation(in axis, angle);
         return ref ZeroRotation;
     }
 

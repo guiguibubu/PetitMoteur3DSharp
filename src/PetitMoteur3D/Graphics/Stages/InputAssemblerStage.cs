@@ -28,6 +28,11 @@ internal sealed class InputAssemblerStage
         _deviceContext.IASetInputLayout(pInputLayout);
     }
 
+    public unsafe void SetInputLayout(ref readonly ComPtr<ID3D11InputLayout> pInputLayout)
+    {
+        _deviceContext.IASetInputLayout((ID3D11InputLayout*)pInputLayout.Handle);
+    }
+
     public void GetPrimitiveTopology(ref D3DPrimitiveTopology topology)
     {
         _deviceContext.IAGetPrimitiveTopology(ref topology);
