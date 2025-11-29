@@ -84,21 +84,21 @@ public class D3D11GraphicPipeline : IDisposable
             CullMode = CullMode.Back,
             FrontCounterClockwise = false
         };
-        _solidCullBackRS = RessourceFactory.CreateRasterizerState(in rsSolidBackDesc);
+        _solidCullBackRS = RessourceFactory.CreateRasterizerState(in rsSolidBackDesc, "SolidCullBack_RasterizerState");
         RasterizerDesc rsSolidFrontDesc = new()
         {
             FillMode = FillMode.Solid,
             CullMode = CullMode.Front,
             FrontCounterClockwise = false
         };
-        _solidCullFrontRS = RessourceFactory.CreateRasterizerState(in rsSolidFrontDesc);
+        _solidCullFrontRS = RessourceFactory.CreateRasterizerState(in rsSolidFrontDesc, "SolidCullFront_RasterizerState");
         RasterizerDesc rsWireDesc = new()
         {
             FillMode = FillMode.Wireframe,
             CullMode = CullMode.None,
             FrontCounterClockwise = false
         };
-        _wireFrameCullBackRS = RessourceFactory.CreateRasterizerState(in rsWireDesc);
+        _wireFrameCullBackRS = RessourceFactory.CreateRasterizerState(in rsWireDesc, "WireFrameCullBack_RasterizerState");
 
         RasterizerStage.SetState(_solidCullBackRS);
 

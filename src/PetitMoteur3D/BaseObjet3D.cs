@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using PetitMoteur3D.Core.Math;
 using PetitMoteur3D.Core.Memory;
@@ -26,6 +27,8 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
     protected ComPtr<ID3D11Buffer> IndexBuffer { get { return _indexBuffer; } }
     protected int NbIndices { get { return _indices.Length; } }
     protected GraphicBufferFactory BufferFactory { get { return _bufferFactory; } }
+    protected Action<D3D11GraphicPipeline, SubObjet3D> AdditionalDrawConfig { get; set; }
+    protected Action<D3D11GraphicPipeline, SubObjet3D> PostDrawConfig { get; set; }
     #endregion
 
     private ComPtr<ID3D11Buffer> _vertexBuffer;
@@ -145,7 +148,7 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
     }
 
     /// <inheritdoc/>
-    public unsafe void Draw(D3D11GraphicPipeline graphicPipeline, ref readonly System.Numerics.Matrix4x4 matViewProj)
+    public virtual unsafe void Draw(D3D11GraphicPipeline graphicPipeline, ref readonly System.Numerics.Matrix4x4 matViewProj)
     {
         // Choisir la topologie des primitives
         graphicPipeline.InputAssemblerStage.SetPrimitiveTopology(D3DPrimitiveTopology.D3D11PrimitiveTopologyTrianglelist);
@@ -188,10 +191,23 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
             }
             // Le sampler state
             graphicPipeline.PixelShaderStage.SetSamplers(0, 1, in _sampleState);
+
+            // Additional draw config actions
+            AdditionalDrawConfig?.Invoke(graphicPipeline, subObjet3D);
+
             // **** Rendu de l’objet
             graphicPipeline.DrawIndexed((uint)_indices.Length, 0, 0);
 
             _objectShadersParamsPool.Return(shadersParamsWrapper);
+
+            if (_textureD3D.Handle is not null)
+            {
+                graphicPipeline.PixelShaderStage.ClearShaderResources(0);
+            }
+            if (_normalMap.Handle is not null)
+            {
+                graphicPipeline.PixelShaderStage.ClearShaderResources(1);
+            }
         }
     }
 
@@ -276,7 +292,7 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
         _indexBuffer = bufferFactory.CreateIndexBuffer<TIndice>(indices, Usage.Immutable, CpuAccessFlag.None, $"{_name}_IndexBuffer");
 
         // Create our constant buffer.
-        _constantBuffer = bufferFactory.CreateConstantBuffer<ObjectShadersParams>(Usage.Default, CpuAccessFlag.None, $"{_name}_IndexBuffer");
+        _constantBuffer = bufferFactory.CreateConstantBuffer<ObjectShadersParams>(Usage.Default, CpuAccessFlag.None, $"{_name}_ConstantBuffer");
     }
 
     protected void UpdateMatWorld()
@@ -290,6 +306,27 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
     /// <param name="device"></param>
     /// <param name="compiler"></param>
     private unsafe void InitVertexShader(ShaderManager shaderManager)
+    {
+        ShaderCodeFile shaderFile = InitVertexShaderCodeFile();
+        shaderManager.GetOrLoadVertexShaderAndLayout(shaderFile, Sommet.InputLayoutDesc, ref _vertexShader, ref _vertexLayout);
+    }
+
+    /// <summary>
+    /// Compilation et chargement du pixel shader
+    /// </summary>
+    /// <param name="device"></param>
+    /// <param name="compiler"></param>
+    private unsafe void InitPixelShader(ShaderManager shaderManager)
+    {
+        ShaderCodeFile shaderFile = InitPixelShaderCodeFile();
+        _pixelShader = shaderManager.GetOrLoadPixelShader(shaderFile);
+    }
+
+    /// <summary>
+    /// VertexShader file
+    /// </summary>
+    [return: NotNull]
+    protected virtual ShaderCodeFile InitVertexShaderCodeFile()
     {
         // Compilation et chargement du vertex shader
         string filePath = "shaders\\MiniPhongNormalMap.hlsl";
@@ -307,7 +344,7 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
         uint flagSkipOptimization = 0;
 #endif
         uint compilationFlags = flagStrictness | flagDebug | flagSkipOptimization;
-        ShaderCodeFile shaderFile = new
+        return new ShaderCodeFile
         (
             filePath,
             entryPoint,
@@ -315,15 +352,13 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
             compilationFlags,
             name: "MiniPhongNormalMap_VertexShader"
         );
-        shaderManager.GetOrLoadVertexShaderAndLayout(shaderFile, Sommet.InputLayoutDesc, ref _vertexShader, ref _vertexLayout);
     }
 
     /// <summary>
-    /// Compilation et chargement du pixel shader
+    /// PixelShader file
     /// </summary>
-    /// <param name="device"></param>
-    /// <param name="compiler"></param>
-    private unsafe void InitPixelShader(ShaderManager shaderManager)
+    [return: NotNull]
+    protected virtual ShaderCodeFile InitPixelShaderCodeFile()
     {
         string filePath = "shaders\\MiniPhongNormalMap.hlsl";
         string entryPoint = "MiniPhongNormalMapPS";
@@ -340,15 +375,14 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
         uint flagSkipOptimization = 0;
 #endif
         uint compilationFlags = flagStrictness | flagDebug | flagSkipOptimization;
-        ShaderCodeFile shaderFile = new
+        return new ShaderCodeFile
         (
-            filePath,
-            entryPoint,
-            target,
-            compilationFlags,
-            name: "MiniPhongNormalMap_PixelShader"
+           filePath,
+           entryPoint,
+           target,
+           compilationFlags,
+           name: "MiniPhongNormalMap_PixelShader"
         );
-        _pixelShader = shaderManager.GetOrLoadPixelShader(shaderFile);
     }
 
     public struct SubObjet3D

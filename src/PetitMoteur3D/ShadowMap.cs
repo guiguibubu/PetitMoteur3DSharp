@@ -7,7 +7,7 @@ using Silk.NET.Direct3D11;
 
 namespace PetitMoteur3D;
 
-internal class ShadowMap
+internal sealed class ShadowMap
 {
     #region Public properties
     public ref readonly ComPtr<ID3D11InputLayout> VertexLayout { get { return ref _vertexLayout; } }
@@ -67,12 +67,12 @@ internal class ShadowMap
     {
         // Initialisation des paramètres de sampling de la texture
         SamplerDesc samplerDesc = new();
-        samplerDesc.Filter = Filter.MinMagMipLinear;
+        samplerDesc.Filter = Filter.ComparisonMinMagMipPoint;
         samplerDesc.AddressU = TextureAddressMode.Border;
         samplerDesc.AddressV = TextureAddressMode.Border;
         samplerDesc.AddressW = TextureAddressMode.Border;
         samplerDesc.MipLODBias = 0f;
-        samplerDesc.MaxAnisotropy = 4;
+        samplerDesc.MaxAnisotropy = 0;
         samplerDesc.ComparisonFunc = ComparisonFunc.LessEqual;
         samplerDesc.MinLOD = 0;
         samplerDesc.MaxLOD = float.MaxValue;

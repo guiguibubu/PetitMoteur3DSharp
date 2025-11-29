@@ -7,25 +7,28 @@ using PetitMoteur3D.Camera;
 using PetitMoteur3D.Graphics;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
-using Silk.NET.GLFW;
 using Silk.NET.Maths;
 
 namespace PetitMoteur3D;
 
 internal sealed class Scene : IDrawableObjet, IDisposable
 {
+    public bool ShowShadow {  get; set; }
+
     private readonly List<IShadowDrawableObjet> _objectsWithShadow;
     private readonly List<IUpdatableObjet> _objectsUpdatable;
     private readonly List<IDrawableObjet> _objectsDrawable;
     private ICamera _camera;
 
     private ComPtr<ID3D11Buffer> _constantBuffer;
+    private ComPtr<ID3D11Buffer> _constantShadowBuffer;
 
     public ComPtr<ID3D11RasterizerState> RasterizerState { get { return _rasterizerState; } set { _rasterizerState = value; } }
     private ComPtr<ID3D11RasterizerState> _rasterizerState;
 
     private LightShadersParams _light;
     private SceneShadersParams _shadersParams;
+    private SceneShadowShadersParams _shadersShadowParams;
 
     private readonly ShadowMap _shadowMap;
     private readonly FrustrumView _frustrumViewLight;
@@ -61,8 +64,14 @@ internal sealed class Scene : IDrawableObjet, IDisposable
             CameraPos = new Vector4D<float>(_camera.Position.ToGeneric(), 1.0f),
         };
 
+        _shadersShadowParams = new SceneShadowShadersParams()
+        {
+            DrawShadow = ShowShadow ? 1 : 0
+        };
+
         // Create our constant buffer.
         _constantBuffer = graphicDeviceRessourceFactory.BufferFactory.CreateConstantBuffer<SceneShadersParams>(Usage.Default, CpuAccessFlag.None, name: "SceneConstantBuffer");
+        _constantShadowBuffer = graphicDeviceRessourceFactory.BufferFactory.CreateConstantBuffer<SceneShadowShadersParams>(Usage.Default, CpuAccessFlag.None, name: "SceneShadowConstantBuffer");
 
         _shadowMap = new ShadowMap(graphicDeviceRessourceFactory, name: "SceneShadowMap");
         _cameraLigth = new FreeCamera((float)(Math.PI / 4));
@@ -83,17 +92,20 @@ internal sealed class Scene : IDrawableObjet, IDisposable
 
     public void AddObjet(IObjet3D obj)
     {
+        // Render
         if (obj is IShadowDrawableObjet shadowDrawableObjet)
         {
             _objectsWithShadow.Add(shadowDrawableObjet);
         }
+        else if (obj is IDrawableObjet drawableObjet)
+        {
+            _objectsDrawable.Add(drawableObjet);
+        }
+
+        // Update
         if (obj is IUpdatableObjet updatableObjet)
         {
             _objectsUpdatable.Add(updatableObjet);
-        }
-        if (obj is IDrawableObjet drawableObjet)
-        {
-            _objectsDrawable.Add(drawableObjet);
         }
     }
 
@@ -106,7 +118,7 @@ internal sealed class Scene : IDrawableObjet, IDisposable
         _camera.Update(elapsedTime);
     }
 
-    public void Draw(D3D11GraphicPipeline graphicPipeline, ref readonly System.Numerics.Matrix4x4 matViewProj)
+    public unsafe void Draw(D3D11GraphicPipeline graphicPipeline, ref readonly System.Numerics.Matrix4x4 matViewProj)
     {
         // Initialiser et sélectionner les « constantes » des shaders
         ref Vector4D<float> cameraPosParam = ref _shadersParams.CameraPos;
@@ -115,13 +127,41 @@ internal sealed class Scene : IDrawableObjet, IDisposable
         cameraPosParam.Y = cameraPos.Y;
         cameraPosParam.Z = cameraPos.Z;
 
+        _shadersShadowParams.DrawShadow = ShowShadow ? 1 : 0;
+
         graphicPipeline.RessourceFactory.UpdateSubresource(_constantBuffer, 0, in Unsafe.NullRef<Box>(), in _shadersParams, 0, 0);
+        graphicPipeline.RessourceFactory.UpdateSubresource(_constantShadowBuffer, 0, in Unsafe.NullRef<Box>(), in _shadersShadowParams, 0, 0);
         graphicPipeline.VertexShaderStage.SetConstantBuffers(0, 1, ref _constantBuffer);
+        graphicPipeline.VertexShaderStage.SetConstantBuffers(2, 1, ref _constantShadowBuffer);
         graphicPipeline.PixelShaderStage.SetConstantBuffers(0, 1, ref _constantBuffer);
+        graphicPipeline.PixelShaderStage.SetConstantBuffers(2, 1, ref _constantShadowBuffer);
+        // Shadow Map : Texture + sampler
+        if (_shadowMap.DepthTexture.TextureView.Handle is not null)
+        {
+            ComPtr<ID3D11ShaderResourceView> shadowMapTexture = _shadowMap.DepthTexture.TextureView;
+            graphicPipeline.PixelShaderStage.SetShaderResources(2, 1, ref shadowMapTexture);
+        }
+        graphicPipeline.PixelShaderStage.SetSamplers(1, 1, in _shadowMap.SampleState);
         graphicPipeline.RasterizerStage.SetState(_rasterizerState);
+
+        _cameraLigth.SetPosition(_camera.Position - (DistanceLight * _cameraLigth.Orientation.Forward));
+        _cameraLigth.GetViewMatrix(out Matrix4x4 matViewLight);
+        ref readonly Matrix4x4 matProjLight = ref _frustrumViewLight.MatProj;
+        Matrix4x4 matViewProjLight = matViewLight * matProjLight;
+
+        foreach (IShadowDrawableObjet obj in _objectsWithShadow)
+        {
+            obj.Draw(graphicPipeline, in matViewProj, in matViewProjLight);
+        }
         foreach (IDrawableObjet obj in _objectsDrawable)
         {
             obj.Draw(graphicPipeline, in matViewProj);
+        }
+
+        // s'assuré que le texture n'est plus lié comme SRV.
+        if (_shadowMap.DepthTexture.TextureView.Handle is not null)
+        {
+            graphicPipeline.PixelShaderStage.ClearShaderResources(2);
         }
     }
 
@@ -135,7 +175,7 @@ internal sealed class Scene : IDrawableObjet, IDisposable
         // Utiliser la surface de la texture comme surface de rendu
         graphicPipeline.OutputMergerStage.SetRenderTarget(0, in Unsafe.NullRef<ComPtr<ID3D11RenderTargetView>>(), _shadowMap.DepthTexture.TextureDepthStencilView);
         // Effacer le shadow map
-        graphicPipeline.GraphicDevice.DeviceContext.ClearDepthStencilView(_shadowMap.DepthTexture.TextureDepthStencilView, (uint)Windows.Win32.Graphics.Direct3D11.D3D11_CLEAR_FLAG.D3D11_CLEAR_DEPTH, 1.0f, 0);
+        graphicPipeline.GraphicDevice.DeviceContext.ClearDepthStencilView(_shadowMap.DepthTexture.TextureDepthStencilView, (uint)(ClearFlag.Depth | ClearFlag.Stencil), 1.0f, 0);
         // Modifier les dimension du viewport
         // Set the rasterizer state with the current viewport.
         const int SHADOW_MAP_DIM = 2048;

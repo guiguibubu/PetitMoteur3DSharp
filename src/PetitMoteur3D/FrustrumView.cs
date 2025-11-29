@@ -2,7 +2,7 @@
 
 namespace PetitMoteur3D;
 
-internal class FrustrumView
+internal sealed class FrustrumView
 {
     public ref readonly Matrix4x4 MatProj { get { return ref _matProj; } }
     

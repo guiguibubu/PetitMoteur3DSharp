@@ -13,7 +13,7 @@ internal interface ITextureBuilder<TBuilder>
     Texture Build();
 }
 
-internal class TextureBuilder : ITextureBuilder<TextureBuilder>
+internal sealed class TextureBuilder : ITextureBuilder<TextureBuilder>
 {
     private readonly Texture2DDesc _textureDesc;
     private SubresourceData? _textureInitialData;

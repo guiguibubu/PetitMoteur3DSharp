@@ -91,7 +91,7 @@ public class Engine
         _showDebugTool = false;
         _showWireFrame = false;
         _showScene = true;
-        _showShadow = false;
+        _showShadow = true;
 
         _horlogeEngine = new Stopwatch();
         _horlogeScene = new Stopwatch();
@@ -482,6 +482,7 @@ public class Engine
         BeginRender();
         if (_initAnimationFinished)
         {
+            _scene.ShowShadow = _showShadow;
             if (_showShadow)
             {
                 _scene.DrawShadow(_graphicPipeline);

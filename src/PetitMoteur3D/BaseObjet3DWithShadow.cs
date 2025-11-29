@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using PetitMoteur3D.Core.Memory;
 using PetitMoteur3D.Graphics;
@@ -28,6 +29,19 @@ internal abstract class BaseObjet3DWithShadow : BaseObjet3D, IShadowDrawableObje
         _constantBufferShadowMap = default;
 
         _disposed = false;
+    }
+
+    /// <inheritdoc/>
+    public unsafe void Draw(D3D11GraphicPipeline graphicPipeline, ref readonly System.Numerics.Matrix4x4 matViewProj, ref readonly System.Numerics.Matrix4x4 matViewProjLight)
+    {
+        System.Numerics.Matrix4x4 matViewProjLightCopy = matViewProjLight;
+        Action<D3D11GraphicPipeline, SubObjet3D> additionalConf = (graphicPipeline, subObject) =>
+        {
+            SetUpShadowConstants(graphicPipeline, in matViewProjLightCopy, subObject);
+        };
+        base.AdditionalDrawConfig += additionalConf;
+        base.Draw(graphicPipeline, in matViewProj);
+        base.AdditionalDrawConfig -= additionalConf;
     }
 
     /// <inheritdoc/>
@@ -84,7 +98,83 @@ internal abstract class BaseObjet3DWithShadow : BaseObjet3D, IShadowDrawableObje
         _vertexBufferShadowMap = bufferFactory.CreateVertexBuffer<TVertex>(sommets, Usage.Immutable, CpuAccessFlag.None, $"{Name}_VertexBufferShadowMap");
 
         // Create our constant buffer.
-        _constantBufferShadowMap = bufferFactory.CreateConstantBuffer<ObjectShadowMapShadersParams>(Usage.Default, CpuAccessFlag.None, $"{Name}_IndexBufferShadowMap");
+        _constantBufferShadowMap = bufferFactory.CreateConstantBuffer<ObjectShadowMapShadersParams>(Usage.Default, CpuAccessFlag.None, $"{Name}_ConstantBufferShadowMap");
+    }
+
+    /// <summary>
+    /// VertexShader file
+    /// </summary>
+    [return: NotNull]
+    protected override ShaderCodeFile InitVertexShaderCodeFile()
+    {
+        string filePath = "shaders\\MiniPhongNormalMapShadowMap.hlsl";
+        string entryPoint = "MiniPhongNormalMapShadowMapVS";
+        string target = "vs_5_0";
+        // #define D3DCOMPILE_ENABLE_STRICTNESS                    (1 << 11)
+        uint flagStrictness = ((uint)1 << 11);
+        // #define D3DCOMPILE_DEBUG (1 << 0)
+        // #define D3DCOMPILE_SKIP_OPTIMIZATION                    (1 << 2)
+#if DEBUG
+        uint flagDebug = ((uint)1 << 0);
+        uint flagSkipOptimization = ((uint)(1 << 2));
+#else
+        uint flagDebug = 0;
+        uint flagSkipOptimization = 0;
+#endif
+        uint compilationFlags = flagStrictness | flagDebug | flagSkipOptimization;
+        return new ShaderCodeFile(
+           filePath,
+           entryPoint,
+           target,
+           compilationFlags,
+           name: "MiniPhongNormalMapShadowMap_VertexShader"
+        );
+    }
+
+    /// <summary>
+    /// PixelShader file
+    /// </summary>
+    [return: NotNull]
+    protected override ShaderCodeFile InitPixelShaderCodeFile()
+    {
+        string filePath = "shaders\\MiniPhongNormalMapShadowMap.hlsl";
+        string entryPoint = "MiniPhongNormalMapShadowMapPS";
+        string target = "ps_5_0";
+        // #define D3DCOMPILE_ENABLE_STRICTNESS                    (1 << 11)
+        uint flagStrictness = ((uint)1 << 11);
+        // #define D3DCOMPILE_DEBUG (1 << 0)
+        // #define D3DCOMPILE_SKIP_OPTIMIZATION                    (1 << 2)
+#if DEBUG
+        uint flagDebug = ((uint)1 << 0);
+        uint flagSkipOptimization = ((uint)(1 << 2));
+#else
+        uint flagDebug = 0;
+        uint flagSkipOptimization = 0;
+#endif
+        uint compilationFlags = flagStrictness | flagDebug | flagSkipOptimization;
+        return new ShaderCodeFile
+        (
+           filePath,
+           entryPoint,
+           target,
+           compilationFlags,
+           name: "MiniPhongNormalMapShadowMap_PixelShader"
+        );
+    }
+
+    private void SetUpShadowConstants(D3D11GraphicPipeline graphicPipeline, ref readonly System.Numerics.Matrix4x4 matViewProjLight, SubObjet3D subObjet3D)
+    {
+        // Initialiser et sélectionner les « constantes » des shaders
+        _objectShadersParamsPool.Get(out ObjectPoolWrapper<ObjectShadowMapShadersParams> shadersParamsWrapper);
+        ref ObjectShadowMapShadersParams shadersParams = ref shadersParamsWrapper.Data;
+        ref readonly System.Numerics.Matrix4x4 matWorld = ref base.MatWorld;
+        shadersParams.matWorldViewProjLight = System.Numerics.Matrix4x4.Transpose(subObjet3D.Transformation * matWorld * matViewProjLight).ToGeneric();
+
+        graphicPipeline.RessourceFactory.UpdateSubresource(_constantBufferShadowMap, 0, in Unsafe.NullRef<Box>(), in shadersParams, 0, 0);
+
+        // Activer le VS
+        graphicPipeline.VertexShaderStage.SetConstantBuffers(3, 1, ref _constantBufferShadowMap);
+        graphicPipeline.PixelShaderStage.SetConstantBuffers(3, 1, ref _constantBufferShadowMap);
     }
 
     ~BaseObjet3DWithShadow()
