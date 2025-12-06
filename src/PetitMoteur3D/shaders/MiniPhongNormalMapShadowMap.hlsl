@@ -131,6 +131,7 @@ float4 MiniPhongNormalMapShadowMapPS(VS_Sortie vs) : SV_Target0
     bool isInShadow = false;
     if (drawShadow)
     {
+        // Conversion space [-1;1] to texture space [0;1]
         float2 shadowTexCoords = 0.5f * vs.lightSpacePos.xy / vs.lightSpacePos.w + float2(0.5f, 0.5f);
         shadowTexCoords.y = 1.0f - shadowTexCoords.y;
         float pixelDepth = vs.lightSpacePos.z / vs.lightSpacePos.w;

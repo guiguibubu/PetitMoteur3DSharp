@@ -85,7 +85,7 @@ internal sealed class Scene : IDrawableObjet, IDisposable
         float planRapproche = 2.0f;
         float planEloigne = 100.0f;
 
-        _frustrumViewLight = new FrustrumView(_camera.ChampVision, aspectRatio, planRapproche, planEloigne);
+        _frustrumViewLight = new FrustrumView(_camera.ChampVision, aspectRatio, planRapproche, planEloigne, isOrthographic: true);
 
         _disposed = false;
     }

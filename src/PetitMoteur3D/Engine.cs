@@ -40,6 +40,8 @@ public class Engine
     private bool _showWireFrame;
     private bool _showScene;
     private bool _showShadow;
+    private bool _isShadowOrthographique;
+    private bool _isCameraOrthographique;
     private Vector4 _backgroundColour;
 
     private readonly Stopwatch _horlogeEngine;
@@ -92,6 +94,8 @@ public class Engine
         _showWireFrame = false;
         _showScene = true;
         _showShadow = true;
+        _isShadowOrthographique = true;
+        _isCameraOrthographique = false;
 
         _horlogeEngine = new Stopwatch();
         _horlogeScene = new Stopwatch();
@@ -262,6 +266,8 @@ public class Engine
                         ImGui.Checkbox("Show Metrics", ref _imGuiShowMetrics);     // Edit bool
                         ImGui.Checkbox("Show Scene", ref _showScene);     // Edit bool
                         ImGui.Checkbox("Show Shadow", ref _showShadow);     // Edit bool
+                        ImGui.Checkbox("Show Shadow Orthographique", ref _isShadowOrthographique);     // Edit bool
+                        ImGui.Checkbox("Camera Orthographique", ref _isCameraOrthographique);     // Edit bool
                         ImGui.Checkbox("Show Logs", ref _imGuiShowEngineLogs);     // Edit bool
                         ImGui.End();
 
@@ -383,7 +389,8 @@ public class Engine
             _camera.ChampVision,
             aspectRatio,
             planRapproche,
-            planEloigne
+            planEloigne,
+            isOrthographic: _isCameraOrthographique
         );
     }
 
@@ -488,6 +495,7 @@ public class Engine
                 _scene.DrawShadow(_graphicPipeline);
             }
             _camera.GetViewMatrix(out Matrix4x4 matView);
+            _frustrumView.IsOrthographique = _isCameraOrthographique;
             ref readonly Matrix4x4 matProj = ref _frustrumView.MatProj;
             Matrix4x4 matViewProj = matView * matProj;
             _scene.Draw(_graphicPipeline, in matViewProj);
