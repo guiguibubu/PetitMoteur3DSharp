@@ -34,12 +34,15 @@ public class Engine
     private bool _imGuiShowDemo;
     private bool _imGuiShowDebugLogs;
     private bool _imGuiShowEngineLogs;
+    private bool _imGuiShowCameraOptions;
     private bool _imGuiShowMetrics;
     private bool _debugToolKeyPressed;
     private bool _showDebugTool;
     private bool _showWireFrame;
     private bool _showScene;
     private bool _showShadow;
+    private bool _isShadowOrthographique;
+    private bool _isCameraOrthographique;
     private Vector4 _backgroundColour;
 
     private readonly Stopwatch _horlogeEngine;
@@ -86,12 +89,15 @@ public class Engine
         _imGuiShowDemo = false;
         _imGuiShowDebugLogs = false;
         _imGuiShowEngineLogs = false;
+        _imGuiShowCameraOptions = false;
         _imGuiShowMetrics = false;
         _debugToolKeyPressed = false;
         _showDebugTool = false;
         _showWireFrame = false;
         _showScene = true;
         _showShadow = true;
+        _isShadowOrthographique = true;
+        _isCameraOrthographique = false;
 
         _horlogeEngine = new Stopwatch();
         _horlogeScene = new Stopwatch();
@@ -262,6 +268,8 @@ public class Engine
                         ImGui.Checkbox("Show Metrics", ref _imGuiShowMetrics);     // Edit bool
                         ImGui.Checkbox("Show Scene", ref _showScene);     // Edit bool
                         ImGui.Checkbox("Show Shadow", ref _showShadow);     // Edit bool
+                        ImGui.Checkbox("Show Shadow Orthographique", ref _isShadowOrthographique);     // Edit bool
+                        ImGui.Checkbox("Show Camera Options", ref _imGuiShowCameraOptions);     // Edit bool
                         ImGui.Checkbox("Show Logs", ref _imGuiShowEngineLogs);     // Edit bool
                         ImGui.End();
 
@@ -274,6 +282,29 @@ public class Engine
 
                         if (_imGuiShowMetrics)
                             ImGui.ShowMetricsWindow();
+
+                        if (_imGuiShowCameraOptions)
+                        {
+                            ImGui.Begin("PetitMoteur3D Camera");
+                            ImGui.Checkbox("Orthographique", ref _isCameraOrthographique);     // Edit bool
+                            _frustrumView.IsOrthographique = _isCameraOrthographique;
+                            float width = _frustrumView.Width;
+                            ImGui.SliderFloat("width", ref width, 400.0f, 2040f);
+                            _frustrumView.Width = width;
+                            float height = _frustrumView.Height;
+                            ImGui.SliderFloat("height", ref height, 400.0f, 2040f);
+                            _frustrumView.Height = height;
+                            float fieldOfView = _frustrumView.FieldOfView;
+                            ImGui.SliderFloat("fieldOfView", ref fieldOfView, 0.1f, (float)Math.PI - 0.1f);
+                            _frustrumView.FieldOfView = fieldOfView;
+                            float nearPlaneDistance = _frustrumView.NearPlaneDistance;
+                            float farPlaneDistance = _frustrumView.FarPlaneDistance;
+                            ImGui.SliderFloat("nearPlaneDistance", ref nearPlaneDistance, 0.1f, farPlaneDistance - 0.1f);
+                            ImGui.SliderFloat("farPlaneDistance", ref farPlaneDistance, nearPlaneDistance + 0.1f, 500f);
+                            _frustrumView.NearPlaneDistance = nearPlaneDistance;
+                            _frustrumView.FarPlaneDistance = farPlaneDistance;
+                            ImGui.End();
+                        }
 
                         if (_imGuiShowEngineLogs)
                         {
@@ -343,7 +374,8 @@ public class Engine
         float planRapproche = 2.0f;
         float planEloigne = 100.0f;
         _frustrumView.Update(_camera.ChampVision,
-            aspectRatio,
+            windowWidth,
+            windowHeight,
             planRapproche,
             planEloigne);
     }
@@ -378,12 +410,14 @@ public class Engine
         float windowHeight = _window.Size.Height;
         float aspectRatio = windowWidth / windowHeight;
         float planRapproche = 2.0f;
-        float planEloigne = 100.0f;
+        float planEloigne = 15.0f;
         _frustrumView = new FrustrumView(
             _camera.ChampVision,
-            aspectRatio,
+            windowWidth,
+            windowHeight,
             planRapproche,
-            planEloigne
+            planEloigne,
+            isOrthographic: _isCameraOrthographique
         );
     }
 

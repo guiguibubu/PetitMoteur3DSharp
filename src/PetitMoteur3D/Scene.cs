@@ -74,7 +74,7 @@ internal sealed class Scene : IDrawableObjet, IDisposable
         _constantShadowBuffer = graphicDeviceRessourceFactory.BufferFactory.CreateConstantBuffer<SceneShadowShadersParams>(Usage.Default, CpuAccessFlag.None, name: "SceneShadowConstantBuffer");
 
         _shadowMap = new ShadowMap(graphicDeviceRessourceFactory, name: "SceneShadowMap");
-        _cameraLigth = new FreeCamera((float)(Math.PI / 4));
+        _cameraLigth = new FreeCamera((float)(Math.PI / 4d));
         _cameraLigth.LookTo(new Vector3(_light.Direction.X, _light.Direction.Y, _light.Direction.Z));
         _cameraLigth.SetPosition(_camera.Position - (DistanceLight * _cameraLigth.Orientation.Forward));
 
@@ -85,7 +85,7 @@ internal sealed class Scene : IDrawableObjet, IDisposable
         float planRapproche = 2.0f;
         float planEloigne = 100.0f;
 
-        _frustrumViewLight = new FrustrumView(_camera.ChampVision, aspectRatio, planRapproche, planEloigne);
+        _frustrumViewLight = new FrustrumView(_cameraLigth.ChampVision, windowWidth, windowHeight, planRapproche, planEloigne, isOrthographic: true);
 
         _disposed = false;
     }
