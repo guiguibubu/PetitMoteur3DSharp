@@ -121,6 +121,28 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
     }
 
     /// <inheritdoc/>
+    public ref readonly System.Numerics.Vector3 SetPosition(float x, float y, float z)
+    {
+        _position.X = x;
+        _position.Y = y;
+        _position.Z = z;
+        UpdateMatWorld();
+        return ref _position;
+    }
+
+    /// <inheritdoc/>
+    public ref readonly System.Numerics.Vector3 SetPosition(System.Numerics.Vector3 position)
+    {
+        return ref SetPosition(in position);
+    }
+
+    /// <inheritdoc/>
+    public ref readonly System.Numerics.Vector3 SetPosition(scoped ref readonly System.Numerics.Vector3 position)
+    {
+        return ref SetPosition(position.X, position.Y, position.Z);
+    }
+
+    /// <inheritdoc/>
     /// <remarks>Currently only return zero vector</remarks>
     public ref readonly System.Numerics.Vector3 RotateEuler(ref readonly System.Numerics.Vector3 rotation)
     {

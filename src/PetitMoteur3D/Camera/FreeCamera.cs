@@ -9,10 +9,11 @@ namespace PetitMoteur3D.Camera;
 
 internal sealed class FreeCamera : ICamera, IRotationObjet
 {
-    /// <summary>
-    /// Champ vision
-    /// </summary>
+    /// <inheritdoc/>
     public float ChampVision { get; init; }
+
+    /// <inheritdoc/>
+    public FrustrumView FrustrumView { get; init; }
 
     /// <inheritdoc/>
     public ref readonly Vector3 Position => ref _position;
@@ -34,7 +35,7 @@ internal sealed class FreeCamera : ICamera, IRotationObjet
     /// <summary>
     /// Constructeur par defaut
     /// </summary>
-    public FreeCamera() : this(null, (float)(Math.PI / 4))
+    public FreeCamera() : this(null, (float)(Math.PI / 4d))
     {
 
     }
@@ -52,7 +53,7 @@ internal sealed class FreeCamera : ICamera, IRotationObjet
     /// Constructeur
     /// </summary>
     /// <param name="window"></param>
-    public FreeCamera(IWindow? window) : this(window, (float)(Math.PI / 4))
+    public FreeCamera(IWindow? window) : this(window, (float)(Math.PI / 4d))
     {
 
     }

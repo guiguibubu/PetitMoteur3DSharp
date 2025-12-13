@@ -10,13 +10,19 @@ namespace PetitMoteur3D.Camera;
 /// </summary>
 internal sealed class FixedCamera : ICamera
 {
-    /// <summary>
-    /// Champ vision
-    /// </summary>
+    /// <inheritdoc/>
     public float ChampVision { get; init; }
 
     /// <inheritdoc/>
+    public FrustrumView FrustrumView { get; init; }
+
+    /// <inheritdoc/>
     public ref readonly Vector3 Position => ref _position;
+
+    /// <summary>
+    /// The target of the camera.
+    /// </summary>
+    public ref readonly Vector3 Target => ref _target;
 
     private Vector3 _position;
 
@@ -33,7 +39,7 @@ internal sealed class FixedCamera : ICamera
     /// Constructeur par defaut
     /// </summary>
     /// <param name="target"></param>
-    public FixedCamera(Vector3 target) : this(target, (float)(Math.PI / 4))
+    public FixedCamera(Vector3 target) : this(target, (float)(Math.PI / 4d))
     {
 
     }
@@ -66,13 +72,13 @@ internal sealed class FixedCamera : ICamera
     /// <inheritdoc/>
     public void Update(float elapsedTime)
     {
+        Vector3 direction = _target - _position;
+        _orientation.LookTo(in direction);
+
         if (_inputContext is null)
         {
             return;
         }
-
-        Vector3 direction = _target - _position;
-        _orientation.LookTo(in direction);
 
         IKeyboard keyboard = _inputContext.Keyboards[0];
         // WASD (W is up, A is left, S is down, and D is right)
@@ -136,6 +142,62 @@ internal sealed class FixedCamera : ICamera
     public ref readonly Vector3 Move(scoped ref readonly Vector3 move)
     {
         return ref Move(move.X, move.Y, move.Z);
+    }
+
+    /// <inheritdoc/>
+    public ref readonly Vector3 SetPosition(float x, float y, float z)
+    {
+        _position.X = x;
+        _position.Y = y;
+        _position.Z = z;
+        return ref _position;
+    }
+
+    /// <inheritdoc/>
+    public ref readonly Vector3 SetPosition(Vector3 position)
+    {
+        return ref SetPosition(in position);
+    }
+
+    /// <inheritdoc/>
+    public ref readonly Vector3 SetPosition(scoped ref readonly Vector3 position)
+    {
+        return ref SetPosition(position.X, position.Y, position.Z);
+    }
+
+    /// <summary>
+    /// Set target of the camera
+    /// </summary>
+    /// <param name="x"></param>
+    /// <param name="y"></param>
+    /// <param name="z"></param>
+    /// <returns>New target</returns>
+    public ref readonly Vector3 SetTarget(float x, float y, float z)
+    {
+        _target.X = x;
+        _target.Y = y;
+        _target.Z = z;
+        return ref _target;
+    }
+
+    /// <summary>
+    /// Set target of the camera
+    /// </summary>
+    /// <param name="target"></param>
+    /// <returns>New target</returns>
+    public ref readonly Vector3 SetTarget(Vector3 target)
+    {
+        return ref SetTarget(in target);
+    }
+
+    /// <summary>
+    /// Set target of the camera
+    /// </summary>
+    /// <param name="target"></param>
+    /// <returns>New target</returns>
+    public ref readonly Vector3 SetTarget(scoped ref readonly Vector3 target)
+    {
+        return ref SetTarget(target.X, target.Y, target.Z);
     }
 
     /// <inheritdoc/>

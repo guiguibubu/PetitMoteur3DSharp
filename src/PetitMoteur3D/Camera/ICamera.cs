@@ -10,6 +10,11 @@ internal interface ICamera : ISceneObjet, IMovableObjet, IInputListener
     float ChampVision { get; }
 
     /// <summary>
+    /// FrustrumView
+    /// </summary>
+    FrustrumView FrustrumView { get; }
+
+    /// <summary>
     /// Get the current view matrix
     /// </summary>
     /// <returns></returns>

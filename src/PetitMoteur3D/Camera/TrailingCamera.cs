@@ -10,10 +10,11 @@ namespace PetitMoteur3D.Camera;
 /// </summary>
 internal sealed class TrailingCamera : ICamera
 {
-    /// <summary>
-    /// Champ vision
-    /// </summary>
+    /// <inheritdoc/>
     public float ChampVision { get; init; }
+
+    /// <inheritdoc/>
+    public FrustrumView FrustrumView { get; init; }
 
     /// <inheritdoc/>
     public ref readonly Vector3 Position => ref _position;
@@ -31,7 +32,7 @@ internal sealed class TrailingCamera : ICamera
     /// Constructeur par defaut
     /// </summary>
     /// <param name="target"></param>
-    public TrailingCamera(ISceneObjet target) : this(target, (float)(Math.PI / 4))
+    public TrailingCamera(ISceneObjet target) : this(target, (float)(Math.PI / 4d))
     {
 
     }
@@ -89,6 +90,27 @@ internal sealed class TrailingCamera : ICamera
     public ref readonly Vector3 Move(scoped ref readonly Vector3 move)
     {
         return ref Move(move.X, move.Y, move.Z);
+    }
+
+    /// <inheritdoc/>
+    public ref readonly System.Numerics.Vector3 SetPosition(float x, float y, float z)
+    {
+        _position.X = x;
+        _position.Y = y;
+        _position.Z = z;
+        return ref _position;
+    }
+
+    /// <inheritdoc/>
+    public ref readonly System.Numerics.Vector3 SetPosition(System.Numerics.Vector3 position)
+    {
+        return ref SetPosition(in position);
+    }
+
+    /// <inheritdoc/>
+    public ref readonly System.Numerics.Vector3 SetPosition(scoped ref readonly System.Numerics.Vector3 position)
+    {
+        return ref SetPosition(position.X, position.Y, position.Z);
     }
 
     /// <inheritdoc/>

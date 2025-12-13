@@ -28,13 +28,15 @@ public class Engine
     private D3D11GraphicPipeline _graphicPipeline;
 
     private Scene _scene;
-    private ICamera _camera;
-    private FrustrumView _frustrumView;
+    private ICamera _activeCamera;
+    private ICamera _gameCamera;
+    private FixedCamera _debugCamera;
 
     private bool _imGuiShowDemo;
     private bool _imGuiShowDebugLogs;
     private bool _imGuiShowEngineLogs;
-    private bool _imGuiShowCameraOptions;
+    private bool _imGuiShowGameCameraOptions;
+    private bool _imGuiShowDebugCameraOptions;
     private bool _imGuiShowMetrics;
     private bool _debugToolKeyPressed;
     private bool _showDebugTool;
@@ -43,6 +45,7 @@ public class Engine
     private bool _showShadow;
     private bool _isShadowOrthographique;
     private bool _isCameraOrthographique;
+    private bool _useDebugCamera;
     private Vector4 _backgroundColour;
 
     private readonly Stopwatch _horlogeEngine;
@@ -89,7 +92,8 @@ public class Engine
         _imGuiShowDemo = false;
         _imGuiShowDebugLogs = false;
         _imGuiShowEngineLogs = false;
-        _imGuiShowCameraOptions = false;
+        _imGuiShowDebugCameraOptions = false;
+        _imGuiShowGameCameraOptions = false;
         _imGuiShowMetrics = false;
         _debugToolKeyPressed = false;
         _showDebugTool = false;
@@ -98,14 +102,16 @@ public class Engine
         _showShadow = true;
         _isShadowOrthographique = true;
         _isCameraOrthographique = false;
+        _useDebugCamera = false;
 
         _horlogeEngine = new Stopwatch();
         _horlogeScene = new Stopwatch();
         _horlogeDebugTool = new Stopwatch();
 
         _scene = default!;
-        _camera = default!;
-        _frustrumView = default!;
+        _activeCamera = default!;
+        _gameCamera = default!;
+        _debugCamera = default!;
     }
 
     public void Initialize()
@@ -210,22 +216,22 @@ public class Engine
             return;
         }
         CurrentFrameCount++;
-        double tempsEcouleEngine = _horlogeEngine.ElapsedMilliseconds;
+        double elapsedTimeEngine = _horlogeEngine.ElapsedMilliseconds;
         try
         {
             // Est-il temps de rendre l’image ?
-            if (tempsEcouleEngine > ECART_TEMPS_ENGINE)
+            if (elapsedTimeEngine > ECART_TEMPS_ENGINE)
             {
                 // Affichage optimisé
                 _graphicPipeline.Present();
                 // On relance l'horloge pour être certain de garder la fréquence d'affichage
                 _horlogeEngine.Restart();
                 // On prépare la prochaine image
-                AnimeScene((float)tempsEcouleEngine);
+                AnimeScene((float)elapsedTimeEngine);
                 if (_showScene)
                 {
-                    double tempsEcouleScene = _horlogeScene.ElapsedMilliseconds;
-                    if (tempsEcouleScene > ECART_TEMPS_SCENE)
+                    double elapsedTimeScene = _horlogeScene.ElapsedMilliseconds;
+                    if (elapsedTimeScene > ECART_TEMPS_SCENE)
                     {
                         _horlogeScene.Restart();
                         // On rend l’image sur la surface de travail
@@ -240,12 +246,12 @@ public class Engine
 
                 if (_showDebugTool)
                 {
-                    double tempsEcouleDebugTool = _horlogeDebugTool.ElapsedMilliseconds;
+                    double elapsedTimeDebugTool = _horlogeDebugTool.ElapsedMilliseconds;
                     // We create a new frame or reuse the last one
-                    if (tempsEcouleDebugTool > ECART_TEMPS_DEBUGTOOL)
+                    if (elapsedTimeDebugTool > ECART_TEMPS_DEBUGTOOL)
                     {
                         _imGuiController.CloseFrame();
-                        _imGuiController.Update((float)tempsEcouleEngine / 1000.0f);
+                        _imGuiController.Update((float)elapsedTimeEngine / 1000.0f);
                         _imGuiController.NewFrame();
 
                         // On relance l'horloge pour être certain de garder la fréquence d'affichage
@@ -269,7 +275,8 @@ public class Engine
                         ImGui.Checkbox("Show Scene", ref _showScene);     // Edit bool
                         ImGui.Checkbox("Show Shadow", ref _showShadow);     // Edit bool
                         ImGui.Checkbox("Show Shadow Orthographique", ref _isShadowOrthographique);     // Edit bool
-                        ImGui.Checkbox("Show Camera Options", ref _imGuiShowCameraOptions);     // Edit bool
+                        ImGui.Checkbox("Show Debug Camera Options", ref _imGuiShowDebugCameraOptions);     // Edit bool
+                        ImGui.Checkbox("Show Game Camera Options", ref _imGuiShowGameCameraOptions);     // Edit bool
                         ImGui.Checkbox("Show Logs", ref _imGuiShowEngineLogs);     // Edit bool
                         ImGui.End();
 
@@ -283,26 +290,45 @@ public class Engine
                         if (_imGuiShowMetrics)
                             ImGui.ShowMetricsWindow();
 
-                        if (_imGuiShowCameraOptions)
+                        if (_imGuiShowDebugCameraOptions)
                         {
-                            ImGui.Begin("PetitMoteur3D Camera");
+                            ImGui.Begin("PetitMoteur3D Debug Camera");
+                            ImGui.Checkbox("Use debug camera", ref _useDebugCamera);     // Edit bool
+                            Vector3 position = _debugCamera.Position;
+                            ImGui.SliderFloat("X", ref position.X, -100f, 100f);
+                            ImGui.SliderFloat("Y", ref position.Y, -100f, 100f);
+                            ImGui.SliderFloat("Z", ref position.Z, -100f, 100f);
+                            _debugCamera.SetPosition(in position);
+
+                            Vector3 target = _debugCamera.Target;
+                            ImGui.SliderFloat("Target X", ref target.X, -100f, 100f);
+                            ImGui.SliderFloat("Target Y", ref target.Y, -100f, 100f);
+                            ImGui.SliderFloat("Target Z", ref target.Z, -100f, 100f);
+                            _debugCamera.SetTarget(in target);
+                            ImGui.End();
+                        }
+
+                        if (_imGuiShowGameCameraOptions)
+                        {
+                            ImGui.Begin("PetitMoteur3D Game Camera");
                             ImGui.Checkbox("Orthographique", ref _isCameraOrthographique);     // Edit bool
-                            _frustrumView.IsOrthographique = _isCameraOrthographique;
-                            float width = _frustrumView.Width;
+                            FrustrumView gameFrustrumView = _gameCamera.FrustrumView;
+                            gameFrustrumView.IsOrthographique = _isCameraOrthographique;
+                            float width = gameFrustrumView.Width;
                             ImGui.SliderFloat("width", ref width, 400.0f, 2040f);
-                            _frustrumView.Width = width;
-                            float height = _frustrumView.Height;
+                            gameFrustrumView.Width = width;
+                            float height = gameFrustrumView.Height;
                             ImGui.SliderFloat("height", ref height, 400.0f, 2040f);
-                            _frustrumView.Height = height;
-                            float fieldOfView = _frustrumView.FieldOfView;
+                            gameFrustrumView.Height = height;
+                            float fieldOfView = gameFrustrumView.FieldOfView;
                             ImGui.SliderFloat("fieldOfView", ref fieldOfView, 0.1f, (float)Math.PI - 0.1f);
-                            _frustrumView.FieldOfView = fieldOfView;
-                            float nearPlaneDistance = _frustrumView.NearPlaneDistance;
-                            float farPlaneDistance = _frustrumView.FarPlaneDistance;
+                            gameFrustrumView.FieldOfView = fieldOfView;
+                            float nearPlaneDistance = gameFrustrumView.NearPlaneDistance;
+                            float farPlaneDistance = gameFrustrumView.FarPlaneDistance;
                             ImGui.SliderFloat("nearPlaneDistance", ref nearPlaneDistance, 0.1f, farPlaneDistance - 0.1f);
                             ImGui.SliderFloat("farPlaneDistance", ref farPlaneDistance, nearPlaneDistance + 0.1f, 500f);
-                            _frustrumView.NearPlaneDistance = nearPlaneDistance;
-                            _frustrumView.FarPlaneDistance = farPlaneDistance;
+                            gameFrustrumView.NearPlaneDistance = nearPlaneDistance;
+                            gameFrustrumView.FarPlaneDistance = farPlaneDistance;
                             ImGui.End();
                         }
 
@@ -370,14 +396,19 @@ public class Engine
         // Update projection matrix
         float windowWidth = newSize.Width;
         float windowHeight = newSize.Height;
-        float aspectRatio = windowWidth / windowHeight;
-        float planRapproche = 2.0f;
-        float planEloigne = 100.0f;
-        _frustrumView.Update(_camera.ChampVision,
+        FrustrumView gameFrustrumView = _gameCamera.FrustrumView;
+        gameFrustrumView.Update(_gameCamera.ChampVision,
             windowWidth,
             windowHeight,
-            planRapproche,
-            planEloigne);
+            gameFrustrumView.NearPlaneDistance,
+            gameFrustrumView.FarPlaneDistance);
+
+        FrustrumView debugFrustrumView = _debugCamera.FrustrumView;
+        debugFrustrumView.Update(_gameCamera.ChampVision,
+            windowWidth,
+            windowHeight,
+            debugFrustrumView.NearPlaneDistance,
+            debugFrustrumView.FarPlaneDistance);
     }
 
     private void BeginRender()
@@ -395,35 +426,45 @@ public class Engine
 
     private void InitScene()
     {
-        _camera = new FixedCamera(new Vector3(0f, 2f, 0f));
-        //_camera = new ArcCamera(Vector3.Zero);
-        //_camera = new FreeCamera(_window);
-        _camera.Move(0f, 2f, -10f);
-
-        _scene = InitDefaultScene(_graphicDevice.RessourceFactory, _camera);
-        // Set default rasterizer state
-        _scene.RasterizerState = _graphicPipeline.SolidCullBackRS;
-
-        // Initialisation des matrices View et Proj
-        // Dans notre cas, ces matrices sont fixes
         float windowWidth = _window.Size.Width;
         float windowHeight = _window.Size.Height;
-        float aspectRatio = windowWidth / windowHeight;
-        float planRapproche = 2.0f;
-        float planEloigne = 15.0f;
-        _frustrumView = new FrustrumView(
-            _camera.ChampVision,
+        float champVision = (float)(Math.PI / 4d);
+        _debugCamera = new FixedCamera(target: new Vector3(0f, 2f, 0f), champVision)
+        {
+            FrustrumView = new FrustrumView(
+                champVision,
+                windowWidth,
+                windowHeight,
+                nearPlaneDistance: 2f,
+                farPlaneDistance: 150f,
+                isOrthographic: false
+            )
+        };
+
+        FrustrumView gameFrustrumView = new(
+            champVision,
             windowWidth,
             windowHeight,
-            planRapproche,
-            planEloigne,
+            nearPlaneDistance: 2f,
+            farPlaneDistance: 15f,
             isOrthographic: _isCameraOrthographique
         );
+        _gameCamera = new FixedCamera(target: new Vector3(0f, 2f, 0f), champVision)
+        //_gameCamera = new ArcCamera(Vector3.Zero, champVision)
+        //_gameCamera = new FreeCamera(_window, champVision)
+        {
+            FrustrumView = gameFrustrumView
+        };
+        _gameCamera.Move(0f, 2f, -10f);
+
+        _scene = InitDefaultScene(_graphicDevice.RessourceFactory, _gameCamera);
+        // Set default rasterizer state
+        _scene.RasterizerState = _graphicPipeline.SolidCullBackRS;
     }
 
-    private static Scene InitDefaultScene(GraphicDeviceRessourceFactory ressourceFactory, ICamera camera)
+    private static Scene InitDefaultScene(GraphicDeviceRessourceFactory ressourceFactory, ICamera gameCamera)
     {
-        Scene scene = new(ressourceFactory, camera);
+        Scene scene = new(ressourceFactory, gameCamera);
         Bloc bloc1 = new(4.0f, 4.0f, 4.0f, ressourceFactory);
         bloc1.SetTexture(ressourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall.jpg"));
         bloc1.SetNormalMapTexture(ressourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall_normal.jpg"));
@@ -498,7 +539,7 @@ public class Engine
                 _debugToolKeyPressed = false;
             }
         };
-        _camera.InitInput(_inputContext);
+        _gameCamera.InitInput(_inputContext);
     }
 
     private void InitDebugTools()
@@ -506,9 +547,10 @@ public class Engine
         _imGuiController = new ImGuiController(_graphicPipeline, _window, _inputContext);
     }
 
-    private void AnimeScene(float tempsEcoule)
+    private void AnimeScene(float elapsedTime)
     {
-        _scene.Anime(tempsEcoule);
+        _gameCamera.Update(elapsedTime);
+        _scene.Anime(elapsedTime);
     }
 
     private void RenderScene()
@@ -521,9 +563,19 @@ public class Engine
             {
                 _scene.DrawShadow(_graphicPipeline);
             }
-            _camera.GetViewMatrix(out Matrix4x4 matView);
-            ref readonly Matrix4x4 matProj = ref _frustrumView.MatProj;
-            Matrix4x4 matViewProj = matView * matProj;
+            Matrix4x4 matViewProj;
+            if (_useDebugCamera)
+            {
+                ref readonly Matrix4x4 matProj = ref _debugCamera.FrustrumView.MatProj;
+                _debugCamera.GetViewMatrix(out Matrix4x4 matView);
+                matViewProj = matView * matProj;
+            }
+            else
+            {
+                ref readonly Matrix4x4 matProj = ref _gameCamera.FrustrumView.MatProj;
+                _gameCamera.GetViewMatrix(out Matrix4x4 matView);
+                matViewProj = matView * matProj;
+            }
             _scene.Draw(_graphicPipeline, in matViewProj);
         }
     }

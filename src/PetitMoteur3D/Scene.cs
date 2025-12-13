@@ -17,7 +17,7 @@ internal sealed class Scene : IDrawableObjet, IDisposable
     private readonly List<IShadowDrawableObjet> _objectsWithShadow;
     private readonly List<IUpdatableObjet> _objectsUpdatable;
     private readonly List<IDrawableObjet> _objectsDrawable;
-    private ICamera _camera;
+    private ICamera _gameCamera;
 
     private ComPtr<ID3D11Buffer> _constantBuffer;
     private ComPtr<ID3D11Buffer> _constantShadowBuffer;
@@ -30,7 +30,6 @@ internal sealed class Scene : IDrawableObjet, IDisposable
     private SceneShadowShadersParams _shadersShadowParams;
 
     private readonly ShadowMap _shadowMap;
-    private readonly FrustrumView _frustrumViewLight;
     private readonly FreeCamera _cameraLigth;
 
     private const int DistanceLight = 50;
@@ -47,7 +46,7 @@ internal sealed class Scene : IDrawableObjet, IDisposable
         _objectsWithShadow = new List<IShadowDrawableObjet>();
         _objectsUpdatable = new List<IUpdatableObjet>();
         _objectsDrawable = new List<IDrawableObjet>();
-        _camera = camera;
+        _gameCamera = camera;
 
         _light = new LightShadersParams()
         {
@@ -60,7 +59,7 @@ internal sealed class Scene : IDrawableObjet, IDisposable
         _shadersParams = new SceneShadersParams()
         {
             LightParams = _light,
-            CameraPos = new Vector4(_camera.Position, 1.0f),
+            CameraPos = new Vector4(_gameCamera.Position, 1.0f),
         };
 
         _shadersShadowParams = new SceneShadowShadersParams()
@@ -73,9 +72,7 @@ internal sealed class Scene : IDrawableObjet, IDisposable
         _constantShadowBuffer = graphicDeviceRessourceFactory.BufferFactory.CreateConstantBuffer<SceneShadowShadersParams>(Usage.Default, CpuAccessFlag.None, name: "SceneShadowConstantBuffer");
 
         _shadowMap = new ShadowMap(graphicDeviceRessourceFactory, name: "SceneShadowMap");
-        _cameraLigth = new FreeCamera((float)(Math.PI / 4d));
-        _cameraLigth.LookTo(new Vector3(_light.Direction.X, _light.Direction.Y, _light.Direction.Z));
-        _cameraLigth.SetPosition(_camera.Position - (DistanceLight * _cameraLigth.Orientation.Forward));
+        
 
         ref readonly Size shadowMapDimension = ref _shadowMap.Dimension;
         float windowWidth = shadowMapDimension.Width;
@@ -84,7 +81,12 @@ internal sealed class Scene : IDrawableObjet, IDisposable
         float planRapproche = 2.0f;
         float planEloigne = 100.0f;
 
-        _frustrumViewLight = new FrustrumView(_cameraLigth.ChampVision, windowWidth, windowHeight, planRapproche, planEloigne, isOrthographic: true);
+        _cameraLigth = new FreeCamera((float)(Math.PI / 4d))
+        {
+            FrustrumView = new FrustrumView((float)(Math.PI / 4d), windowWidth, windowHeight, planRapproche, planEloigne, isOrthographic: true)
+        };
+        _cameraLigth.LookTo(new Vector3(_light.Direction.X, _light.Direction.Y, _light.Direction.Z));
+        _cameraLigth.SetPosition(_gameCamera.Position - (DistanceLight * _cameraLigth.Orientation.Forward));
 
         _disposed = false;
     }
@@ -114,14 +116,13 @@ internal sealed class Scene : IDrawableObjet, IDisposable
         {
             obj.Update(elapsedTime);
         }
-        _camera.Update(elapsedTime);
     }
 
     public unsafe void Draw(D3D11GraphicPipeline graphicPipeline, ref readonly System.Numerics.Matrix4x4 matViewProj)
     {
         // Initialiser et sélectionner les « constantes » des shaders
         ref Vector4 cameraPosParam = ref _shadersParams.CameraPos;
-        ref readonly System.Numerics.Vector3 cameraPos = ref _camera.Position;
+        ref readonly System.Numerics.Vector3 cameraPos = ref _gameCamera.Position;
         cameraPosParam.X = cameraPos.X;
         cameraPosParam.Y = cameraPos.Y;
         cameraPosParam.Z = cameraPos.Z;
@@ -143,9 +144,9 @@ internal sealed class Scene : IDrawableObjet, IDisposable
         graphicPipeline.PixelShaderStage.SetSamplers(1, 1, in _shadowMap.SampleState);
         graphicPipeline.RasterizerStage.SetState(_rasterizerState);
 
-        _cameraLigth.SetPosition(_camera.Position - (DistanceLight * _cameraLigth.Orientation.Forward));
+        _cameraLigth.SetPosition(_gameCamera.Position - (DistanceLight * _cameraLigth.Orientation.Forward));
         _cameraLigth.GetViewMatrix(out Matrix4x4 matViewLight);
-        ref readonly Matrix4x4 matProjLight = ref _frustrumViewLight.MatProj;
+        ref readonly Matrix4x4 matProjLight = ref _cameraLigth.FrustrumView.MatProj;
         Matrix4x4 matViewProjLight = matViewLight * matProjLight;
 
         foreach (IShadowDrawableObjet obj in _objectsWithShadow)
@@ -166,9 +167,9 @@ internal sealed class Scene : IDrawableObjet, IDisposable
 
     public unsafe void DrawShadow(D3D11GraphicPipeline graphicPipeline)
     {
-        _cameraLigth.SetPosition(_camera.Position - (DistanceLight * _cameraLigth.Orientation.Forward));
+        _cameraLigth.SetPosition(_gameCamera.Position - (DistanceLight * _cameraLigth.Orientation.Forward));
         _cameraLigth.GetViewMatrix(out Matrix4x4 matViewLight);
-        ref readonly Matrix4x4 matProjLight = ref _frustrumViewLight.MatProj;
+        ref readonly Matrix4x4 matProjLight = ref _cameraLigth.FrustrumView.MatProj;
         Matrix4x4 matViewProjLight = matViewLight * matProjLight;
 
         // Utiliser la surface de la texture comme surface de rendu
