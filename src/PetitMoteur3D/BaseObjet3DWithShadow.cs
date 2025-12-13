@@ -5,7 +5,6 @@ using PetitMoteur3D.Core.Memory;
 using PetitMoteur3D.Graphics;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
-using Silk.NET.Maths;
 
 namespace PetitMoteur3D;
 
@@ -60,7 +59,7 @@ internal abstract class BaseObjet3DWithShadow : BaseObjet3D, IShadowDrawableObje
             _objectShadersParamsPool.Get(out ObjectPoolWrapper<ObjectShadowMapShadersParams> shadersParamsWrapper);
             ref ObjectShadowMapShadersParams shadersParams = ref shadersParamsWrapper.Data;
             ref readonly System.Numerics.Matrix4x4 matWorld = ref base.MatWorld;
-            shadersParams.matWorldViewProjLight = System.Numerics.Matrix4x4.Transpose(subObjet3D.Transformation * matWorld * matViewProjLight).ToGeneric();
+            shadersParams.matWorldViewProjLight = System.Numerics.Matrix4x4.Transpose(subObjet3D.Transformation * matWorld * matViewProjLight);
 
             graphicPipeline.RessourceFactory.UpdateSubresource(_constantBufferShadowMap, 0, in Unsafe.NullRef<Box>(), in shadersParams, 0, 0);
 
@@ -168,7 +167,7 @@ internal abstract class BaseObjet3DWithShadow : BaseObjet3D, IShadowDrawableObje
         _objectShadersParamsPool.Get(out ObjectPoolWrapper<ObjectShadowMapShadersParams> shadersParamsWrapper);
         ref ObjectShadowMapShadersParams shadersParams = ref shadersParamsWrapper.Data;
         ref readonly System.Numerics.Matrix4x4 matWorld = ref base.MatWorld;
-        shadersParams.matWorldViewProjLight = System.Numerics.Matrix4x4.Transpose(subObjet3D.Transformation * matWorld * matViewProjLight).ToGeneric();
+        shadersParams.matWorldViewProjLight = System.Numerics.Matrix4x4.Transpose(subObjet3D.Transformation * matWorld * matViewProjLight);
 
         graphicPipeline.RessourceFactory.UpdateSubresource(_constantBufferShadowMap, 0, in Unsafe.NullRef<Box>(), in shadersParams, 0, 0);
 

@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Numerics;
 using Silk.NET.Assimp;
-using Silk.NET.Maths;
 
 namespace PetitMoteur3D.Graphics;
 
@@ -63,11 +63,11 @@ internal sealed class MeshLoader
         for (int i = 0; i < nbMaterials; i++)
         {
             Silk.NET.Assimp.Material* material = scene.MMaterials[i];
-            System.Numerics.Vector4 diffuse = new System.Numerics.Vector4(0.8f, 0.8f, 0.8f, 1f);
-            System.Numerics.Vector4 specular = System.Numerics.Vector4.Zero;
-            System.Numerics.Vector4 ambient = new System.Numerics.Vector4(0.2f, 0.2f, 0.2f, 1f);
-            System.Numerics.Vector4 emission = System.Numerics.Vector4.Zero;
-            System.Numerics.Vector4 reflexion = System.Numerics.Vector4.Zero;
+            Vector4 diffuse = new Vector4(0.8f, 0.8f, 0.8f, 1f);
+            Vector4 specular = Vector4.Zero;
+            Vector4 ambient = new Vector4(0.2f, 0.2f, 0.2f, 1f);
+            Vector4 emission = Vector4.Zero;
+            Vector4 reflexion = Vector4.Zero;
             float shininess = 0;
             uint max = 1;
             importer.GetMaterialColor(material, Assimp.MatkeyColorDiffuse, 0, 0, ref diffuse);
@@ -77,11 +77,11 @@ internal sealed class MeshLoader
             importer.GetMaterialColor(material, Assimp.MatkeyColorReflective, 0, 0, ref reflexion);
             importer.GetMaterialFloatArray(material, Assimp.MatkeyShininess, 0, 0, ref shininess, ref max);
             materials[i] = new Material(
-                ambient.ToGeneric(),
-                diffuse.ToGeneric(),
-                specular.ToGeneric(),
-                emission.ToGeneric(),
-                reflexion.ToGeneric(),
+                ambient,
+                diffuse,
+                specular,
+                emission,
+                reflexion,
                 shininess,
                 false
             );
@@ -116,7 +116,7 @@ internal sealed class MeshLoader
             {
                 uint indexMesh = node.MMeshes[i];
                 Mesh mesh = meshes[(int)indexMesh];
-                System.Numerics.Matrix4x4 transformation = node.MTransformation;
+                Matrix4x4 transformation = node.MTransformation;
                 SceneMesh sceneMesh = new(mesh, transformation);
                 uint nbChildren = node.MNumChildren;
                 for (int j = 0; j < nbChildren; j++)
@@ -156,15 +156,15 @@ internal sealed class MeshLoader
         bool hasTangent = mesh.MTangents is not null;
         for (int k = 0; k < nbVertices; k++)
         {
-            System.Numerics.Vector3 position = mesh.MVertices[k];
-            System.Numerics.Vector3 normal = mesh.MNormals[k];
-            System.Numerics.Vector3 tangent = hasTangent ? mesh.MTangents[k] : System.Numerics.Vector3.Zero;
-            System.Numerics.Vector3 textureCoordPtr = hasTexture ? mesh.MTextureCoords[0][k] : System.Numerics.Vector3.Zero;
+            Vector3 position = mesh.MVertices[k];
+            Vector3 normal = mesh.MNormals[k];
+            Vector3 tangent = hasTangent ? mesh.MTangents[k] : Vector3.Zero;
+            Vector3 textureCoordPtr = hasTexture ? mesh.MTextureCoords[0][k] : Vector3.Zero;
             Sommet vertex = new Sommet(
-                position.ToGeneric(),
-                normal.ToGeneric(),
-                tangent.ToGeneric(),
-                new Vector2D<float>(textureCoordPtr.X, textureCoordPtr.Y)
+                position,
+                normal,
+                tangent,
+                new Vector2(textureCoordPtr.X, textureCoordPtr.Y)
             );
 
             vertices[k] = vertex;

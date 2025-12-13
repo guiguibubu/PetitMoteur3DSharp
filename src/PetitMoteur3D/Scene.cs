@@ -7,7 +7,6 @@ using PetitMoteur3D.Camera;
 using PetitMoteur3D.Graphics;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
-using Silk.NET.Maths;
 
 namespace PetitMoteur3D;
 
@@ -52,16 +51,16 @@ internal sealed class Scene : IDrawableObjet, IDisposable
 
         _light = new LightShadersParams()
         {
-            Position = new Vector4D<float>(0f, 0f, 0f, 1f),
-            Direction = new Vector4D<float>(1f, -1f, 1f, 1f),
-            AmbiantColor = new Vector4D<float>(0.2f, 0.2f, 0.2f, 1.0f),
-            DiffuseColor = new Vector4D<float>(1.0f, 1.0f, 1.0f, 1.0f),
+            Position = new Vector4(0f, 0f, 0f, 1f),
+            Direction = new Vector4(1f, -1f, 1f, 1f),
+            AmbiantColor = new Vector4(0.2f, 0.2f, 0.2f, 1.0f),
+            DiffuseColor = new Vector4(1.0f, 1.0f, 1.0f, 1.0f),
         };
 
         _shadersParams = new SceneShadersParams()
         {
             LightParams = _light,
-            CameraPos = new Vector4D<float>(_camera.Position.ToGeneric(), 1.0f),
+            CameraPos = new Vector4(_camera.Position, 1.0f),
         };
 
         _shadersShadowParams = new SceneShadowShadersParams()
@@ -121,7 +120,7 @@ internal sealed class Scene : IDrawableObjet, IDisposable
     public unsafe void Draw(D3D11GraphicPipeline graphicPipeline, ref readonly System.Numerics.Matrix4x4 matViewProj)
     {
         // Initialiser et sélectionner les « constantes » des shaders
-        ref Vector4D<float> cameraPosParam = ref _shadersParams.CameraPos;
+        ref Vector4 cameraPosParam = ref _shadersParams.CameraPos;
         ref readonly System.Numerics.Vector3 cameraPos = ref _camera.Position;
         cameraPosParam.X = cameraPos.X;
         cameraPosParam.Y = cameraPos.Y;

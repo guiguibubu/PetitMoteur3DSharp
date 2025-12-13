@@ -7,7 +7,6 @@ using PetitMoteur3D.Core.Memory;
 using PetitMoteur3D.Graphics;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
-using Silk.NET.Maths;
 
 namespace PetitMoteur3D;
 
@@ -163,8 +162,8 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
             // Initialiser et sélectionner les « constantes » des shaders
             _objectShadersParamsPool.Get(out ObjectPoolWrapper<ObjectShadersParams> shadersParamsWrapper);
             ref ObjectShadersParams shadersParams = ref shadersParamsWrapper.Data;
-            shadersParams.matWorldViewProj = System.Numerics.Matrix4x4.Transpose(subObjet3D.Transformation * _matWorld * matViewProj).ToGeneric();
-            shadersParams.matWorld = System.Numerics.Matrix4x4.Transpose(subObjet3D.Transformation * _matWorld).ToGeneric();
+            shadersParams.matWorldViewProj = System.Numerics.Matrix4x4.Transpose(subObjet3D.Transformation * _matWorld * matViewProj);
+            shadersParams.matWorld = System.Numerics.Matrix4x4.Transpose(subObjet3D.Transformation * _matWorld);
             shadersParams.ambiantMaterialValue = subObjet3D.Material.Ambient;
             shadersParams.diffuseMaterialValue = subObjet3D.Material.Diffuse;
             shadersParams.hasTexture = Convert.ToInt32(_textureD3D.Handle is not null);
@@ -297,6 +296,7 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
 
     protected void UpdateMatWorld()
     {
+        //_sommets
         _matWorld = System.Numerics.Matrix4x4.CreateFromQuaternion(_orientation.Quaternion) * System.Numerics.Matrix4x4.CreateTranslation(_position);
     }
 

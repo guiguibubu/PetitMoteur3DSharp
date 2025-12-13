@@ -1,6 +1,6 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Numerics;
+using System.Runtime.InteropServices;
 using PetitMoteur3D.Graphics;
-using Silk.NET.Maths;
 
 namespace PetitMoteur3D;
 
@@ -14,5 +14,5 @@ internal struct SceneShadersParams
     /// <summary>
     /// la position de la caméra
     /// </summary>
-    public Vector4D<float> CameraPos;
+    public Vector4 CameraPos;
 }

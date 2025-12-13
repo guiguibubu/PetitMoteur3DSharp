@@ -1,6 +1,7 @@
 // Uncomment to add a (heavy) check of buffer content (vertex and index buffer only for the moment)
 //#define DEBUG_BUFFERS 
 using System;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using ImGuiNET;
@@ -296,10 +297,10 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
             float top = drawData.DisplayPos.Y;
             float bottom = drawData.DisplayPos.Y + drawData.DisplaySize.Y;
             float nearPlane = 1f;
-            Matrix4X4<float> matriceMonde = Matrix4X4.CreateTranslation(0, 0, nearPlane);
-            Matrix4X4<float> matriceProjection = CreateOrthographicOffCenterLH(left, right, bottom, top, nearPlane, 3);
-            Matrix4X4<float> mvp = matriceMonde * matriceProjection;
-            System.Buffer.MemoryCopy(Unsafe.AsPointer(ref mvp), constantBufferPtr, (uint)sizeof(Matrix4X4<float>), (uint)sizeof(Matrix4X4<float>));
+            Matrix4x4 matriceMonde = Matrix4x4.CreateTranslation(0, 0, nearPlane);
+            Matrix4x4 matriceProjection = CreateOrthographicOffCenterLH(left, right, bottom, top, nearPlane, 3);
+            Matrix4x4 mvp = matriceMonde * matriceProjection;
+            System.Buffer.MemoryCopy(Unsafe.AsPointer(ref mvp), constantBufferPtr, (uint)sizeof(Matrix4x4), (uint)sizeof(Matrix4x4));
             _pipelineRessourceFactory.Unmap(_backendRendererUserData.VertexConstantBuffer, 0);
         }
 
@@ -495,7 +496,7 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
         );
         shaderManager.GetOrLoadVertexShaderAndLayout(shaderFile, ImDrawVertInputLayout.InputLayoutDesc, ref _backendRendererUserData.VertexShader, ref _backendRendererUserData.InputLayout);
 
-        _backendRendererUserData.VertexConstantBuffer = bufferFactory.CreateConstantBuffer<Matrix4X4<float>>(Usage.Dynamic, CpuAccessFlag.Write, name: "ImGuiVertexConstantBuffer");
+        _backendRendererUserData.VertexConstantBuffer = bufferFactory.CreateConstantBuffer<Matrix4x4>(Usage.Dynamic, CpuAccessFlag.Write, name: "ImGuiVertexConstantBuffer");
         return true;
     }
 
@@ -691,10 +692,9 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
         if (_backendRendererUserData.VertexShader.Handle != null) { _backendRendererUserData.VertexShader.Dispose(); _backendRendererUserData.VertexShader = null; }
     }
 
-    public static Matrix4X4<T> CreateOrthographicOffCenterLH<T>(T left, T right, T bottom, T top, T zNearPlane, T zFarPlane) where T : unmanaged, IFormattable, IEquatable<T>, IComparable<T>
+    public static Matrix4x4 CreateOrthographicOffCenterLH(float left, float right, float bottom, float top, float zNearPlane, float zFarPlane)
     {
-        Matrix4X4<T> result = Matrix4X4.CreateOrthographicOffCenter(left, right, bottom, top, zNearPlane, zFarPlane);
-        result.M33 = Scalar.Negate(result.M33);
+        Matrix4x4 result = Matrix4x4.CreateOrthographicOffCenterLeftHanded(left, right, bottom, top, zNearPlane, zFarPlane);
         return result;
     }
 

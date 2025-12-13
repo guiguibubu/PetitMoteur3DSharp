@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using PetitMoteur3D.Graphics;
-using Silk.NET.Maths;
 
 namespace PetitMoteur3D;
 
@@ -75,7 +74,7 @@ internal sealed class SceneMesh
         IReadOnlyList<Sommet> sommets = Mesh.Sommets;
         System.Numerics.Matrix4x4 fullTransformation = transformation * _transformation;
 
-        IReadOnlyList<System.Numerics.Vector4> positions = sommets.Select(v => System.Numerics.Vector4.Transform(new System.Numerics.Vector4(v.Position.ToSystem(), 1f), fullTransformation)).ToList();
+        IReadOnlyList<System.Numerics.Vector4> positions = sommets.Select(v => System.Numerics.Vector4.Transform(new System.Numerics.Vector4(v.Position, 1f), fullTransformation)).ToList();
         IReadOnlyList<float> sommetsX = positions.Select(v => v.X).Order().ToList();
         IReadOnlyList<float> sommetsY = positions.Select(v => v.Y).Order().ToList();
         IReadOnlyList<float> sommetsZ = positions.Select(v => v.Z).Order().ToList();

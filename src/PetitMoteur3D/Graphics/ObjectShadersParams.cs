@@ -1,6 +1,6 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Numerics;
+using System.Runtime.InteropServices;
 using PetitMoteur3D.Core.Memory;
-using Silk.NET.Maths;
 
 namespace PetitMoteur3D.Graphics;
 
@@ -10,19 +10,19 @@ internal struct ObjectShadersParams : IResetable
     /// <summary>
     /// la matrice totale
     /// </summary>
-    public Matrix4X4<float> matWorldViewProj;
+    public Matrix4x4 matWorldViewProj;
     /// <summary>
     /// matrice de transformation dans le monde
     /// </summary>
-    public Matrix4X4<float> matWorld;
+    public Matrix4x4 matWorld;
     /// <summary>
     /// la valeur ambiante du matériau
     /// </summary>
-    public Vector4D<float> ambiantMaterialValue;
+    public Vector4 ambiantMaterialValue;
     /// <summary>
     /// la valeur diffuse du matériau
     /// </summary>
-    public Vector4D<float> diffuseMaterialValue;
+    public Vector4 diffuseMaterialValue;
     /// <summary>
     /// Indique la présence d'une texture
     /// </summary>

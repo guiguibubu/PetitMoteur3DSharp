@@ -1,15 +1,15 @@
 ﻿using System;
+using System.Numerics;
 using System.Runtime.InteropServices;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
-using Silk.NET.Maths;
 
 namespace PetitMoteur3D;
 
 internal struct SommetShadowMap
 {
-    private Vector3D<float> _position;
-    public readonly Vector3D<float> Position => _position;
+    private Vector3 _position;
+    public readonly Vector3 Position => _position;
 
     /// <summary>
     /// Defini l’organisation de notre sommet
@@ -34,7 +34,7 @@ internal struct SommetShadowMap
     /// Constructeur
     /// </summary>
     /// <param name="position"></param>
-    public SommetShadowMap(Vector3D<float> position)
+    public SommetShadowMap(Vector3 position)
     {
         _position = position;
     }
@@ -43,7 +43,7 @@ internal struct SommetShadowMap
     /// Constructeur par défaut
     /// </summary>
     public unsafe SommetShadowMap()
-    : this(Vector3D<float>.Zero)
+    : this(Vector3.Zero)
     { }
 
     /// <summary>

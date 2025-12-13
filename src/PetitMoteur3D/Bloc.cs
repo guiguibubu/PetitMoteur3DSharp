@@ -1,15 +1,15 @@
 ﻿using System;
 using System.Linq;
+using System.Numerics;
 using PetitMoteur3D.Graphics;
-using Silk.NET.Maths;
 
 namespace PetitMoteur3D;
 
 internal sealed class Bloc : BaseObjet3DWithShadow
 {
-    private readonly Vector3D<float>[] _vertices;
-    private readonly Vector3D<float>[] _normales;
-    private readonly Vector3D<float>[] _tangentes;
+    private readonly Vector3[] _vertices;
+    private readonly Vector3[] _normales;
+    private readonly Vector3[] _tangentes;
     private readonly Sommet[] _sommets;
     private readonly ushort[] _indices;
     private readonly SubObjet3D[] _subObjects;
@@ -19,7 +19,7 @@ internal sealed class Bloc : BaseObjet3DWithShadow
     public unsafe Bloc(float dx, float dy, float dz, GraphicDeviceRessourceFactory graphicDeviceRessourceFactory)
         : base(graphicDeviceRessourceFactory)
     {
-        _vertices = new Vector3D<float>[]
+        _vertices = new Vector3[]
         {
             new(-dx / 2, dy / 2, -dz / 2),
             new(dx / 2, dy / 2, -dz / 2),
@@ -31,7 +31,7 @@ internal sealed class Bloc : BaseObjet3DWithShadow
             new(dx / 2, dy / 2, dz / 2)
         };
 
-        _normales = new Vector3D<float>[]
+        _normales = new Vector3[]
         {
             new(0f, 0f, -1f), // devant
             new(0f, 0f, 1f), // arrière
@@ -41,7 +41,7 @@ internal sealed class Bloc : BaseObjet3DWithShadow
             new(1f, 0f, 0f) // face droite
         };
 
-        _tangentes = new Vector3D<float>[]
+        _tangentes = new Vector3[]
         {
             new(1f, 0f, 0f), // devant
             new(-1f, 0f, 0f), // arrière
@@ -54,35 +54,35 @@ internal sealed class Bloc : BaseObjet3DWithShadow
         _sommets = new Sommet[]
         {
             // Le devant du bloc
-            new(_vertices[0], _normales[0], _tangentes[0], new Vector2D<float>(0f, 0f)),
-            new(_vertices[1], _normales[0], _tangentes[0], new Vector2D<float>(1f, 0f)),
-            new(_vertices[2], _normales[0], _tangentes[0], new Vector2D<float>(1f, 1f)),
-            new(_vertices[3], _normales[0], _tangentes[0], new Vector2D<float>(0f, 1f)),
+            new(_vertices[0], _normales[0], _tangentes[0], new Vector2(0f, 0f)),
+            new(_vertices[1], _normales[0], _tangentes[0], new Vector2(1f, 0f)),
+            new(_vertices[2], _normales[0], _tangentes[0], new Vector2(1f, 1f)),
+            new(_vertices[3], _normales[0], _tangentes[0], new Vector2(0f, 1f)),
             // L’arrière du bloc
-            new(_vertices[4], _normales[1], _tangentes[1], new Vector2D<float>(1f, 0f)),
-            new(_vertices[5], _normales[1], _tangentes[1], new Vector2D<float>(1f, 1f)),
-            new(_vertices[6], _normales[1], _tangentes[1], new Vector2D<float>(0f, 1f)),
-            new(_vertices[7], _normales[1], _tangentes[1], new Vector2D<float>(0f, 0f)),
+            new(_vertices[4], _normales[1], _tangentes[1], new Vector2(1f, 0f)),
+            new(_vertices[5], _normales[1], _tangentes[1], new Vector2(1f, 1f)),
+            new(_vertices[6], _normales[1], _tangentes[1], new Vector2(0f, 1f)),
+            new(_vertices[7], _normales[1], _tangentes[1], new Vector2(0f, 0f)),
             // Le dessous du bloc
-            new(_vertices[3], _normales[2], _tangentes[2], new Vector2D<float>(0f, 0f)),
-            new(_vertices[2], _normales[2], _tangentes[2], new Vector2D<float>(1f, 0f)),
-            new(_vertices[6], _normales[2], _tangentes[2], new Vector2D<float>(1f, 1f)),
-            new(_vertices[5], _normales[2], _tangentes[2], new Vector2D<float>(0f, 1f)),
+            new(_vertices[3], _normales[2], _tangentes[2], new Vector2(0f, 0f)),
+            new(_vertices[2], _normales[2], _tangentes[2], new Vector2(1f, 0f)),
+            new(_vertices[6], _normales[2], _tangentes[2], new Vector2(1f, 1f)),
+            new(_vertices[5], _normales[2], _tangentes[2], new Vector2(0f, 1f)),
             // Le dessus du bloc
-            new(_vertices[0], _normales[3], _tangentes[3], new Vector2D<float>(0f, 1f)),
-            new(_vertices[4], _normales[3], _tangentes[3], new Vector2D<float>(0f, 0f)),
-            new(_vertices[7], _normales[3], _tangentes[3], new Vector2D<float>(1f, 0f)),
-            new(_vertices[1], _normales[3], _tangentes[3], new Vector2D<float>(1f, 1f)),
+            new(_vertices[0], _normales[3], _tangentes[3], new Vector2(0f, 1f)),
+            new(_vertices[4], _normales[3], _tangentes[3], new Vector2(0f, 0f)),
+            new(_vertices[7], _normales[3], _tangentes[3], new Vector2(1f, 0f)),
+            new(_vertices[1], _normales[3], _tangentes[3], new Vector2(1f, 1f)),
             // La face gauche
-            new(_vertices[0], _normales[4], _tangentes[4], new Vector2D<float>(1f, 0f)),
-            new(_vertices[3], _normales[4], _tangentes[4], new Vector2D<float>(1f, 1f)),
-            new(_vertices[5], _normales[4], _tangentes[4], new Vector2D<float>(0f, 1f)),
-            new(_vertices[4], _normales[4], _tangentes[4], new Vector2D<float>(0f, 0f)),
+            new(_vertices[0], _normales[4], _tangentes[4], new Vector2(1f, 0f)),
+            new(_vertices[3], _normales[4], _tangentes[4], new Vector2(1f, 1f)),
+            new(_vertices[5], _normales[4], _tangentes[4], new Vector2(0f, 1f)),
+            new(_vertices[4], _normales[4], _tangentes[4], new Vector2(0f, 0f)),
             // La face droite
-            new(_vertices[1], _normales[5], _tangentes[5], new Vector2D<float>(0f, 0f)),
-            new(_vertices[7], _normales[5], _tangentes[5], new Vector2D<float>(1f, 0f)),
-            new(_vertices[6], _normales[5], _tangentes[5], new Vector2D<float>(1f, 1f)),
-            new(_vertices[2], _normales[5], _tangentes[5], new Vector2D<float>(0f, 1f))
+            new(_vertices[1], _normales[5], _tangentes[5], new Vector2(0f, 0f)),
+            new(_vertices[7], _normales[5], _tangentes[5], new Vector2(1f, 0f)),
+            new(_vertices[6], _normales[5], _tangentes[5], new Vector2(1f, 1f)),
+            new(_vertices[2], _normales[5], _tangentes[5], new Vector2(0f, 1f))
         };
 
         _indices = new ushort[]

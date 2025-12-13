@@ -1,21 +1,21 @@
 ﻿using System;
+using System.Numerics;
 using System.Runtime.InteropServices;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
-using Silk.NET.Maths;
 
 namespace PetitMoteur3D;
 
 internal struct Sommet
 {
-    private Vector3D<float> _position;
-    private Vector3D<float> _normale;
-    private Vector3D<float> _tangente;
-    private Vector2D<float> _coordTex;
-    public readonly Vector3D<float> Position => _position;
-    public readonly Vector3D<float> Normale => _normale;
-    public readonly Vector3D<float> Tangente => _tangente;
-    public readonly Vector2D<float> CoordTex => _coordTex;
+    private Vector3 _position;
+    private Vector3 _normale;
+    private Vector3 _tangente;
+    private Vector2 _coordTex;
+    public readonly Vector3 Position => _position;
+    public readonly Vector3 Normale => _normale;
+    public readonly Vector3 Tangente => _tangente;
+    public readonly Vector2 CoordTex => _coordTex;
 
     /// <summary>
     /// Defini l’organisation de notre sommet
@@ -57,7 +57,7 @@ internal struct Sommet
     /// <param name="position"></param>
     /// <param name="normale"></param>
     /// <param name="coordTex"></param>
-    public unsafe Sommet(Vector3D<float> position, Vector3D<float> normale, Vector3D<float> tangente, Vector2D<float> coordTex)
+    public unsafe Sommet(Vector3 position, Vector3 normale, Vector3 tangente, Vector2 coordTex)
     {
         _position = position;
         _normale = normale;
@@ -71,8 +71,8 @@ internal struct Sommet
     /// <param name="position"></param>
     /// <param name="normale"></param>
     /// <param name="coordTex"></param>
-    public unsafe Sommet(Vector3D<float> position, Vector3D<float> normale, Vector3D<float> tangente)
-    : this(position, normale, tangente, Vector2D<float>.Zero)
+    public unsafe Sommet(Vector3 position, Vector3 normale, Vector3 tangente)
+    : this(position, normale, tangente, Vector2.Zero)
     { }
 
     /// <summary>
@@ -81,8 +81,8 @@ internal struct Sommet
     /// <param name="position"></param>
     /// <param name="normale"></param>
     /// <param name="coordTex"></param>
-    public unsafe Sommet(Vector3D<float> position, Vector3D<float> normale)
-    : this(position, normale, Vector3D<float>.Zero, Vector2D<float>.Zero)
+    public unsafe Sommet(Vector3 position, Vector3 normale)
+    : this(position, normale, Vector3.Zero, Vector2.Zero)
     { }
 
     /// <summary>
@@ -92,15 +92,15 @@ internal struct Sommet
     /// <param name="normale"></param>
     /// <param name="coordTex"></param>
     public unsafe Sommet()
-    : this(Vector3D<float>.Zero, Vector3D<float>.Zero, Vector3D<float>.Zero, Vector2D<float>.Zero)
+    : this(Vector3.Zero, Vector3.Zero, Vector3.Zero, Vector2.Zero)
     { }
 
     public Sommet Clone()
     {
         Sommet copy = (Sommet)this.MemberwiseClone();
-        copy._position = new Vector3D<float>(Position.X, Position.Y, Position.Z);
-        copy._normale = new Vector3D<float>(Normale.X, Normale.Y, Normale.Z);
-        copy._coordTex = new Vector2D<float>(CoordTex.X, CoordTex.Y);
+        copy._position = new Vector3(Position.X, Position.Y, Position.Z);
+        copy._normale = new Vector3(Normale.X, Normale.Y, Normale.Z);
+        copy._coordTex = new Vector2(CoordTex.X, CoordTex.Y);
         return copy;
     }
 }

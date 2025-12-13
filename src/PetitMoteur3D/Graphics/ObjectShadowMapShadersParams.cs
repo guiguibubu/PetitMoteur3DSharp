@@ -1,6 +1,6 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Numerics;
+using System.Runtime.InteropServices;
 using PetitMoteur3D.Core.Memory;
-using Silk.NET.Maths;
 
 namespace PetitMoteur3D.Graphics;
 
@@ -10,7 +10,7 @@ internal struct ObjectShadowMapShadersParams : IResetable
     /// <summary>
     /// la matrice totale
     /// </summary>
-    public Matrix4X4<float> matWorldViewProjLight;
+    public Matrix4x4 matWorldViewProjLight;
 
     public void Reset()
     {
