@@ -106,8 +106,8 @@ internal abstract class BaseObjet3DWithShadow : BaseObjet3D, IShadowDrawableObje
     [return: NotNull]
     protected override ShaderCodeFile InitVertexShaderCodeFile()
     {
-        string filePath = "shaders\\MiniPhongNormalMapShadowMapDebugCam_VS.hlsl";
-        string entryPoint = "MiniPhongNormalMapShadowMapDebugCamVS";
+        string filePath = "shaders\\DepthTest_VS.hlsl";
+        string entryPoint = "DepthTestVS";
         string target = "vs_5_0";
         // #define D3DCOMPILE_ENABLE_STRICTNESS                    (1 << 11)
         uint flagStrictness = ((uint)1 << 11);
@@ -127,7 +127,7 @@ internal abstract class BaseObjet3DWithShadow : BaseObjet3D, IShadowDrawableObje
            entryPoint,
            target,
            compilationFlags,
-           name: "MiniPhongNormalMapShadowMapDebugCam_VertexShader"
+           name: "DepthTest_VertexShader"
         );
     }
 
@@ -137,8 +137,8 @@ internal abstract class BaseObjet3DWithShadow : BaseObjet3D, IShadowDrawableObje
     [return: NotNull]
     protected override ShaderCodeFile InitPixelShaderCodeFile()
     {
-        string filePath = "shaders\\MiniPhongNormalMapShadowMapDebugCam_PS.hlsl";
-        string entryPoint = "MiniPhongNormalMapShadowMapDebugCamPS";
+        string filePath = "shaders\\DepthTest_PS.hlsl";
+        string entryPoint = "DepthTestPS";
         string target = "ps_5_0";
         // #define D3DCOMPILE_ENABLE_STRICTNESS                    (1 << 11)
         uint flagStrictness = ((uint)1 << 11);
@@ -158,7 +158,7 @@ internal abstract class BaseObjet3DWithShadow : BaseObjet3D, IShadowDrawableObje
            entryPoint,
            target,
            compilationFlags,
-           name: "MiniPhongNormalMapShadowMapDebugCam_PixelShader"
+           name: "DepthTest_PixelShader"
         );
     }
 

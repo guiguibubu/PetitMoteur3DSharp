@@ -351,8 +351,8 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
     protected virtual ShaderCodeFile InitVertexShaderCodeFile()
     {
         // Compilation et chargement du vertex shader
-        string filePath = "shaders\\MiniPhongNormalMap_VS.hlsl";
-        string entryPoint = "MiniPhongNormalMapVS";
+        string filePath = "shaders\\DepthTest_VS.hlsl";
+        string entryPoint = "DepthTestVS";
         string target = "vs_5_0";
         // #define D3DCOMPILE_ENABLE_STRICTNESS                    (1 << 11)
         uint flagStrictness = ((uint)1 << 11);
@@ -372,7 +372,7 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
             entryPoint,
             target,
             compilationFlags,
-            name: "MiniPhongNormalMap_VertexShader"
+            name: "DepthTest_VertexShader"
         );
     }
 
@@ -382,8 +382,8 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
     [return: NotNull]
     protected virtual ShaderCodeFile InitPixelShaderCodeFile()
     {
-        string filePath = "shaders\\MiniPhongNormalMap_PS.hlsl";
-        string entryPoint = "MiniPhongNormalMapPS";
+        string filePath = "shaders\\DepthTest_PS.hlsl";
+        string entryPoint = "DepthTestPS";
         string target = "ps_5_0";
         // #define D3DCOMPILE_ENABLE_STRICTNESS                    (1 << 11)
         uint flagStrictness = ((uint)1 << 11);
@@ -403,7 +403,7 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
            entryPoint,
            target,
            compilationFlags,
-           name: "MiniPhongNormalMap_PixelShader"
+           name: "DepthTest_PixelShader"
         );
     }
 

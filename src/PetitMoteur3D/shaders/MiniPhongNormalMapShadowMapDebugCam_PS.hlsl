@@ -150,7 +150,6 @@ PS_OUT MiniPhongNormalMapShadowMapDebugCamPS(VS_Sortie vs)
     if (isDebugCamUsed)
     {
         // Conversion space [-1;1] to texture space [0;1]
-        //float posLength = length(vs.Pos.xy);
         float2 depthTexCoords = 0.5f * vs.gameSpacePos.xy / vs.gameSpacePos.w + float2(0.5f, 0.5f);
         depthTexCoords.y = 1.0f - depthTexCoords.y;
         float pixelDepth = vs.gameSpacePos.z / vs.gameSpacePos.w;
