@@ -146,13 +146,14 @@ internal sealed class ShaderManager : IDisposable
         string target = shaderDesc.Target;
         uint compilationFlags = shaderDesc.CompilationFlags;
 
+        // For include cf. D3D_COMPILE_STANDARD_FILE_INCLUDE from https://learn.microsoft.com/en-us/windows/win32/api/d3dcompiler/nf-d3dcompiler-d3dcompile
         HResult hr = _compiler.Compile
         (
             in shaderCode[0],
             (nuint)shaderCode.Length,
             filePath,
             ref Unsafe.NullRef<D3DShaderMacro>(),
-            ref Unsafe.NullRef<ID3DInclude>(),
+            ref Unsafe.AsRef<ID3DInclude>((ID3DInclude*)1), // D3D_COMPILE_STANDARD_FILE_INCLUDE = ((ID3DInclude*)(UINT_PTR)1)
             entryPoint,
             target,
             compilationFlags,

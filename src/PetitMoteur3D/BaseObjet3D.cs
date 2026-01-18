@@ -351,7 +351,7 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
     protected virtual ShaderCodeFile InitVertexShaderCodeFile()
     {
         // Compilation et chargement du vertex shader
-        string filePath = "shaders\\MiniPhongNormalMap.hlsl";
+        string filePath = "shaders\\MiniPhongNormalMap_VS.hlsl";
         string entryPoint = "MiniPhongNormalMapVS";
         string target = "vs_5_0";
         // #define D3DCOMPILE_ENABLE_STRICTNESS                    (1 << 11)
@@ -382,7 +382,7 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
     [return: NotNull]
     protected virtual ShaderCodeFile InitPixelShaderCodeFile()
     {
-        string filePath = "shaders\\MiniPhongNormalMap.hlsl";
+        string filePath = "shaders\\MiniPhongNormalMap_PS.hlsl";
         string entryPoint = "MiniPhongNormalMapPS";
         string target = "ps_5_0";
         // #define D3DCOMPILE_ENABLE_STRICTNESS                    (1 << 11)
