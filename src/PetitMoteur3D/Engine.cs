@@ -409,6 +409,8 @@ public class Engine
             windowHeight,
             debugFrustrumView.NearPlaneDistance,
             debugFrustrumView.FarPlaneDistance);
+
+        _scene.OnScreenResize(newSize);
     }
 
     private void BeginRender()
@@ -457,14 +459,14 @@ public class Engine
         };
         _gameCamera.Move(0f, 2f, -10f);
 
-        _scene = InitDefaultScene(_graphicDevice.RessourceFactory, _gameCamera);
+        _scene = InitDefaultScene(_graphicDevice.RessourceFactory, _gameCamera, _window);
         // Set default rasterizer state
         _scene.RasterizerState = _graphicPipeline.SolidCullBackRS;
     }
 
-    private static Scene InitDefaultScene(GraphicDeviceRessourceFactory ressourceFactory, ICamera gameCamera)
+    private static Scene InitDefaultScene(GraphicDeviceRessourceFactory ressourceFactory, ICamera gameCamera, IWindow window)
     {
-        Scene scene = new(ressourceFactory, gameCamera);
+        Scene scene = new(ressourceFactory, gameCamera, window.Size);
         Bloc bloc1 = new(4.0f, 4.0f, 4.0f, ressourceFactory);
         bloc1.SetTexture(ressourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall.jpg"));
         bloc1.SetNormalMapTexture(ressourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall_normal.jpg"));
@@ -472,7 +474,18 @@ public class Engine
 
         Bloc bloc2 = new(4.0f, 4.0f, 4.0f, ressourceFactory);
         bloc2.SetTexture(ressourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall.jpg"));
+        bloc2.SetNormalMapTexture(ressourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall_normal.jpg"));
         bloc2.Move(4f, 2f, 0f);
+
+        Bloc bloc3 = new(4.0f, 4.0f, 4.0f, ressourceFactory);
+        bloc3.SetTexture(ressourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall.jpg"));
+        bloc3.SetNormalMapTexture(ressourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall_normal.jpg"));
+        bloc3.Move(-4f, 2f, 4f);
+
+        Bloc bloc4 = new(4.0f, 4.0f, 4.0f, ressourceFactory);
+        bloc4.SetTexture(ressourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall.jpg"));
+        bloc4.SetNormalMapTexture(ressourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall_normal.jpg"));
+        bloc4.Move(4f, 2f, 4f);
 
         MeshLoader meshLoader = new();
         IReadOnlyList<SceneMesh>? meshes = meshLoader.Load("models\\teapot.obj");
@@ -500,6 +513,8 @@ public class Engine
 
         scene.AddObjet(bloc1);
         scene.AddObjet(bloc2);
+        scene.AddObjet(bloc3);
+        scene.AddObjet(bloc4);
         scene.AddObjet(objetMesh);
         scene.AddObjet(ground);
 
@@ -559,10 +574,16 @@ public class Engine
         if (_initAnimationFinished)
         {
             _scene.ShowShadow = _showShadow;
+            _scene.UseDebugCam = _useDebugCamera;
             if (_showShadow)
             {
                 _scene.DrawShadow(_graphicPipeline);
             }
+            //if (_useDebugCamera)
+            {
+                _scene.DrawDebugDepth(_graphicPipeline);
+            }
+
             Matrix4x4 matViewProj;
             if (_useDebugCamera)
             {

@@ -106,8 +106,8 @@ internal abstract class BaseObjet3DWithShadow : BaseObjet3D, IShadowDrawableObje
     [return: NotNull]
     protected override ShaderCodeFile InitVertexShaderCodeFile()
     {
-        string filePath = "shaders\\MiniPhongNormalMapShadowMap.hlsl";
-        string entryPoint = "MiniPhongNormalMapShadowMapVS";
+        string filePath = "shaders\\MiniPhongNormalMapShadowMapDebugCam_VS.hlsl";
+        string entryPoint = "MiniPhongNormalMapShadowMapDebugCamVS";
         string target = "vs_5_0";
         // #define D3DCOMPILE_ENABLE_STRICTNESS                    (1 << 11)
         uint flagStrictness = ((uint)1 << 11);
@@ -121,12 +121,13 @@ internal abstract class BaseObjet3DWithShadow : BaseObjet3D, IShadowDrawableObje
         uint flagSkipOptimization = 0;
 #endif
         uint compilationFlags = flagStrictness | flagDebug | flagSkipOptimization;
-        return new ShaderCodeFile(
+        return new ShaderCodeFile
+        (
            filePath,
            entryPoint,
            target,
            compilationFlags,
-           name: "MiniPhongNormalMapShadowMap_VertexShader"
+           name: "MiniPhongNormalMapShadowMapDebugCam_VertexShader"
         );
     }
 
@@ -136,8 +137,8 @@ internal abstract class BaseObjet3DWithShadow : BaseObjet3D, IShadowDrawableObje
     [return: NotNull]
     protected override ShaderCodeFile InitPixelShaderCodeFile()
     {
-        string filePath = "shaders\\MiniPhongNormalMapShadowMap.hlsl";
-        string entryPoint = "MiniPhongNormalMapShadowMapPS";
+        string filePath = "shaders\\MiniPhongNormalMapShadowMapDebugCam_PS.hlsl";
+        string entryPoint = "MiniPhongNormalMapShadowMapDebugCamPS";
         string target = "ps_5_0";
         // #define D3DCOMPILE_ENABLE_STRICTNESS                    (1 << 11)
         uint flagStrictness = ((uint)1 << 11);
@@ -157,7 +158,7 @@ internal abstract class BaseObjet3DWithShadow : BaseObjet3D, IShadowDrawableObje
            entryPoint,
            target,
            compilationFlags,
-           name: "MiniPhongNormalMapShadowMap_PixelShader"
+           name: "MiniPhongNormalMapShadowMapDebugCam_PixelShader"
         );
     }
 

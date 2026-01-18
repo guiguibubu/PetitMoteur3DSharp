@@ -28,10 +28,9 @@ internal sealed class ShadowMap
     private readonly GraphicDeviceRessourceFactory _graphicRessourceFactory;
 
     private readonly string _name;
-    private const int SHADOW_MAP_DIM = 2048;
-    private readonly Size _dimension;
+    private Size _dimension;
 
-    public ShadowMap(GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, string name = "")
+    public ShadowMap(GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, Size size, string name = "")
     {
         if (string.IsNullOrEmpty(name))
         {
@@ -46,7 +45,7 @@ internal sealed class ShadowMap
         _shaderManager = graphicDeviceRessourceFactory.ShaderManager;
         _textureManager = graphicDeviceRessourceFactory.TextureManager;
 
-        _dimension = new Size(SHADOW_MAP_DIM, SHADOW_MAP_DIM);
+        _dimension = size;
         Initialisation();
     }
 
@@ -123,10 +122,16 @@ internal sealed class ShadowMap
             Texture2D = new Tex2DDsv() { MipSlice = 0 }
         };
 
-        _depthTexture = _textureManager.GetOrCreateTexture("ShadowMap_DepthTexture", depthTextureDesc, 
+        _depthTexture = _textureManager.GetOrCreateTexture($"{_name}_DepthTexture", depthTextureDesc, 
             (TextureBuilder builder) => builder
             .WithShaderRessourceView(shaderResourceViewDesc)
             .WithDepthStencilView(descDSView));
+    }
+
+    public void Resize(Size newSize)
+    {
+        _dimension = newSize;
+        InitDepthBuffer(_dimension.Width, _dimension.Height);
     }
 
     /// <summary>
