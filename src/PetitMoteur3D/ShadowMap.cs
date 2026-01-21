@@ -163,6 +163,6 @@ internal sealed class ShadowMap
             compilationFlags,
             name: "ShadowMap_VertexShader"
         );
-        shaderManager.GetOrLoadVertexShaderAndLayout(shaderFile, SommetShadowMap.InputLayoutDesc, ref _vertexShader, ref _vertexLayout);
+        shaderManager.GetOrLoadVertexShaderAndLayout(shaderFile, SommetPosition.InputLayoutDesc, ref _vertexShader, ref _vertexLayout);
     }
 }

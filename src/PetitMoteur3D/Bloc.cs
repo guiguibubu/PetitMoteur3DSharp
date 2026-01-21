@@ -2,10 +2,11 @@
 using System.Linq;
 using System.Numerics;
 using PetitMoteur3D.Graphics;
+using PetitMoteur3D.Graphics.Shaders;
 
 namespace PetitMoteur3D;
 
-internal sealed class Bloc : BaseObjet3DWithShadow
+internal sealed class Bloc : BaseObjet3D
 {
     private readonly Vector3[] _vertices;
     private readonly Vector3[] _normales;
@@ -16,8 +17,8 @@ internal sealed class Bloc : BaseObjet3DWithShadow
 
     private System.Numerics.Matrix4x4 _transformation;
 
-    public unsafe Bloc(float dx, float dy, float dz, GraphicDeviceRessourceFactory graphicDeviceRessourceFactory)
-        : base(graphicDeviceRessourceFactory)
+    public unsafe Bloc(float dx, float dy, float dz, GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, RenderPassFactory shaderFactory)
+        : base(graphicDeviceRessourceFactory, shaderFactory)
     {
         _vertices = new Vector3[]
         {
@@ -126,11 +127,11 @@ internal sealed class Bloc : BaseObjet3DWithShadow
         return _sommets;
     }
 
-    /// <inheritdoc/>
-    protected override SommetShadowMap[] InitVertexShadowMap()
-    {
-        return _sommets.Select(s => new SommetShadowMap(s.Position)).ToArray();
-    }
+    ///// <inheritdoc/>
+    //protected override SommetShadowMap[] InitVertexShadowMap()
+    //{
+    //    return _sommets.Select(s => new SommetShadowMap(s.Position)).ToArray();
+    //}
 
     /// <inheritdoc/>
     protected override ushort[] InitIndex()

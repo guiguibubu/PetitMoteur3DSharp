@@ -1,3 +1,5 @@
+#include "MiniPhong_VSOut.hlsli"
+
 struct LightParams
 {
     float3 pos; // la position de la source d’éclairage (Point)
@@ -22,26 +24,25 @@ cbuffer objectBuffer
 	bool hasNormalMap; // indique si a une normal map
 }
 
-struct VS_Sortie
-{
-	float4 Pos : SV_Position;
-	float3 Norm : TEXCOORD0;
-	float3 vDirLum : TEXCOORD1;
-	float3 vDirCam : TEXCOORD2;
-	float2 coordTex : TEXCOORD3;
-};
 
 VS_Sortie MiniPhongVS(float4 Pos : POSITION, float3 Normale : NORMAL, float2 coordTex: TEXCOORD)
 {
-	VS_Sortie sortie = (VS_Sortie)0;
-	sortie.Pos = mul(Pos, matWorldViewProj);
-	sortie.Norm = mul(float4(Normale, 0.0f), matWorld).xyz;
-	float3 PosWorld = mul(Pos, matWorld).xyz;
-	sortie.vDirLum = vLumiere.pos.xyz - PosWorld;
-	sortie.vDirCam = vCamera.xyz - PosWorld;
+    VS_Sortie sortie = (VS_Sortie) 0;
+    sortie.Pos = mul(Pos, matWorldViewProj);
+    sortie.Norm = mul(float4(Normale, 0.0f), matWorld).xyz;
+    float3 PosWorld = mul(Pos, matWorld).xyz;
+    if (vLumiere.dir.x != 0.0f || vLumiere.dir.y != 0.0f || vLumiere.dir.z != 0.0f)
+    {
+        sortie.vDirLum = -vLumiere.dir.xyz;
+    }
+    else
+    {
+        sortie.vDirLum = vLumiere.pos.xyz - PosWorld;
+    }
+    sortie.vDirCam = vCamera.xyz - PosWorld;
 
 	// Coordonnées d’application de texture
-	sortie.coordTex = coordTex;
+    sortie.coordTex = coordTex;
 
 	return sortie;
 }

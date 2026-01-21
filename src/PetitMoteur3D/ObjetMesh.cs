@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using PetitMoteur3D.Graphics;
+using PetitMoteur3D.Graphics.Shaders;
 
 namespace PetitMoteur3D;
 
@@ -10,8 +11,8 @@ internal sealed class ObjetMesh : BaseObjet3D
 
     private readonly SubObjet3D[] _subObjects;
 
-    public ObjetMesh(SceneMesh sceneMesh, GraphicDeviceRessourceFactory graphicDeviceRessourceFactory)
-        : base(graphicDeviceRessourceFactory)
+    public ObjetMesh(SceneMesh sceneMesh, GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, RenderPassFactory shaderFactory)
+        : base(graphicDeviceRessourceFactory, shaderFactory)
     {
         _sceneMesh = sceneMesh;
 

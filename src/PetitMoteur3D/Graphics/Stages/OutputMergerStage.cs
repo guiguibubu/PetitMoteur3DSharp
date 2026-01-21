@@ -37,4 +37,9 @@ internal sealed class OutputMergerStage
     {
         _deviceContext.OMSetRenderTargets(NumViews, (ID3D11RenderTargetView**)ppRenderTargetViews.GetAddressOf(), (ID3D11DepthStencilView*)pDepthStencilView.Handle);
     }
+    
+    public unsafe void SetRenderTarget(uint NumViews, in ComPtr<ID3D11RenderTargetView> ppRenderTargetViews)
+    {
+        _deviceContext.OMSetRenderTargets(NumViews, (ID3D11RenderTargetView**)ppRenderTargetViews.GetAddressOf(), (ID3D11DepthStencilView*)null);
+    }
 }

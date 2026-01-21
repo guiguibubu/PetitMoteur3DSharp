@@ -5,20 +5,22 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using PetitMoteur3D.Camera;
 using PetitMoteur3D.Graphics;
-using PetitMoteur3D.Window;
+using PetitMoteur3D.Graphics.Shaders;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
 
 namespace PetitMoteur3D;
 
-internal sealed class Scene : IDrawableObjet, IDisposable
+internal sealed class Scene : IDisposable
 {
-    public bool ShowShadow {  get; set; }
-    public bool UseDebugCam {  get; set; }
+    public bool ShowDepthTest { get; set; }
+    public bool ShowShadow { get; set; }
+    public bool UseDebugCam { get; set; }
+    public ICamera GameCamera => _gameCamera;
+    public LightShadersParams Light => _light;
 
-    private readonly List<IShadowDrawableObjet> _objectsWithShadow;
     private readonly List<IUpdatableObjet> _objectsUpdatable;
-    private readonly List<IDrawableObjet> _objectsDrawable;
+    private readonly Dictionary<RenderPassType, List<IDrawableObjet>> _objectsDrawablePerRenderPass;
     private ICamera _gameCamera;
 
     private ComPtr<ID3D11Buffer> _constantBuffer;
@@ -48,9 +50,8 @@ internal sealed class Scene : IDrawableObjet, IDisposable
 
     public Scene(GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, ICamera camera, Size windowSize)
     {
-        _objectsWithShadow = new List<IShadowDrawableObjet>();
         _objectsUpdatable = new List<IUpdatableObjet>();
-        _objectsDrawable = new List<IDrawableObjet>();
+        _objectsDrawablePerRenderPass = new Dictionary<RenderPassType, List<IDrawableObjet>>();
         _gameCamera = camera;
 
         _light = new LightShadersParams()
@@ -105,13 +106,16 @@ internal sealed class Scene : IDrawableObjet, IDisposable
     public void AddObjet(IObjet3D obj)
     {
         // Render
-        if (obj is IShadowDrawableObjet shadowDrawableObjet)
+        foreach (RenderPassType renderPass in obj.SupportedRenderPasses)
         {
-            _objectsWithShadow.Add(shadowDrawableObjet);
-        }
-        else if (obj is IDrawableObjet drawableObjet)
-        {
-            _objectsDrawable.Add(drawableObjet);
+            if (_objectsDrawablePerRenderPass.TryGetValue(renderPass, out List<IDrawableObjet>? drawableObjects))
+            {
+                drawableObjects.Add(obj);
+            }
+            else
+            {
+                _objectsDrawablePerRenderPass.Add(renderPass, new List<IDrawableObjet>() { obj });
+            }
         }
 
         // Update
@@ -172,13 +176,17 @@ internal sealed class Scene : IDrawableObjet, IDisposable
         ref readonly Matrix4x4 matProjLight = ref _cameraLigth.FrustrumView.MatProj;
         Matrix4x4 matViewProjLight = matViewLight * matProjLight;
 
-        foreach (IShadowDrawableObjet obj in _objectsWithShadow)
+        if (ShowDepthTest)
         {
-            obj.Draw(graphicPipeline, in matViewProj, in matViewProjLight);
+            foreach (IDrawableObjet obj in _objectsDrawablePerRenderPass[RenderPassType.DepthTest])
+            {
+                obj.Draw(RenderPassType.DepthTest, this, in matViewProj);
+            }
         }
-        foreach (IDrawableObjet obj in _objectsDrawable)
+
+        foreach (IDrawableObjet obj in _objectsDrawablePerRenderPass[RenderPassType.Standart])
         {
-            obj.Draw(graphicPipeline, in matViewProj);
+            obj.Draw(RenderPassType.Standart, this, in matViewProj);
         }
 
         // s'assuré que le texture n'est plus lié comme SRV.
@@ -192,81 +200,81 @@ internal sealed class Scene : IDrawableObjet, IDisposable
         }
     }
 
-    public unsafe void DrawShadow(D3D11GraphicPipeline graphicPipeline)
-    {
-        _cameraLigth.SetPosition(_gameCamera.Position - (DistanceLight * _cameraLigth.Orientation.Forward));
-        _cameraLigth.GetViewMatrix(out Matrix4x4 matViewLight);
-        ref readonly Matrix4x4 matProjLight = ref _cameraLigth.FrustrumView.MatProj;
-        Matrix4x4 matViewProjLight = matViewLight * matProjLight;
+    //public unsafe void DrawShadow(D3D11GraphicPipeline graphicPipeline)
+    //{
+    //    _cameraLigth.SetPosition(_gameCamera.Position - (DistanceLight * _cameraLigth.Orientation.Forward));
+    //    _cameraLigth.GetViewMatrix(out Matrix4x4 matViewLight);
+    //    ref readonly Matrix4x4 matProjLight = ref _cameraLigth.FrustrumView.MatProj;
+    //    Matrix4x4 matViewProjLight = matViewLight * matProjLight;
 
-        // Utiliser la surface de la texture comme surface de rendu
-        graphicPipeline.OutputMergerStage.SetRenderTarget(0, in Unsafe.NullRef<ComPtr<ID3D11RenderTargetView>>(), _shadowMap.DepthTexture.TextureDepthStencilView);
-        // Effacer le shadow map
-        graphicPipeline.GraphicDevice.DeviceContext.ClearDepthStencilView(_shadowMap.DepthTexture.TextureDepthStencilView, (uint)(ClearFlag.Depth | ClearFlag.Stencil), 1.0f, 0);
-        // Modifier les dimension du viewport
-        // Set the rasterizer state with the current viewport.
-        //const int SHADOW_MAP_DIM = 2048;
-        //Silk.NET.Direct3D11.Viewport viewport = new(0, 0, SHADOW_MAP_DIM, SHADOW_MAP_DIM, 0, 1);
-        //graphicPipeline.RasterizerStage.SetViewports(1, in viewport);
+    //    // Utiliser la surface de la texture comme surface de rendu
+    //    graphicPipeline.OutputMergerStage.SetRenderTarget(0, in Unsafe.NullRef<ComPtr<ID3D11RenderTargetView>>(), _shadowMap.DepthTexture.TextureDepthStencilView);
+    //    // Effacer le shadow map
+    //    graphicPipeline.GraphicDevice.DeviceContext.ClearDepthStencilView(_shadowMap.DepthTexture.TextureDepthStencilView, (uint)(ClearFlag.Depth | ClearFlag.Stencil), 1.0f, 0);
+    //    // Modifier les dimension du viewport
+    //    // Set the rasterizer state with the current viewport.
+    //    //const int SHADOW_MAP_DIM = 2048;
+    //    //Silk.NET.Direct3D11.Viewport viewport = new(0, 0, SHADOW_MAP_DIM, SHADOW_MAP_DIM, 0, 1);
+    //    //graphicPipeline.RasterizerStage.SetViewports(1, in viewport);
 
-        // input layout des sommets
-        graphicPipeline.InputAssemblerStage.SetInputLayout(in _shadowMap.VertexLayout);
-        // Activer le VS
-        graphicPipeline.VertexShaderStage.SetShader(in _shadowMap.VertexShader, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
-        // Le sampler state
-        graphicPipeline.PixelShaderStage.SetSamplers(0, 1, in _shadowMap.SampleState);
-        // Rasterizer
-        graphicPipeline.RasterizerStage.SetState(graphicPipeline.SolidCullFrontRS);
-        foreach (IShadowDrawableObjet obj in _objectsWithShadow)
-        {
-            obj.DrawShadow(graphicPipeline, in matViewProjLight);
-        }
+    //    // input layout des sommets
+    //    graphicPipeline.InputAssemblerStage.SetInputLayout(in _shadowMap.VertexLayout);
+    //    // Activer le VS
+    //    graphicPipeline.VertexShaderStage.SetShader(in _shadowMap.VertexShader, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
+    //    // Le sampler state
+    //    graphicPipeline.PixelShaderStage.SetSamplers(0, 1, in _shadowMap.SampleState);
+    //    // Rasterizer
+    //    graphicPipeline.RasterizerStage.SetState(graphicPipeline.SolidCullFrontRS);
+    //    foreach (IShadowDrawableObjet obj in _objectsWithShadow)
+    //    {
+    //        obj.DrawShadow(graphicPipeline, in matViewProjLight);
+    //    }
 
-        // On remet les render targets originales
-        graphicPipeline.SetRenderTarget(clear: false);
-        graphicPipeline.ResetViewport();
-        graphicPipeline.RasterizerStage.SetState(_rasterizerState);
-    }
+    //    // On remet les render targets originales
+    //    graphicPipeline.SetRenderTarget(clear: false);
+    //    graphicPipeline.ResetViewport();
+    //    graphicPipeline.RasterizerStage.SetState(_rasterizerState);
+    //}
 
-    public unsafe void DrawDebugDepth(D3D11GraphicPipeline graphicPipeline)
-    {
-        //_cameraLigth.SetPosition(_gameCamera.Position - (DistanceLight * _cameraLigth.Orientation.Forward));
-        //_cameraLigth.GetViewMatrix(out Matrix4x4 matViewLight);
-        //ref readonly Matrix4x4 matProjLight = ref _cameraLigth.FrustrumView.MatProj;
-        //Matrix4x4 matViewProj = matViewLight * matProjLight;
+    //public unsafe void DrawDebugDepth(D3D11GraphicPipeline graphicPipeline)
+    //{
+    //    //_cameraLigth.SetPosition(_gameCamera.Position - (DistanceLight * _cameraLigth.Orientation.Forward));
+    //    //_cameraLigth.GetViewMatrix(out Matrix4x4 matViewLight);
+    //    //ref readonly Matrix4x4 matProjLight = ref _cameraLigth.FrustrumView.MatProj;
+    //    //Matrix4x4 matViewProj = matViewLight * matProjLight;
 
-        _gameCamera.GetViewMatrix(out Matrix4x4 matView);
-        ref readonly Matrix4x4 matProj = ref _gameCamera.FrustrumView.MatProj;
-        Matrix4x4 matViewProj = matView * matProj;
+    //    _gameCamera.GetViewMatrix(out Matrix4x4 matView);
+    //    ref readonly Matrix4x4 matProj = ref _gameCamera.FrustrumView.MatProj;
+    //    Matrix4x4 matViewProj = matView * matProj;
 
-        // Utiliser la surface de la texture comme surface de rendu
-        graphicPipeline.OutputMergerStage.SetRenderTarget(0, in Unsafe.NullRef<ComPtr<ID3D11RenderTargetView>>(), _debugDepthMap.DepthTexture.TextureDepthStencilView);
-        // Effacer le shadow map
-        graphicPipeline.GraphicDevice.DeviceContext.ClearDepthStencilView(_debugDepthMap.DepthTexture.TextureDepthStencilView, (uint)(ClearFlag.Depth | ClearFlag.Stencil), 1.0f, 0);
-        // Modifier les dimension du viewport
-        // Set the rasterizer state with the current viewport.
-        //const int SHADOW_MAP_DIM = 2048;
-        //Silk.NET.Direct3D11.Viewport viewport = new(0, 0, SHADOW_MAP_DIM, SHADOW_MAP_DIM, 0, 1);
-        //graphicPipeline.RasterizerStage.SetViewports(1, in viewport);
+    //    // Utiliser la surface de la texture comme surface de rendu
+    //    graphicPipeline.OutputMergerStage.SetRenderTarget(0, in Unsafe.NullRef<ComPtr<ID3D11RenderTargetView>>(), _debugDepthMap.DepthTexture.TextureDepthStencilView);
+    //    // Effacer le shadow map
+    //    graphicPipeline.GraphicDevice.DeviceContext.ClearDepthStencilView(_debugDepthMap.DepthTexture.TextureDepthStencilView, (uint)(ClearFlag.Depth | ClearFlag.Stencil), 1.0f, 0);
+    //    // Modifier les dimension du viewport
+    //    // Set the rasterizer state with the current viewport.
+    //    //const int SHADOW_MAP_DIM = 2048;
+    //    //Silk.NET.Direct3D11.Viewport viewport = new(0, 0, SHADOW_MAP_DIM, SHADOW_MAP_DIM, 0, 1);
+    //    //graphicPipeline.RasterizerStage.SetViewports(1, in viewport);
 
-        // input layout des sommets
-        graphicPipeline.InputAssemblerStage.SetInputLayout(in _debugDepthMap.VertexLayout);
-        // Activer le VS
-        graphicPipeline.VertexShaderStage.SetShader(in _debugDepthMap.VertexShader, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
-        // Le sampler state
-        graphicPipeline.PixelShaderStage.SetSamplers(0, 1, in _debugDepthMap.SampleState);
-        // Rasterizer
-        graphicPipeline.RasterizerStage.SetState(graphicPipeline.SolidCullFrontRS);
-        foreach (IShadowDrawableObjet obj in _objectsWithShadow)
-        {
-            obj.DrawShadow(graphicPipeline, in matViewProj);
-        }
+    //    // input layout des sommets
+    //    graphicPipeline.InputAssemblerStage.SetInputLayout(in _debugDepthMap.VertexLayout);
+    //    // Activer le VS
+    //    graphicPipeline.VertexShaderStage.SetShader(in _debugDepthMap.VertexShader, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
+    //    // Le sampler state
+    //    graphicPipeline.PixelShaderStage.SetSamplers(0, 1, in _debugDepthMap.SampleState);
+    //    // Rasterizer
+    //    graphicPipeline.RasterizerStage.SetState(graphicPipeline.SolidCullFrontRS);
+    //    foreach (IShadowDrawableObjet obj in _objectsWithShadow)
+    //    {
+    //        obj.DrawShadow(graphicPipeline, in matViewProj);
+    //    }
 
-        // On remet les render targets originales
-        graphicPipeline.SetRenderTarget(clear: false);
-        graphicPipeline.ResetViewport();
-        graphicPipeline.RasterizerStage.SetState(_rasterizerState);
-    }
+    //    // On remet les render targets originales
+    //    graphicPipeline.SetRenderTarget(clear: false);
+    //    graphicPipeline.ResetViewport();
+    //    graphicPipeline.RasterizerStage.SetState(_rasterizerState);
+    //}
 
     public void OnScreenResize(Size newSize)
     {
@@ -286,9 +294,8 @@ internal sealed class Scene : IDrawableObjet, IDisposable
             if (disposing)
             {
                 // TODO: dispose managed state (managed objects)
-                _objectsWithShadow.Clear();
                 _objectsUpdatable.Clear();
-                _objectsDrawable.Clear();
+                _objectsDrawablePerRenderPass.Clear();
             }
 
             // TODO: free unmanaged resources (unmanaged objects) and override finalizer

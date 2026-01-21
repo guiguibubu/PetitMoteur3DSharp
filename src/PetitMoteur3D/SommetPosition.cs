@@ -6,7 +6,7 @@ using Silk.NET.Direct3D11;
 
 namespace PetitMoteur3D;
 
-internal struct SommetShadowMap
+internal struct SommetPosition
 {
     private Vector3 _position;
     public readonly Vector3 Position => _position;
@@ -18,7 +18,7 @@ internal struct SommetShadowMap
 
     private static readonly GlobalMemory s_semanticNamePosition;
     private static readonly InputElementDesc[] s_inputElements;
-    static unsafe SommetShadowMap()
+    static unsafe SommetPosition()
     {
         s_semanticNamePosition = SilkMarshal.StringToMemory("POSITION", NativeStringEncoding.Ansi);
 
@@ -34,7 +34,7 @@ internal struct SommetShadowMap
     /// Constructeur
     /// </summary>
     /// <param name="position"></param>
-    public SommetShadowMap(Vector3 position)
+    public SommetPosition(Vector3 position)
     {
         _position = position;
     }
@@ -42,19 +42,19 @@ internal struct SommetShadowMap
     /// <summary>
     /// Constructeur par défaut
     /// </summary>
-    public unsafe SommetShadowMap()
+    public unsafe SommetPosition()
     : this(Vector3.Zero)
     { }
 
     /// <summary>
     /// Constructeur de pie
     /// </summary>
-    public unsafe SommetShadowMap(SommetShadowMap other)
+    public unsafe SommetPosition(SommetPosition other)
     : this(other._position)
     { }
 
-    public SommetShadowMap Clone()
+    public SommetPosition Clone()
     {
-        return new SommetShadowMap(this);
+        return new SommetPosition(this);
     }
 }

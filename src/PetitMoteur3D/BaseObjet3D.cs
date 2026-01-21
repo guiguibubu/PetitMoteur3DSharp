@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
-using System.Runtime.CompilerServices;
+using System.Linq;
+using System.Numerics;
 using PetitMoteur3D.Core.Math;
-using PetitMoteur3D.Core.Memory;
 using PetitMoteur3D.Graphics;
+using PetitMoteur3D.Graphics.Shaders;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
 
@@ -18,6 +18,9 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
     public Orientation3D Orientation { get { return _orientation; } }
     /// <inheritdoc/>
     public string Name { get { return _name; } }
+
+    /// <inheritdoc/>
+    public RenderPassType[] SupportedRenderPasses => [RenderPassType.Standart, RenderPassType.DepthTest];
     #endregion
 
     #region Protected Properties
@@ -31,16 +34,11 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
     #endregion
 
     private ComPtr<ID3D11Buffer> _vertexBuffer;
+    private ComPtr<ID3D11Buffer> _vertexBufferPosition;
     private ComPtr<ID3D11Buffer> _indexBuffer;
-    private ComPtr<ID3D11Buffer> _constantBuffer;
-
-    private ComPtr<ID3D11VertexShader> _vertexShader;
-    private ComPtr<ID3D11InputLayout> _vertexLayout;
-    private ComPtr<ID3D11PixelShader> _pixelShader;
 
     private ComPtr<ID3D11ShaderResourceView> _textureD3D;
     private ComPtr<ID3D11ShaderResourceView> _normalMap;
-    private ComPtr<ID3D11SamplerState> _sampleState;
 
     private System.Numerics.Matrix4x4 _matWorld;
 
@@ -54,18 +52,16 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
     private SubObjet3D[] _subObjects;
 
     private unsafe readonly uint _vertexStride = (uint)sizeof(Sommet);
-    private static readonly uint _vertexOffset = 0;
+    private unsafe readonly uint _vertexPositionStride = (uint)sizeof(SommetPosition);
 
     private readonly string _name;
 
-    private static readonly IObjectPool<ObjectShadersParams> _objectShadersParamsPool = ObjectPoolFactory.Create<ObjectShadersParams>();
-    private static readonly IObjectPool<SamplerDesc> _shaderDescPool = ObjectPoolFactory.Create<SamplerDesc>();
     private bool _disposed;
     private readonly GraphicBufferFactory _bufferFactory;
-    private readonly ShaderManager _shaderManager;
-    private readonly TextureManager _textureManager;
+    private readonly DepthTestRenderPass _depthTestRenderPass;
+    private readonly MiniPhongNormalMapRenderPass _mainRenderPass;
 
-    protected BaseObjet3D(GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, string name = "")
+    protected BaseObjet3D(GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, RenderPassFactory renderPassFactory, string name = "")
     {
         _position = System.Numerics.Vector3.Zero;
         _orientation = new Orientation3D();
@@ -84,16 +80,13 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
         }
 
         _bufferFactory = graphicDeviceRessourceFactory.BufferFactory;
-        _shaderManager = graphicDeviceRessourceFactory.ShaderManager;
-        _textureManager = graphicDeviceRessourceFactory.TextureManager;
 
         _vertexBuffer = default;
+        _vertexBufferPosition = default;
         _indexBuffer = default;
-        _constantBuffer = default;
 
-        _vertexShader = default;
-        _vertexLayout = default;
-        _pixelShader = default;
+        _depthTestRenderPass = renderPassFactory.CreateDepthTestRenderPass($"{_name}_DepthTestRenderPass");
+        _mainRenderPass = renderPassFactory.CreateMiniPhongNormalMapRenderPass($"{_name}_MiniPhongNormalMapRenderPass");
 
         _disposed = false;
     }
@@ -169,65 +162,108 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
     }
 
     /// <inheritdoc/>
-    public virtual unsafe void Draw(D3D11GraphicPipeline graphicPipeline, ref readonly System.Numerics.Matrix4x4 matViewProj)
+    public virtual unsafe void Draw(RenderPassType renderPass, Scene scene, ref readonly System.Numerics.Matrix4x4 matViewProj)
     {
-        // Choisir la topologie des primitives
-        graphicPipeline.InputAssemblerStage.SetPrimitiveTopology(D3DPrimitiveTopology.D3D11PrimitiveTopologyTrianglelist);
-        // Source des sommets
-        graphicPipeline.InputAssemblerStage.SetVertexBuffers(0, 1, ref _vertexBuffer, in _vertexStride, in _vertexOffset);
-        // Source des index
-        graphicPipeline.InputAssemblerStage.SetIndexBuffer(_indexBuffer, Silk.NET.DXGI.Format.FormatR16Uint, 0);
-        // input layout des sommets
-        graphicPipeline.InputAssemblerStage.SetInputLayout(_vertexLayout);
-        foreach (SubObjet3D subObjet3D in _subObjects)
+        if (renderPass == RenderPassType.DepthTest)
         {
-            // Initialiser et sélectionner les « constantes » des shaders
-            _objectShadersParamsPool.Get(out ObjectPoolWrapper<ObjectShadersParams> shadersParamsWrapper);
-            ref ObjectShadersParams shadersParams = ref shadersParamsWrapper.Data;
-            shadersParams.matWorldViewProj = System.Numerics.Matrix4x4.Transpose(subObjet3D.Transformation * _matWorld * matViewProj);
-            shadersParams.matWorld = System.Numerics.Matrix4x4.Transpose(subObjet3D.Transformation * _matWorld);
-            shadersParams.ambiantMaterialValue = subObjet3D.Material.Ambient;
-            shadersParams.diffuseMaterialValue = subObjet3D.Material.Diffuse;
-            shadersParams.hasTexture = Convert.ToInt32(_textureD3D.Handle is not null);
-            shadersParams.hasNormalMap = Convert.ToInt32(_normalMap.Handle is not null);
-
-            graphicPipeline.RessourceFactory.UpdateSubresource(_constantBuffer, 0, in Unsafe.NullRef<Box>(), in shadersParams, 0, 0);
-
-            // Activer le VS
-            graphicPipeline.VertexShaderStage.SetShader(_vertexShader, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
-            graphicPipeline.VertexShaderStage.SetConstantBuffers(1, 1, ref _constantBuffer);
-            // Activer le GS
-            graphicPipeline.GeometryShaderStage.SetShader((ComPtr<ID3D11GeometryShader>)null, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
-            // Activer le PS
-            graphicPipeline.PixelShaderStage.SetShader(_pixelShader, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
-            graphicPipeline.PixelShaderStage.SetConstantBuffers(1, 1, ref _constantBuffer);
-            // Activation de la texture
-            if (_textureD3D.Handle is not null)
+            // Choisir la topologie des primitives
+            _depthTestRenderPass.UpdatePrimitiveTopology(D3DPrimitiveTopology.D3D11PrimitiveTopologyTrianglelist);
+            _depthTestRenderPass.SetPrimitiveTopology();
+            // Source des sommets
+            _depthTestRenderPass.UpdateVertexBuffer(_vertexBufferPosition, _vertexPositionStride);
+            _depthTestRenderPass.SetVertexBuffer();
+            // Source des index
+            _depthTestRenderPass.UpdateIndexBuffer(_indexBuffer, Silk.NET.DXGI.Format.FormatR16Uint);
+            _depthTestRenderPass.SetIndexBuffer();
+            // input layout des sommets
+            _depthTestRenderPass.SetInputLayout();
+            foreach (SubObjet3D subObjet3D in _subObjects)
             {
-                graphicPipeline.PixelShaderStage.SetShaderResources(0, 1, ref _textureD3D);
+                _depthTestRenderPass.UpdateVertexShaderConstantBuffer(new DepthTestRenderPass.VertexConstantBufferParams()
+                {
+                    matWorldViewProj = System.Numerics.Matrix4x4.Transpose(subObjet3D.Transformation * _matWorld * matViewProj)
+                });
+
+                _depthTestRenderPass.UpdatePixelShaderConstantBuffer(new DepthTestRenderPass.PixelConstantBufferParams()
+                {
+                    successColor = new System.Numerics.Vector4(0, 255, 0, 1),
+                    failColor = new System.Numerics.Vector4(255, 0, 0, 1)
+                });
+
+                // Activer le VS
+                _depthTestRenderPass.SetVertexShader();
+                _depthTestRenderPass.SetVertexShaderConstantBuffers();
+                // Activer le GS
+                _depthTestRenderPass.SetGeometryShader();
+                // Activer le PS
+                _depthTestRenderPass.SetPixelShader();
+                _depthTestRenderPass.SetPixelShaderConstantBuffers();
+
+                // Le sampler state
+                _depthTestRenderPass.SetSamplers();
+
+                // **** Rendu de l’objet
+                _depthTestRenderPass.DrawIndexed((uint)_indices.Length, 0, 0);
             }
-            if (_normalMap.Handle is not null)
+        }
+        else if (renderPass == RenderPassType.Standart)
+        {
+            // Choisir la topologie des primitives
+            _mainRenderPass.UpdatePrimitiveTopology(D3DPrimitiveTopology.D3D11PrimitiveTopologyTrianglelist);
+            _mainRenderPass.SetPrimitiveTopology();
+            // Source des sommets
+            _mainRenderPass.UpdateVertexBuffer(_vertexBuffer, _vertexStride);
+            _mainRenderPass.SetVertexBuffer();
+            // Source des index
+            _mainRenderPass.UpdateIndexBuffer(_indexBuffer, Silk.NET.DXGI.Format.FormatR16Uint);
+            _mainRenderPass.SetIndexBuffer();
+            // input layout des sommets
+            _mainRenderPass.SetInputLayout();
+            foreach (SubObjet3D subObjet3D in _subObjects)
             {
-                graphicPipeline.PixelShaderStage.SetShaderResources(1, 1, ref _normalMap);
-            }
-            // Le sampler state
-            graphicPipeline.PixelShaderStage.SetSamplers(0, 1, in _sampleState);
+                // Initialiser et sélectionner les « constantes » des shaders
+                _mainRenderPass.UpdateSceneConstantBuffer(new MiniPhongNormalMapRenderPass.SceneConstantBufferParams()
+                {
+                    LightParams = new MiniPhongNormalMapRenderPass.LightParams()
+                    {
+                        Position = scene.Light.Position,
+                        Direction = scene.Light.Direction,
+                        AmbiantColor = scene.Light.AmbiantColor,
+                        DiffuseColor = scene.Light.DiffuseColor
+                    },
+                    CameraPos = new Vector4(scene.GameCamera.Position, 1.0f)
+                });
 
-            // Additional draw config actions
-            AdditionalDrawConfig?.Invoke(graphicPipeline, subObjet3D);
+                _mainRenderPass.UpdateObjectConstantBuffer(new MiniPhongNormalMapRenderPass.ObjectConstantBufferParams()
+                {
+                    matWorldViewProj = System.Numerics.Matrix4x4.Transpose(subObjet3D.Transformation * _matWorld * matViewProj),
+                    matWorld = System.Numerics.Matrix4x4.Transpose(subObjet3D.Transformation * _matWorld),
+                    ambiantMaterialValue = subObjet3D.Material.Ambient,
+                    diffuseMaterialValue = subObjet3D.Material.Diffuse,
+                    hasTexture = Convert.ToInt32(_textureD3D.Handle is not null),
+                    hasNormalMap = Convert.ToInt32(_normalMap.Handle is not null)
+                });
 
-            // **** Rendu de l’objet
-            graphicPipeline.DrawIndexed((uint)_indices.Length, 0, 0);
+                // Activer le VS
+                _mainRenderPass.SetVertexShader();
+                _mainRenderPass.SetVertexShaderConstantBuffers();
+                // Activer le GS
+                _mainRenderPass.SetGeometryShader();
+                // Activer le PS
+                _mainRenderPass.SetPixelShader();
+                _mainRenderPass.SetPixelShaderConstantBuffers();
+                // Activation de la texture
+                _mainRenderPass.UpdateTexture(_textureD3D);
+                _mainRenderPass.UpdateNormalMap(_normalMap);
+                _mainRenderPass.SetPixelShaderRessources();
 
-            _objectShadersParamsPool.Return(shadersParamsWrapper);
+                // Le sampler state
+                _mainRenderPass.SetSamplers();
 
-            if (_textureD3D.Handle is not null)
-            {
-                graphicPipeline.PixelShaderStage.ClearShaderResources(0);
-            }
-            if (_normalMap.Handle is not null)
-            {
-                graphicPipeline.PixelShaderStage.ClearShaderResources(1);
+                // **** Rendu de l’objet
+                _mainRenderPass.DrawIndexed((uint)_indices.Length, 0, 0);
+
+                _mainRenderPass.ClearPixelShaderResources();
             }
         }
     }
@@ -249,8 +285,6 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
         _subObjects = InitSubObjets();
 
         InitBuffers(_bufferFactory, _sommets, _indices);
-        InitShaders(_shaderManager);
-        InitTexture(_textureManager);
     }
 
     /// <summary>
@@ -271,140 +305,20 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
     /// <returns></returns>
     protected abstract SubObjet3D[] InitSubObjets();
 
-    private unsafe void InitShaders(ShaderManager shaderManager)
-    {
-        InitVertexShader(shaderManager);
-        InitPixelShader(shaderManager);
-    }
-
-    private unsafe void InitTexture(TextureManager textureManager)
-    {
-        // Initialisation des paramètres de sampling de la texture
-        _shaderDescPool.Get(out ObjectPoolWrapper<SamplerDesc> samplerDescWrapper);
-        ref SamplerDesc samplerDesc = ref samplerDescWrapper.Data;
-        samplerDesc.Filter = Filter.Anisotropic;
-        samplerDesc.AddressU = TextureAddressMode.Wrap;
-        samplerDesc.AddressV = TextureAddressMode.Wrap;
-        samplerDesc.AddressW = TextureAddressMode.Wrap;
-        samplerDesc.MipLODBias = 0f;
-        samplerDesc.MaxAnisotropy = 4;
-        samplerDesc.ComparisonFunc = ComparisonFunc.Always;
-        samplerDesc.MinLOD = 0;
-        samplerDesc.MaxLOD = float.MaxValue;
-        samplerDesc.BorderColor[0] = 0f;
-        samplerDesc.BorderColor[1] = 0f;
-        samplerDesc.BorderColor[2] = 0f;
-        samplerDesc.BorderColor[3] = 0f;
-
-        // Création de l’état de sampling
-        _sampleState = textureManager.Factory.CreateSampler(samplerDesc, $"{_name}_SamplerState");
-
-        _shaderDescPool.Return(samplerDescWrapper);
-    }
-
-    private unsafe void InitBuffers<TVertex, TIndice>(GraphicBufferFactory bufferFactory, TVertex[] sommets, TIndice[] indices)
-        where TVertex : unmanaged
+    private unsafe void InitBuffers<TIndice>(GraphicBufferFactory bufferFactory, Sommet[] sommets, TIndice[] indices)
         where TIndice : unmanaged
     {
         // Create our vertex buffer.
-        _vertexBuffer = bufferFactory.CreateVertexBuffer<TVertex>(sommets, Usage.Immutable, CpuAccessFlag.None, $"{_name}_VertexBuffer");
+        _vertexBuffer = bufferFactory.CreateVertexBuffer<Sommet>(sommets, Usage.Immutable, CpuAccessFlag.None, $"{_name}_VertexBuffer");
+        _vertexBufferPosition = bufferFactory.CreateVertexBuffer<SommetPosition>(sommets.Select(s => new SommetPosition(s.Position)).ToArray(), Usage.Immutable, CpuAccessFlag.None, $"{_name}_VertexBuffer");
 
         // Create our index buffer.
         _indexBuffer = bufferFactory.CreateIndexBuffer<TIndice>(indices, Usage.Immutable, CpuAccessFlag.None, $"{_name}_IndexBuffer");
-
-        // Create our constant buffer.
-        _constantBuffer = bufferFactory.CreateConstantBuffer<ObjectShadersParams>(Usage.Default, CpuAccessFlag.None, $"{_name}_ConstantBuffer");
     }
 
     protected void UpdateMatWorld()
     {
-        //_sommets
         _matWorld = System.Numerics.Matrix4x4.CreateFromQuaternion(_orientation.Quaternion) * System.Numerics.Matrix4x4.CreateTranslation(_position);
-    }
-
-    /// <summary>
-    /// Compilation et chargement du vertex shader
-    /// </summary>
-    /// <param name="device"></param>
-    /// <param name="compiler"></param>
-    private unsafe void InitVertexShader(ShaderManager shaderManager)
-    {
-        ShaderCodeFile shaderFile = InitVertexShaderCodeFile();
-        shaderManager.GetOrLoadVertexShaderAndLayout(shaderFile, Sommet.InputLayoutDesc, ref _vertexShader, ref _vertexLayout);
-    }
-
-    /// <summary>
-    /// Compilation et chargement du pixel shader
-    /// </summary>
-    /// <param name="device"></param>
-    /// <param name="compiler"></param>
-    private unsafe void InitPixelShader(ShaderManager shaderManager)
-    {
-        ShaderCodeFile shaderFile = InitPixelShaderCodeFile();
-        _pixelShader = shaderManager.GetOrLoadPixelShader(shaderFile);
-    }
-
-    /// <summary>
-    /// VertexShader file
-    /// </summary>
-    [return: NotNull]
-    protected virtual ShaderCodeFile InitVertexShaderCodeFile()
-    {
-        // Compilation et chargement du vertex shader
-        string filePath = "shaders\\DepthTest_VS.hlsl";
-        string entryPoint = "DepthTestVS";
-        string target = "vs_5_0";
-        // #define D3DCOMPILE_ENABLE_STRICTNESS                    (1 << 11)
-        uint flagStrictness = ((uint)1 << 11);
-        // #define D3DCOMPILE_DEBUG (1 << 0)
-        // #define D3DCOMPILE_SKIP_OPTIMIZATION                    (1 << 2)
-#if DEBUG
-        uint flagDebug = ((uint)1 << 0);
-        uint flagSkipOptimization = ((uint)(1 << 2));
-#else
-        uint flagDebug = 0;
-        uint flagSkipOptimization = 0;
-#endif
-        uint compilationFlags = flagStrictness | flagDebug | flagSkipOptimization;
-        return new ShaderCodeFile
-        (
-            filePath,
-            entryPoint,
-            target,
-            compilationFlags,
-            name: "DepthTest_VertexShader"
-        );
-    }
-
-    /// <summary>
-    /// PixelShader file
-    /// </summary>
-    [return: NotNull]
-    protected virtual ShaderCodeFile InitPixelShaderCodeFile()
-    {
-        string filePath = "shaders\\DepthTest_PS.hlsl";
-        string entryPoint = "DepthTestPS";
-        string target = "ps_5_0";
-        // #define D3DCOMPILE_ENABLE_STRICTNESS                    (1 << 11)
-        uint flagStrictness = ((uint)1 << 11);
-        // #define D3DCOMPILE_DEBUG (1 << 0)
-        // #define D3DCOMPILE_SKIP_OPTIMIZATION                    (1 << 2)
-#if DEBUG
-        uint flagDebug = ((uint)1 << 0);
-        uint flagSkipOptimization = ((uint)(1 << 2));
-#else
-        uint flagDebug = 0;
-        uint flagSkipOptimization = 0;
-#endif
-        uint compilationFlags = flagStrictness | flagDebug | flagSkipOptimization;
-        return new ShaderCodeFile
-        (
-           filePath,
-           entryPoint,
-           target,
-           compilationFlags,
-           name: "DepthTest_PixelShader"
-        );
     }
 
     public struct SubObjet3D
@@ -434,22 +348,13 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
 
             _vertexBuffer.Dispose();
             _indexBuffer.Dispose();
-            _constantBuffer.Dispose();
 
-            _vertexShader.Dispose();
-            _vertexLayout.Dispose();
-            _pixelShader.Dispose();
+            _depthTestRenderPass.Dispose();
+            _mainRenderPass.Dispose();
 
             _disposed = true;
         }
     }
-
-    // // TODO: override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
-    // ~BaseObjet3D()
-    // {
-    //     // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-    //     Dispose(disposing: false);
-    // }
 
     public void Dispose()
     {

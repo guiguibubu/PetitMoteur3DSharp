@@ -1,28 +1,28 @@
 ﻿using System;
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using PetitMoteur3D.Core.Memory;
 using PetitMoteur3D.Graphics;
+using PetitMoteur3D.Graphics.Shaders;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
 
 namespace PetitMoteur3D;
 
-internal abstract class BaseObjet3DWithShadow : BaseObjet3D, IShadowDrawableObjet, IDisposable
+internal abstract class BaseObjet3DWithShadow : BaseObjet3D, IDisposable
 {
     private ComPtr<ID3D11Buffer> _vertexBufferShadowMap;
     private ComPtr<ID3D11Buffer> _constantBufferShadowMap;
-    private SommetShadowMap[] _sommetsShadowMap;
-    private unsafe readonly uint _vertexStrideSadowMap = (uint)sizeof(SommetShadowMap);
+    private SommetPosition[] _sommetsShadowMap;
+    private unsafe readonly uint _vertexStrideSadowMap = (uint)sizeof(SommetPosition);
     private static readonly uint _vertexOffsetShadowMap = 0;
 
     private static readonly IObjectPool<ObjectShadowMapShadersParams> _objectShadersParamsPool = ObjectPoolFactory.Create<ObjectShadowMapShadersParams>();
     private bool _disposed;
 
-    protected BaseObjet3DWithShadow(GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, string name = "")
-        : base(graphicDeviceRessourceFactory, name)
+    protected BaseObjet3DWithShadow(GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, RenderPassFactory shaderFactory, string name = "")
+        : base(graphicDeviceRessourceFactory, shaderFactory, name)
     {
-        _sommetsShadowMap = Array.Empty<SommetShadowMap>();
+        _sommetsShadowMap = Array.Empty<SommetPosition>();
 
         _vertexBufferShadowMap = default;
         _constantBufferShadowMap = default;
@@ -31,7 +31,7 @@ internal abstract class BaseObjet3DWithShadow : BaseObjet3D, IShadowDrawableObje
     }
 
     /// <inheritdoc/>
-    public unsafe void Draw(D3D11GraphicPipeline graphicPipeline, ref readonly System.Numerics.Matrix4x4 matViewProj, ref readonly System.Numerics.Matrix4x4 matViewProjLight)
+    public unsafe void Draw(RenderPassType renderPass, Scene scene, ref readonly System.Numerics.Matrix4x4 matViewProj, ref readonly System.Numerics.Matrix4x4 matViewProjLight)
     {
         System.Numerics.Matrix4x4 matViewProjLightCopy = matViewProjLight;
         Action<D3D11GraphicPipeline, SubObjet3D> additionalConf = (graphicPipeline, subObject) =>
@@ -39,7 +39,7 @@ internal abstract class BaseObjet3DWithShadow : BaseObjet3D, IShadowDrawableObje
             SetUpShadowConstants(graphicPipeline, in matViewProjLightCopy, subObject);
         };
         base.AdditionalDrawConfig += additionalConf;
-        base.Draw(graphicPipeline, in matViewProj);
+        base.Draw(renderPass, scene, in matViewProj);
         base.AdditionalDrawConfig -= additionalConf;
     }
 
@@ -88,7 +88,7 @@ internal abstract class BaseObjet3DWithShadow : BaseObjet3D, IShadowDrawableObje
     /// Initialise les vertex pour la shhadow map
     /// </summary>
     /// <returns></returns>
-    protected abstract SommetShadowMap[] InitVertexShadowMap();
+    protected abstract SommetPosition[] InitVertexShadowMap();
 
     private unsafe void InitBuffersShadowMap<TVertex>(GraphicBufferFactory bufferFactory, TVertex[] sommets)
         where TVertex : unmanaged
@@ -98,68 +98,6 @@ internal abstract class BaseObjet3DWithShadow : BaseObjet3D, IShadowDrawableObje
 
         // Create our constant buffer.
         _constantBufferShadowMap = bufferFactory.CreateConstantBuffer<ObjectShadowMapShadersParams>(Usage.Default, CpuAccessFlag.None, $"{Name}_ConstantBufferShadowMap");
-    }
-
-    /// <summary>
-    /// VertexShader file
-    /// </summary>
-    [return: NotNull]
-    protected override ShaderCodeFile InitVertexShaderCodeFile()
-    {
-        string filePath = "shaders\\DepthTest_VS.hlsl";
-        string entryPoint = "DepthTestVS";
-        string target = "vs_5_0";
-        // #define D3DCOMPILE_ENABLE_STRICTNESS                    (1 << 11)
-        uint flagStrictness = ((uint)1 << 11);
-        // #define D3DCOMPILE_DEBUG (1 << 0)
-        // #define D3DCOMPILE_SKIP_OPTIMIZATION                    (1 << 2)
-#if DEBUG
-        uint flagDebug = ((uint)1 << 0);
-        uint flagSkipOptimization = ((uint)(1 << 2));
-#else
-        uint flagDebug = 0;
-        uint flagSkipOptimization = 0;
-#endif
-        uint compilationFlags = flagStrictness | flagDebug | flagSkipOptimization;
-        return new ShaderCodeFile
-        (
-           filePath,
-           entryPoint,
-           target,
-           compilationFlags,
-           name: "DepthTest_VertexShader"
-        );
-    }
-
-    /// <summary>
-    /// PixelShader file
-    /// </summary>
-    [return: NotNull]
-    protected override ShaderCodeFile InitPixelShaderCodeFile()
-    {
-        string filePath = "shaders\\DepthTest_PS.hlsl";
-        string entryPoint = "DepthTestPS";
-        string target = "ps_5_0";
-        // #define D3DCOMPILE_ENABLE_STRICTNESS                    (1 << 11)
-        uint flagStrictness = ((uint)1 << 11);
-        // #define D3DCOMPILE_DEBUG (1 << 0)
-        // #define D3DCOMPILE_SKIP_OPTIMIZATION                    (1 << 2)
-#if DEBUG
-        uint flagDebug = ((uint)1 << 0);
-        uint flagSkipOptimization = ((uint)(1 << 2));
-#else
-        uint flagDebug = 0;
-        uint flagSkipOptimization = 0;
-#endif
-        uint compilationFlags = flagStrictness | flagDebug | flagSkipOptimization;
-        return new ShaderCodeFile
-        (
-           filePath,
-           entryPoint,
-           target,
-           compilationFlags,
-           name: "DepthTest_PixelShader"
-        );
     }
 
     private void SetUpShadowConstants(D3D11GraphicPipeline graphicPipeline, ref readonly System.Numerics.Matrix4x4 matViewProjLight, SubObjet3D subObjet3D)

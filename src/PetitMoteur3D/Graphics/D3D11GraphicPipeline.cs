@@ -3,6 +3,7 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.Runtime.CompilerServices;
+using PetitMoteur3D.Graphics.Shaders;
 using PetitMoteur3D.Graphics.Stages;
 using PetitMoteur3D.Window;
 using Silk.NET.Core.Native;
@@ -21,6 +22,7 @@ public class D3D11GraphicPipeline : IDisposable
     public ComPtr<ID3D11RasterizerState> WireFrameCullBackRS { get { return _wireFrameCullBackRS; } }
 
     internal D3D11GraphicDevice GraphicDevice => _graphicDevice;
+    internal RenderPassFactory ShaderFactory => _shaderFactory;
 
     internal InputAssemblerStage InputAssemblerStage { get; init; }
     internal VertexShaderStage VertexShaderStage { get; init; }
@@ -40,6 +42,7 @@ public class D3D11GraphicPipeline : IDisposable
 
     private readonly D3D11GraphicDevice _graphicDevice;
     private readonly GraphicDeviceRessourceFactory _graphicRessourceFactory;
+    private readonly RenderPassFactory _shaderFactory;
 
     private SwapChainDesc1 _swapchainDescription;
 
@@ -101,6 +104,8 @@ public class D3D11GraphicPipeline : IDisposable
         _wireFrameCullBackRS = RessourceFactory.CreateRasterizerState(in rsWireDesc, "WireFrameCullBack_RasterizerState");
 
         RasterizerStage.SetState(_solidCullBackRS);
+
+        _shaderFactory = new RenderPassFactory(this); 
 
         _disposed = false;
 #if USE_RENDERDOC
@@ -202,10 +207,17 @@ public class D3D11GraphicPipeline : IDisposable
         _graphicDevice.DeviceContext.DrawIndexed(IndexCount, StartIndexLocation, BaseVertexLocation);
     }
 
-    public void SetRenderTarget(bool clear = true)
+    public void SetRenderTarget(bool clear = true, bool renderTargetOnly = false)
     {
         // Tell the output merger about our render target view.
-        OutputMergerStage.SetRenderTarget(1, in _renderTargetView, _depthTexture.TextureDepthStencilView);
+        if (renderTargetOnly)
+        {
+            OutputMergerStage.SetRenderTarget(1, in _renderTargetView);
+        }
+        else
+        {
+            OutputMergerStage.SetRenderTarget(1, in _renderTargetView, _depthTexture.TextureDepthStencilView);
+        }
         if (clear)
         {
             ClearRenderTarget();
@@ -339,7 +351,7 @@ public class D3D11GraphicPipeline : IDisposable
             Texture2D = new Tex2DDsv() { MipSlice = 0 }
         };
 
-        _depthTexture = _graphicRessourceFactory.TextureManager.GetOrCreateTexture("GraphicPipeline_DepthTexture", depthTextureDesc, 
+        _depthTexture = _graphicRessourceFactory.TextureManager.GetOrCreateTexture("GraphicPipeline_DepthTexture", depthTextureDesc,
             builder => builder
             .WithDepthStencilView(descDSView)
             .WithName("GraphicPipeline_DepthTexture"));

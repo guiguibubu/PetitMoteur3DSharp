@@ -8,6 +8,7 @@ using ImGuiNET;
 using PetitMoteur3D.Camera;
 using PetitMoteur3D.DebugGui;
 using PetitMoteur3D.Graphics;
+using PetitMoteur3D.Graphics.Shaders;
 using PetitMoteur3D.Input;
 using PetitMoteur3D.Logging;
 using PetitMoteur3D.Window;
@@ -43,6 +44,7 @@ public class Engine
     private bool _showWireFrame;
     private bool _showScene;
     private bool _showShadow;
+    private bool _showDepthTest;
     private bool _isShadowOrthographique;
     private bool _isCameraOrthographique;
     private bool _useDebugCamera;
@@ -274,6 +276,7 @@ public class Engine
                         ImGui.Checkbox("Show Metrics", ref _imGuiShowMetrics);     // Edit bool
                         ImGui.Checkbox("Show Scene", ref _showScene);     // Edit bool
                         ImGui.Checkbox("Show Shadow", ref _showShadow);     // Edit bool
+                        ImGui.Checkbox("Show DepthTest", ref _showDepthTest);     // Edit bool
                         ImGui.Checkbox("Show Shadow Orthographique", ref _isShadowOrthographique);     // Edit bool
                         ImGui.Checkbox("Show Debug Camera Options", ref _imGuiShowDebugCameraOptions);     // Edit bool
                         ImGui.Checkbox("Show Game Camera Options", ref _imGuiShowGameCameraOptions);     // Edit bool
@@ -459,30 +462,30 @@ public class Engine
         };
         _gameCamera.Move(0f, 2f, -10f);
 
-        _scene = InitDefaultScene(_graphicDevice.RessourceFactory, _gameCamera, _window);
+        _scene = InitDefaultScene(_graphicDevice.RessourceFactory, _graphicPipeline.ShaderFactory, _gameCamera, _window);
         // Set default rasterizer state
         _scene.RasterizerState = _graphicPipeline.SolidCullBackRS;
     }
 
-    private static Scene InitDefaultScene(GraphicDeviceRessourceFactory ressourceFactory, ICamera gameCamera, IWindow window)
+    private static Scene InitDefaultScene(GraphicDeviceRessourceFactory ressourceFactory, RenderPassFactory shaderFactory, ICamera gameCamera, IWindow window)
     {
         Scene scene = new(ressourceFactory, gameCamera, window.Size);
-        Bloc bloc1 = new(4.0f, 4.0f, 4.0f, ressourceFactory);
+        Bloc bloc1 = new(4.0f, 4.0f, 4.0f, ressourceFactory, shaderFactory);
         bloc1.SetTexture(ressourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall.jpg"));
         bloc1.SetNormalMapTexture(ressourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall_normal.jpg"));
         bloc1.Move(-4f, 2f, 0f);
 
-        Bloc bloc2 = new(4.0f, 4.0f, 4.0f, ressourceFactory);
+        Bloc bloc2 = new(4.0f, 4.0f, 4.0f, ressourceFactory, shaderFactory);
         bloc2.SetTexture(ressourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall.jpg"));
         bloc2.SetNormalMapTexture(ressourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall_normal.jpg"));
         bloc2.Move(4f, 2f, 0f);
 
-        Bloc bloc3 = new(4.0f, 4.0f, 4.0f, ressourceFactory);
+        Bloc bloc3 = new(4.0f, 4.0f, 4.0f, ressourceFactory, shaderFactory);
         bloc3.SetTexture(ressourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall.jpg"));
         bloc3.SetNormalMapTexture(ressourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall_normal.jpg"));
         bloc3.Move(-4f, 2f, 4f);
 
-        Bloc bloc4 = new(4.0f, 4.0f, 4.0f, ressourceFactory);
+        Bloc bloc4 = new(4.0f, 4.0f, 4.0f, ressourceFactory, shaderFactory);
         bloc4.SetTexture(ressourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall.jpg"));
         bloc4.SetNormalMapTexture(ressourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall_normal.jpg"));
         bloc4.Move(4f, 2f, 4f);
@@ -501,13 +504,13 @@ public class Engine
 
         rootMesh.AddTransform(Matrix4x4.CreateScale(4f / float.Max(float.Max(dimX, dimY), dimZ)));
 
-        ObjetMesh objetMesh = new(rootMesh, ressourceFactory);
+        ObjetMesh objetMesh = new(rootMesh, ressourceFactory, shaderFactory);
         Vector3 sceneCenter = new(centerX, centerY, centerZ);
         Vector3 sceneDim = new(dimX, dimY, dimZ);
 
         objetMesh.Move(0f, 2f, 0f);
 
-        Plane ground = new(10f, 10f, ressourceFactory);
+        Plane ground = new(10f, 10f, ressourceFactory, shaderFactory);
         ground.SetTexture(ressourceFactory.TextureManager.GetOrLoadTexture("textures\\silk.png"));
         ground.Rotate(Vector3.UnitX, (float)(Math.PI / 2f));
 
@@ -574,14 +577,15 @@ public class Engine
         if (_initAnimationFinished)
         {
             _scene.ShowShadow = _showShadow;
+            _scene.ShowDepthTest = _showDepthTest;
             _scene.UseDebugCam = _useDebugCamera;
             if (_showShadow)
             {
-                _scene.DrawShadow(_graphicPipeline);
+                //_scene.DrawShadow(_graphicPipeline);
             }
             //if (_useDebugCamera)
             {
-                _scene.DrawDebugDepth(_graphicPipeline);
+                //_scene.DrawDebugDepth(_graphicPipeline);
             }
 
             Matrix4x4 matViewProj;

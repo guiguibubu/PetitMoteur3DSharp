@@ -38,7 +38,7 @@ internal sealed class D3D11GraphicDevice : IDisposable
 #pragma warning restore CS0618 // Type or member is obsolete
         InitDevice(_d3d11Api);
 
-        RessourceFactory = new(this);
+        RessourceFactory = new GraphicDeviceRessourceFactory(this);
 
         _disposed = false;
     }
