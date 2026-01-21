@@ -21,4 +21,8 @@ internal class RenderPassFactory
     {
         return new MiniPhongRenderPass(_graphicPipeline, name);
     }
+    public ShadowMapRenderPass CreateShadowMapRenderPass(string name = "")
+    {
+        return new ShadowMapRenderPass(_graphicPipeline, name);
+    }
 }

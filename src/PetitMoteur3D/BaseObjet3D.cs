@@ -20,7 +20,7 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
     public string Name { get { return _name; } }
 
     /// <inheritdoc/>
-    public RenderPassType[] SupportedRenderPasses => [RenderPassType.Standart, RenderPassType.DepthTest];
+    public RenderPassType[] SupportedRenderPasses => [RenderPassType.Standart, RenderPassType.DepthTest, RenderPassType.Shadow];
     #endregion
 
     #region Protected Properties
@@ -58,8 +58,10 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
 
     private bool _disposed;
     private readonly GraphicBufferFactory _bufferFactory;
+
     private readonly DepthTestRenderPass _depthTestRenderPass;
     private readonly MiniPhongNormalMapRenderPass _mainRenderPass;
+    private readonly ShadowMapRenderPass _shadowMapRenderPass;
 
     protected BaseObjet3D(GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, RenderPassFactory renderPassFactory, string name = "")
     {
@@ -86,7 +88,8 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
         _indexBuffer = default;
 
         _depthTestRenderPass = renderPassFactory.CreateDepthTestRenderPass($"{_name}_DepthTestRenderPass");
-        _mainRenderPass = renderPassFactory.CreateMiniPhongNormalMapRenderPass($"{_name}_MiniPhongNormalMapRenderPass");
+        _mainRenderPass = renderPassFactory.CreateMiniPhongNormalMapRenderPass($"{_name}_MainRenderPass");
+        _shadowMapRenderPass = renderPassFactory.CreateShadowMapRenderPass($"{_name}_ShadowMapRenderPass");
 
         _disposed = false;
     }
@@ -266,6 +269,39 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
                 _mainRenderPass.ClearPixelShaderResources();
             }
         }
+        else if (renderPass == RenderPassType.Shadow)
+        {
+            // Choisir la topologie des primitives
+            _shadowMapRenderPass.UpdatePrimitiveTopology(D3DPrimitiveTopology.D3D11PrimitiveTopologyTrianglelist);
+            _shadowMapRenderPass.SetPrimitiveTopology();
+            // Source des sommets
+            _shadowMapRenderPass.UpdateVertexBuffer(_vertexBufferPosition, _vertexPositionStride);
+            _shadowMapRenderPass.SetVertexBuffer();
+            // Source des index
+            _shadowMapRenderPass.UpdateIndexBuffer(_indexBuffer, Silk.NET.DXGI.Format.FormatR16Uint);
+            _shadowMapRenderPass.SetIndexBuffer();
+            // input layout des sommets
+            _shadowMapRenderPass.SetInputLayout();
+            foreach (SubObjet3D subObjet3D in _subObjects)
+            {
+                _shadowMapRenderPass.UpdateVertexShaderConstantBuffer(new ShadowMapRenderPass.VertexShaderConstantBufferParams()
+                {
+                    matWorldViewProj = System.Numerics.Matrix4x4.Transpose(subObjet3D.Transformation * _matWorld * matViewProj)
+                });
+
+                // Activer le VS
+                _shadowMapRenderPass.SetVertexShader();
+                _shadowMapRenderPass.SetVertexShaderConstantBuffers();
+                // Activer le GS
+                _shadowMapRenderPass.SetGeometryShader();
+                // Activer le PS
+                _shadowMapRenderPass.SetPixelShader();
+                _shadowMapRenderPass.SetPixelShaderConstantBuffers();
+
+                // **** Rendu de l’objet
+                _shadowMapRenderPass.DrawIndexed((uint)_indices.Length, 0, 0);
+            }
+        }
     }
 
     public void SetTexture(Texture texture)
@@ -351,6 +387,7 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
 
             _depthTestRenderPass.Dispose();
             _mainRenderPass.Dispose();
+            _shadowMapRenderPass.Dispose();
 
             _disposed = true;
         }
