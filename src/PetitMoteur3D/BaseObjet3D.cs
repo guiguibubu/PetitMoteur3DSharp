@@ -24,6 +24,7 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
     #endregion
 
     #region Protected Properties
+    protected abstract bool SupportShadow { get; }
     protected ref readonly System.Numerics.Matrix4x4 MatWorld { get { return ref _matWorld; } }
     protected ref readonly SubObjet3D[] SubObjects { get { return ref _subObjects; } }
     protected ComPtr<ID3D11Buffer> IndexBuffer { get { return _indexBuffer; } }
@@ -60,7 +61,7 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
     private readonly GraphicBufferFactory _bufferFactory;
 
     private readonly DepthTestRenderPass _depthTestRenderPass;
-    private readonly MiniPhongNormalMapRenderPass _mainRenderPass;
+    private readonly MiniPhongNormalMapShadowMapRenderPass _mainRenderPass;
     private readonly ShadowMapRenderPass _shadowMapRenderPass;
 
     protected BaseObjet3D(GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, RenderPassFactory renderPassFactory, string name = "")
@@ -88,7 +89,7 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
         _indexBuffer = default;
 
         _depthTestRenderPass = renderPassFactory.Create<DepthTestRenderPass>($"{_name}_DepthTestRenderPass");
-        _mainRenderPass = renderPassFactory.Create<MiniPhongNormalMapRenderPass>($"{_name}_MainRenderPass");
+        _mainRenderPass = renderPassFactory.Create<MiniPhongNormalMapShadowMapRenderPass>($"{_name}_MainRenderPass");
         _shadowMapRenderPass = renderPassFactory.Create<ShadowMapRenderPass>($"{_name}_ShadowMapRenderPass");
 
         _disposed = false;
@@ -165,8 +166,10 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
     }
 
     /// <inheritdoc/>
-    public virtual unsafe void Draw(RenderPassType renderPass, Scene scene, ref readonly System.Numerics.Matrix4x4 matViewProj)
+    public virtual unsafe void Draw(RenderPassType renderPass, SceneViewContext scene)
     {
+        Matrix4x4 matViewProj = scene.MatViewProj;
+        Matrix4x4 matViewProjLight = scene.MatViewProjLight;
         if (renderPass == RenderPassType.DepthTest)
         {
             // Choisir la topologie des primitives
@@ -222,34 +225,38 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
             _mainRenderPass.SetIndexBuffer();
             // input layout des sommets
             _mainRenderPass.SetInputLayout();
+
             foreach (SubObjet3D subObjet3D in _subObjects)
             {
                 // Initialiser et sélectionner les « constantes » des shaders
-                _mainRenderPass.UpdateSceneConstantBuffer(new MiniPhongNormalMapRenderPass.SceneConstantBufferParams()
+                _mainRenderPass.UpdateSceneConstantBuffer(new MiniPhongNormalMapShadowMapRenderPass.SceneConstantBufferParams()
                 {
-                    LightParams = new MiniPhongNormalMapRenderPass.LightParams()
+                    LightParams = new MiniPhongNormalMapShadowMapRenderPass.LightParams()
                     {
                         Position = scene.Light.Position,
                         Direction = scene.Light.Direction,
                         AmbiantColor = scene.Light.AmbiantColor,
                         DiffuseColor = scene.Light.DiffuseColor
                     },
-                    CameraPos = new Vector4(scene.GameCamera.Position, 1.0f)
+                    CameraPos = scene.GameCameraPos
                 });
 
-                _mainRenderPass.UpdateObjectOptionsConstantBuffer(new MiniPhongNormalMapRenderPass.ObjectOptionsConstantBufferParams()
+                _mainRenderPass.UpdateObjectOptionsConstantBuffer(new MiniPhongNormalMapShadowMapRenderPass.ObjectOptionsConstantBufferParams()
                 {
                     hasTexture = Convert.ToInt32(_textureD3D.Handle is not null),
-                    hasNormalMap = Convert.ToInt32(_normalMap.Handle is not null)
+                    hasNormalMap = Convert.ToInt32(_normalMap.Handle is not null),
+                    drawShadow = Convert.ToInt32(SupportShadow && scene.ShowShadow)
                 });
 
-                _mainRenderPass.UpdateVertexObjectConstantBuffer(new MiniPhongNormalMapRenderPass.VertexObjectConstantBufferParams()
+                Matrix4x4 matrixWorld = subObjet3D.Transformation * _matWorld;
+                _mainRenderPass.UpdateVertexObjectConstantBuffer(new MiniPhongNormalMapShadowMapRenderPass.VertexObjectConstantBufferParams()
                 {
-                    matWorldViewProj = System.Numerics.Matrix4x4.Transpose(subObjet3D.Transformation * _matWorld * matViewProj),
-                    matWorld = System.Numerics.Matrix4x4.Transpose(subObjet3D.Transformation * _matWorld),
+                    matWorldViewProj = System.Numerics.Matrix4x4.Transpose(matrixWorld * matViewProj),
+                    matWorld = System.Numerics.Matrix4x4.Transpose(matrixWorld),
+                    matWorldViewProjLight = System.Numerics.Matrix4x4.Transpose(matrixWorld * matViewProjLight),
                 });
 
-                _mainRenderPass.UpdatePixelObjectConstantBuffer(new MiniPhongNormalMapRenderPass.PixelObjectConstantBufferParams()
+                _mainRenderPass.UpdatePixelObjectConstantBuffer(new MiniPhongNormalMapShadowMapRenderPass.PixelObjectConstantBufferParams()
                 {
                     ambiantMaterialValue = subObjet3D.Material.Ambient,
                     diffuseMaterialValue = subObjet3D.Material.Diffuse,
@@ -266,6 +273,7 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
                 // Activation de la texture
                 _mainRenderPass.UpdateTexture(_textureD3D);
                 _mainRenderPass.UpdateNormalMap(_normalMap);
+                _mainRenderPass.UpdateShadowMap(scene.ShadowMap.DepthTexture.TextureView);
                 _mainRenderPass.SetPixelShaderRessources();
 
                 // Le sampler state
@@ -294,7 +302,7 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
             {
                 _shadowMapRenderPass.UpdateVertexShaderConstantBuffer(new ShadowMapRenderPass.VertexShaderConstantBufferParams()
                 {
-                    matWorldViewProj = System.Numerics.Matrix4x4.Transpose(subObjet3D.Transformation * _matWorld * matViewProj)
+                    matWorldViewProj = System.Numerics.Matrix4x4.Transpose(subObjet3D.Transformation * _matWorld * matViewProjLight)
                 });
 
                 // Activer le VS

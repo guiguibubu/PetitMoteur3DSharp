@@ -1,3 +1,5 @@
+#include "MiniPhongNormalMapShadowMap_VSOut.hlsl"
+
 struct LightParams
 {
     float3 pos; // la position de la source d’éclairage (Point)
@@ -14,34 +16,16 @@ cbuffer frameBuffer
 
 cbuffer objectBuffer
 {
-    float4x4 matWorldViewProj; // la matrice totale
-    float4x4 matWorld; // matrice de transformation dans le monde
     float4 vAMat; // la valeur ambiante du matériau
     float4 vDMat; // la valeur diffuse du matériau
+}
+
+cbuffer objectOptionsBuffer
+{
     bool hasTexture; // indique si a une texture
     bool hasNormalMap; // indique si a une normal map
-}
-
-cbuffer frameShadowBuffer
-{
     bool drawShadow; // do we need to draw shadows
 }
-
-cbuffer objectShadowBuffer
-{
-    float4x4 matWorldViewProjLight; // Matrice WVP pour lumière
-}
-
-struct VS_Sortie
-{
-    float4 Pos : SV_Position;
-    float3 Norm : TEXCOORD0;
-    float3 Tang : TEXCOORD1;
-    float3 vDirLum : TEXCOORD2;
-    float3 vDirCam : TEXCOORD3;
-    float2 coordTex : TEXCOORD4;
-    float4 lightSpacePos : TEXCOORD5;
-};
 
 SamplerState SampleState; // l’état de sampling
 SamplerComparisonState ShadowMapSampler; // sampling pour la shadow map
@@ -49,36 +33,6 @@ SamplerComparisonState ShadowMapSampler; // sampling pour la shadow map
 Texture2D textureEntree; // la texture
 Texture2D textureNormalMap; // la normal map
 Texture2D textureShadowMap; // la shadow map
-
-VS_Sortie MiniPhongNormalMapShadowMapVS(float4 Pos : POSITION, float3 Normale : NORMAL, float2 coordTex : TEXCOORD, float3 Tangent : TANGENT)
-{
-    VS_Sortie sortie = (VS_Sortie) 0;
-    sortie.Pos = mul(Pos, matWorldViewProj);
-    sortie.Norm = mul(float4(Normale, 0.0f), matWorld).xyz;
-    sortie.Tang = mul(float4(Tangent, 0.0f), matWorld).xyz;
-    float3 PosWorld = mul(Pos, matWorld).xyz;
-    if (vLumiere.dir.x != 0.0f || vLumiere.dir.y != 0.0f || vLumiere.dir.z != 0.0f)
-    {
-        sortie.vDirLum = -vLumiere.dir.xyz;
-    }
-    else
-    {
-        sortie.vDirLum = vLumiere.pos.xyz - PosWorld;
-    }
-    sortie.vDirCam = vCamera.xyz - PosWorld;
-
-	// Coordonnées d’application de texture
-    sortie.coordTex = coordTex;
-
-	// Valeurs pour shadow map
-   // Coordonnées
-    if (drawShadow)
-    {
-        sortie.lightSpacePos = mul(Pos, matWorldViewProjLight);
-    }
-	
-    return sortie;
-}
 
 float4 MiniPhongNormalMapShadowMapPS(VS_Sortie vs) : SV_Target0
 {

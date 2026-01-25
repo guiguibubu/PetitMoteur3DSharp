@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using System.Numerics;
 using PetitMoteur3D.Graphics;
 using PetitMoteur3D.Graphics.Shaders;
@@ -16,6 +15,8 @@ internal sealed class Plane : BaseObjet3D
     private readonly SubObjet3D[] _subObjects;
 
     private System.Numerics.Matrix4x4 _transformation;
+
+    protected override bool SupportShadow => true;
 
     public Plane(float dx, float dy, GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, RenderPassFactory shaderFactory)
         : base(graphicDeviceRessourceFactory, shaderFactory)
@@ -77,12 +78,6 @@ internal sealed class Plane : BaseObjet3D
     {
         return _sommets;
     }
-
-    ///// <inheritdoc/>
-    //protected override SommetShadowMap[] InitVertexShadowMap()
-    //{
-    //    return _sommets.Select(s => new SommetShadowMap(s.Position)).ToArray();
-    //}
 
     /// <inheritdoc/>
     protected override ushort[] InitIndex()

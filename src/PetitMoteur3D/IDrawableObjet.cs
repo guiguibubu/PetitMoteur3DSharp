@@ -11,5 +11,5 @@ internal interface IDrawableObjet
     /// </summary>
     /// <param name="graphicPipeline"></param>
     /// <param name="matViewProj"></param>
-    void Draw(RenderPassType renderPass, Scene scene, ref readonly System.Numerics.Matrix4x4 matViewProj);
+    void Draw(RenderPassType renderPass, SceneViewContext scene);
 }
