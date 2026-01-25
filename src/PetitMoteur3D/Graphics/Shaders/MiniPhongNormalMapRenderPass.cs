@@ -11,12 +11,10 @@ namespace PetitMoteur3D.Graphics.Shaders;
 
 internal sealed class MiniPhongNormalMapRenderPass : BaseRenderPass, IDisposable
 {
-    public ComPtr<ID3D11Buffer> VertexShaderConstantBuffer => _sceneConstantBuffer;
-    public ComPtr<ID3D11Buffer> PixelShaderConstantBuffer => _objectConstantBuffer;
-    public ComPtr<ID3D11SamplerState> SampleState => _sampleState;
-
     private ComPtr<ID3D11Buffer> _sceneConstantBuffer;
-    private ComPtr<ID3D11Buffer> _objectConstantBuffer;
+    private ComPtr<ID3D11Buffer> _objectOptionsConstantBuffer;
+    private ComPtr<ID3D11Buffer> _vertexObjectConstantBuffer;
+    private ComPtr<ID3D11Buffer> _pixelObjectConstantBuffer;
     private ComPtr<ID3D11SamplerState> _sampleState;
 
     private ComPtr<ID3D11ShaderResourceView> _textureD3D;
@@ -37,9 +35,19 @@ internal sealed class MiniPhongNormalMapRenderPass : BaseRenderPass, IDisposable
         GraphicPipeline.RessourceFactory.UpdateSubresource(_sceneConstantBuffer, 0, in Unsafe.NullRef<Box>(), in value, 0, 0);
     }
 
-    public void UpdateObjectConstantBuffer(ObjectConstantBufferParams value)
+    public void UpdateObjectOptionsConstantBuffer(ObjectOptionsConstantBufferParams value)
     {
-        GraphicPipeline.RessourceFactory.UpdateSubresource(_objectConstantBuffer, 0, in Unsafe.NullRef<Box>(), in value, 0, 0);
+        GraphicPipeline.RessourceFactory.UpdateSubresource(_objectOptionsConstantBuffer, 0, in Unsafe.NullRef<Box>(), in value, 0, 0);
+    }
+
+    public void UpdateVertexObjectConstantBuffer(VertexObjectConstantBufferParams value)
+    {
+        GraphicPipeline.RessourceFactory.UpdateSubresource(_vertexObjectConstantBuffer, 0, in Unsafe.NullRef<Box>(), in value, 0, 0);
+    }
+
+    public void UpdatePixelObjectConstantBuffer(PixelObjectConstantBufferParams value)
+    {
+        GraphicPipeline.RessourceFactory.UpdateSubresource(_pixelObjectConstantBuffer, 0, in Unsafe.NullRef<Box>(), in value, 0, 0);
     }
 
     public void UpdateTexture(ComPtr<ID3D11ShaderResourceView> texture)
@@ -57,7 +65,7 @@ internal sealed class MiniPhongNormalMapRenderPass : BaseRenderPass, IDisposable
     public override void SetVertexShaderConstantBuffers()
     {
         GraphicPipeline.VertexShaderStage.SetConstantBuffers(0, 1, ref _sceneConstantBuffer);
-        GraphicPipeline.VertexShaderStage.SetConstantBuffers(1, 1, ref _objectConstantBuffer);
+        GraphicPipeline.VertexShaderStage.SetConstantBuffers(1, 1, ref _vertexObjectConstantBuffer);
     }
     #endregion
 
@@ -65,7 +73,8 @@ internal sealed class MiniPhongNormalMapRenderPass : BaseRenderPass, IDisposable
     public override void SetPixelShaderConstantBuffers()
     {
         GraphicPipeline.PixelShaderStage.SetConstantBuffers(0, 1, ref _sceneConstantBuffer);
-        GraphicPipeline.PixelShaderStage.SetConstantBuffers(1, 1, ref _objectConstantBuffer);
+        GraphicPipeline.PixelShaderStage.SetConstantBuffers(1, 1, ref _pixelObjectConstantBuffer);
+        GraphicPipeline.PixelShaderStage.SetConstantBuffers(2, 1, ref _objectOptionsConstantBuffer);
     }
 
     public override unsafe void SetPixelShaderRessources()
@@ -110,7 +119,9 @@ internal sealed class MiniPhongNormalMapRenderPass : BaseRenderPass, IDisposable
         _sceneConstantBuffer = bufferFactory.CreateConstantBuffer<SceneConstantBufferParams>(Usage.Default, CpuAccessFlag.None, $"{Name}_SceneConstantBuffer");
 
         // Create our constant buffer.
-        _objectConstantBuffer = bufferFactory.CreateConstantBuffer<ObjectConstantBufferParams>(Usage.Default, CpuAccessFlag.None, $"{Name}_ObjectConstantBuffer");
+        _objectOptionsConstantBuffer = bufferFactory.CreateConstantBuffer<ObjectOptionsConstantBufferParams>(Usage.Default, CpuAccessFlag.None, $"{Name}_vertexObjectConstantBuffer");
+        _pixelObjectConstantBuffer = bufferFactory.CreateConstantBuffer<PixelObjectConstantBufferParams>(Usage.Default, CpuAccessFlag.None, $"{Name}_vertexObjectConstantBuffer");
+        _vertexObjectConstantBuffer = bufferFactory.CreateConstantBuffer<VertexObjectConstantBufferParams>(Usage.Default, CpuAccessFlag.None, $"{Name}_vertexObjectConstantBuffer");
     }
 
     /// <inheritdoc/>
@@ -251,24 +262,8 @@ internal sealed class MiniPhongNormalMapRenderPass : BaseRenderPass, IDisposable
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 16)]
-    internal struct ObjectConstantBufferParams : IResetable
+    internal struct ObjectOptionsConstantBufferParams : IResetable
     {
-        /// <summary>
-        /// la matrice totale
-        /// </summary>
-        public Matrix4x4 matWorldViewProj;
-        /// <summary>
-        /// matrice de transformation dans le monde
-        /// </summary>
-        public Matrix4x4 matWorld;
-        /// <summary>
-        /// la valeur ambiante du matériau
-        /// </summary>
-        public Vector4 ambiantMaterialValue;
-        /// <summary>
-        /// la valeur diffuse du matériau
-        /// </summary>
-        public Vector4 diffuseMaterialValue;
         /// <summary>
         /// Indique la présence d'une texture
         /// </summary>
@@ -278,6 +273,42 @@ internal sealed class MiniPhongNormalMapRenderPass : BaseRenderPass, IDisposable
         /// </summary>
         public int hasNormalMap;
         private readonly ulong alignement1_1;
+
+        public void Reset()
+        {
+            MemoryHelper.ResetMemory(this);
+        }
+    }
+
+    [StructLayout(LayoutKind.Sequential, Pack = 16)]
+    internal struct VertexObjectConstantBufferParams : IResetable
+    {
+        /// <summary>
+        /// la matrice totale
+        /// </summary>
+        public Matrix4x4 matWorldViewProj;
+        /// <summary>
+        /// matrice de transformation dans le monde
+        /// </summary>
+        public Matrix4x4 matWorld;
+
+        public void Reset()
+        {
+            MemoryHelper.ResetMemory(this);
+        }
+    }
+
+    [StructLayout(LayoutKind.Sequential, Pack = 16)]
+    internal struct PixelObjectConstantBufferParams : IResetable
+    {
+        /// <summary>
+        /// la valeur ambiante du matériau
+        /// </summary>
+        public Vector4 ambiantMaterialValue;
+        /// <summary>
+        /// la valeur diffuse du matériau
+        /// </summary>
+        public Vector4 diffuseMaterialValue;
 
         public void Reset()
         {
@@ -297,7 +328,9 @@ internal sealed class MiniPhongNormalMapRenderPass : BaseRenderPass, IDisposable
             // TODO: free unmanaged resources (unmanaged objects) and override finalizer
             // TODO: set large fields to null
             _sceneConstantBuffer.Dispose();
-            _objectConstantBuffer.Dispose();
+            _objectOptionsConstantBuffer.Dispose();
+            _vertexObjectConstantBuffer.Dispose();
+            _pixelObjectConstantBuffer.Dispose();
             _sampleState.Dispose();
 
             base.Dispose(disposing);

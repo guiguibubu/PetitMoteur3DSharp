@@ -237,14 +237,22 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
                     CameraPos = new Vector4(scene.GameCamera.Position, 1.0f)
                 });
 
-                _mainRenderPass.UpdateObjectConstantBuffer(new MiniPhongNormalMapRenderPass.ObjectConstantBufferParams()
+                _mainRenderPass.UpdateObjectOptionsConstantBuffer(new MiniPhongNormalMapRenderPass.ObjectOptionsConstantBufferParams()
+                {
+                    hasTexture = Convert.ToInt32(_textureD3D.Handle is not null),
+                    hasNormalMap = Convert.ToInt32(_normalMap.Handle is not null)
+                });
+
+                _mainRenderPass.UpdateVertexObjectConstantBuffer(new MiniPhongNormalMapRenderPass.VertexObjectConstantBufferParams()
                 {
                     matWorldViewProj = System.Numerics.Matrix4x4.Transpose(subObjet3D.Transformation * _matWorld * matViewProj),
                     matWorld = System.Numerics.Matrix4x4.Transpose(subObjet3D.Transformation * _matWorld),
+                });
+
+                _mainRenderPass.UpdatePixelObjectConstantBuffer(new MiniPhongNormalMapRenderPass.PixelObjectConstantBufferParams()
+                {
                     ambiantMaterialValue = subObjet3D.Material.Ambient,
                     diffuseMaterialValue = subObjet3D.Material.Diffuse,
-                    hasTexture = Convert.ToInt32(_textureD3D.Handle is not null),
-                    hasNormalMap = Convert.ToInt32(_normalMap.Handle is not null)
                 });
 
                 // Activer le VS

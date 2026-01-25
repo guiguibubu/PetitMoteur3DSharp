@@ -18,10 +18,6 @@ cbuffer objectBuffer
 {
     float4x4 matWorldViewProj; // la matrice totale
     float4x4 matWorld; // matrice de transformation dans le monde
-    float4 vAMat; // la valeur ambiante du matériau
-    float4 vDMat; // la valeur diffuse du matériau
-    bool hasTexture; // indique si a une texture
-    bool hasNormalMap; // indique si a une normal map
 }
 
 VS_Sortie MiniPhongNormalMapVS(float4 Pos : POSITION, float3 Normale : NORMAL, float2 coordTex : TEXCOORD, float3 Tangent : TANGENT)
