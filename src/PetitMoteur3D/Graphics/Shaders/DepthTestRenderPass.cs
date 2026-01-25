@@ -9,147 +9,65 @@ using Silk.NET.Direct3D11;
 
 namespace PetitMoteur3D.Graphics.Shaders;
 
-internal sealed class DepthTestRenderPass : IDisposable
+internal sealed class DepthTestRenderPass : BaseRenderPass, IDisposable
 {
-    public string Name { get; init; }
-
     public ComPtr<ID3D11Buffer> VertexShaderConstantBuffer => _vertexShaderConstantBuffer;
     public ComPtr<ID3D11Buffer> PixelShaderConstantBuffer => _pixelShaderConstantBuffer;
-    public ComPtr<ID3D11VertexShader> VertexShader => _vertexShader;
-    public ComPtr<ID3D11InputLayout> VertexLayout => _vertexLayout;
-    public ComPtr<ID3D11PixelShader> PixelShader => _pixelShader;
     public ComPtr<ID3D11SamplerState> SampleState => _sampleState;
 
     private ComPtr<ID3D11Buffer> _vertexShaderConstantBuffer;
     private ComPtr<ID3D11Buffer> _pixelShaderConstantBuffer;
-    private ComPtr<ID3D11VertexShader> _vertexShader;
-    private ComPtr<ID3D11InputLayout> _vertexLayout;
-    private ComPtr<ID3D11PixelShader> _pixelShader;
     private ComPtr<ID3D11SamplerState> _sampleState;
-
-    private ComPtr<ID3D11Buffer> _vertexBuffer;
-    private uint _vertexStride;
-    private ComPtr<ID3D11Buffer> _indexBuffer;
-    private Silk.NET.DXGI.Format _format;
-    private D3DPrimitiveTopology _topology;
-
-    private readonly D3D11GraphicPipeline _graphicPipeline;
 
     private bool _disposedValue;
 
     public DepthTestRenderPass(D3D11GraphicPipeline graphicPipeline, string name = "")
+        : base(graphicPipeline, name)
     {
-        if (string.IsNullOrEmpty(name))
-        {
-            Name = this.GetType().Name + "_" + Guid.NewGuid().ToString();
-        }
-        else
-        {
-            Name = name;
-        }
-
-        _graphicPipeline = graphicPipeline;
-        Initialisation(graphicPipeline.GraphicDevice.RessourceFactory);
-
         _disposedValue = false;
     }
 
     #region Public methods
 
-    public void UpdatePrimitiveTopology(D3DPrimitiveTopology topology)
-    {
-        _topology = topology;
-    }
-
-    public void SetPrimitiveTopology()
-    {
-        _graphicPipeline.InputAssemblerStage.SetPrimitiveTopology(_topology);
-    }
-
-    public void UpdateVertexBuffer(ComPtr<ID3D11Buffer> vertexBuffer, uint vertexStride)
-    {
-        _vertexBuffer = vertexBuffer;
-        _vertexStride = vertexStride;
-    }
-
-    public void UpdateIndexBuffer(ComPtr<ID3D11Buffer> indexBuffer, Silk.NET.DXGI.Format format)
-    {
-        _indexBuffer = indexBuffer;
-        _format = format;
-    }
-
-    public void SetVertexBuffer(uint offset = 0)
-    {
-        _graphicPipeline.InputAssemblerStage.SetVertexBuffers(0, 1, ref _vertexBuffer, in _vertexStride, in offset);
-    }
-
-    public void SetIndexBuffer(uint offset = 0)
-    {
-        _graphicPipeline.InputAssemblerStage.SetIndexBuffer(_indexBuffer, _format, offset);
-    }
-
-    public void SetInputLayout()
-    {
-        _graphicPipeline.InputAssemblerStage.SetInputLayout(_vertexLayout);
-    }
-
+    #region Update Values
     public void UpdateVertexShaderConstantBuffer(VertexConstantBufferParams value)
     {
-        _graphicPipeline.RessourceFactory.UpdateSubresource(_vertexShaderConstantBuffer, 0, in Unsafe.NullRef<Box>(), in value, 0, 0);
-
+        GraphicPipeline.RessourceFactory.UpdateSubresource(_vertexShaderConstantBuffer, 0, in Unsafe.NullRef<Box>(), in value, 0, 0);
     }
 
     public void UpdatePixelShaderConstantBuffer(PixelConstantBufferParams value)
     {
-        _graphicPipeline.RessourceFactory.UpdateSubresource(_pixelShaderConstantBuffer, 0, in Unsafe.NullRef<Box>(), in value, 0, 0);
-    }
-
-    public void SetVertexShader()
-    {
-        _graphicPipeline.VertexShaderStage.SetShader(_vertexShader, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
-    }
-
-    public void SetVertexShaderConstantBuffers()
-    {
-        _graphicPipeline.VertexShaderStage.SetConstantBuffers(0, 1, ref _vertexShaderConstantBuffer);
-    }
-
-    public void SetGeometryShader()
-    {
-        _graphicPipeline.GeometryShaderStage.SetShader((ComPtr<ID3D11GeometryShader>)null, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
-    }
-
-    public void SetPixelShader()
-    {
-        _graphicPipeline.PixelShaderStage.SetShader(_pixelShader, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
-    }
-
-    public void SetPixelShaderConstantBuffers()
-    {
-        _graphicPipeline.PixelShaderStage.SetConstantBuffers(0, 1, ref _pixelShaderConstantBuffer);
-    }
-
-    public void SetSamplers()
-    {
-        _graphicPipeline.PixelShaderStage.SetSamplers(0, 1, in _sampleState);
-    }
-
-    public void DrawIndexed(uint indexCount, uint startIndexLocation, int baseVertexLocation)
-    {
-        _graphicPipeline.DrawIndexed(indexCount, startIndexLocation, baseVertexLocation);
+        GraphicPipeline.RessourceFactory.UpdateSubresource(_pixelShaderConstantBuffer, 0, in Unsafe.NullRef<Box>(), in value, 0, 0);
     }
     #endregion
 
-    #region Private methods
-
-    private void Initialisation(GraphicDeviceRessourceFactory graphicDeviceRessourceFactory)
+    #region Vertex Shader
+    public override void SetVertexShaderConstantBuffers()
     {
-        InitBuffers(graphicDeviceRessourceFactory.BufferFactory);
-        InitShaders(graphicDeviceRessourceFactory.ShaderManager);
-        InitTextureSampler(graphicDeviceRessourceFactory.TextureManager);
+        GraphicPipeline.VertexShaderStage.SetConstantBuffers(0, 1, ref _vertexShaderConstantBuffer);
+    }
+    #endregion
+
+    #region Pixel Shader
+    public override void SetPixelShaderConstantBuffers()
+    {
+        GraphicPipeline.PixelShaderStage.SetConstantBuffers(0, 1, ref _pixelShaderConstantBuffer);
     }
 
-    private unsafe void InitBuffers(GraphicBufferFactory bufferFactory)
+    public override void SetPixelShaderRessources() { }
+
+    public override void SetSamplers()
+    {
+        GraphicPipeline.PixelShaderStage.SetSamplers(0, 1, in _sampleState);
+    }
+
+    public override void ClearPixelShaderResources() { }
+    #endregion
+    #endregion
+
+    #region Protected methods
+    /// <inheritdoc/>
+    protected override unsafe void InitBuffers(GraphicBufferFactory bufferFactory)
     {
         // Create our constant buffer.
         _vertexShaderConstantBuffer = bufferFactory.CreateConstantBuffer<VertexConstantBufferParams>(Usage.Default, CpuAccessFlag.None, $"{Name}_VertexConstantBuffer");
@@ -158,63 +76,15 @@ internal sealed class DepthTestRenderPass : IDisposable
         _pixelShaderConstantBuffer = bufferFactory.CreateConstantBuffer<PixelConstantBufferParams>(Usage.Default, CpuAccessFlag.None, $"{Name}_PixelConstantBuffer");
     }
 
-    private unsafe void InitShaders(ShaderManager shaderManager)
+    /// <inheritdoc/>
+    protected override InputElementDesc[] GetInputLayoutDesc()
     {
-        InitVertexShader(shaderManager);
-        InitPixelShader(shaderManager);
+        return SommetPosition.InputLayoutDesc;
     }
 
-    private unsafe void InitTextureSampler(TextureManager textureManager)
-    {
-        // Initialisation des paramètres de sampling de la texture
-        SamplerDesc samplerDesc = new()
-        {
-            Filter = Filter.Anisotropic,
-            AddressU = TextureAddressMode.Wrap,
-            AddressV = TextureAddressMode.Wrap,
-            AddressW = TextureAddressMode.Wrap,
-            MipLODBias = 0f,
-            MaxAnisotropy = 4,
-            ComparisonFunc = ComparisonFunc.Always,
-            MinLOD = 0,
-            MaxLOD = float.MaxValue,
-        };
-        samplerDesc.BorderColor[0] = 0f;
-        samplerDesc.BorderColor[1] = 0f;
-        samplerDesc.BorderColor[2] = 0f;
-        samplerDesc.BorderColor[3] = 0f;
-
-        // Création de l’état de sampling
-        _sampleState = textureManager.Factory.CreateSampler(samplerDesc, $"{Name}_SamplerState");
-    }
-
-    /// <summary>
-    /// Compilation et chargement du vertex shader
-    /// </summary>
-    /// <param name="device"></param>
-    /// <param name="compiler"></param>
-    private unsafe void InitVertexShader(ShaderManager shaderManager)
-    {
-        ShaderCodeFile shaderFile = InitVertexShaderCodeFile();
-        shaderManager.GetOrLoadVertexShaderAndLayout(shaderFile, SommetPosition.InputLayoutDesc, ref _vertexShader, ref _vertexLayout);
-    }
-
-    /// <summary>
-    /// Compilation et chargement du pixel shader
-    /// </summary>
-    /// <param name="device"></param>
-    /// <param name="compiler"></param>
-    private unsafe void InitPixelShader(ShaderManager shaderManager)
-    {
-        ShaderCodeFile shaderFile = InitPixelShaderCodeFile();
-        _pixelShader = shaderManager.GetOrLoadPixelShader(shaderFile);
-    }
-
-    /// <summary>
-    /// VertexShader file
-    /// </summary>
+    /// <inheritdoc/>
     [return: NotNull]
-    private static ShaderCodeFile InitVertexShaderCodeFile()
+    protected override ShaderCodeFile InitVertexShaderCodeFile()
     {
         // Compilation et chargement du vertex shader
         string filePath = "shaders\\DepthTest_VS.hlsl";
@@ -242,11 +112,9 @@ internal sealed class DepthTestRenderPass : IDisposable
         );
     }
 
-    /// <summary>
-    /// PixelShader file
-    /// </summary>
-    [return: NotNull]
-    private static ShaderCodeFile InitPixelShaderCodeFile()
+    /// <inheritdoc/>
+    [return : NotNull]
+    protected override ShaderCodeFile? InitPixelShaderCodeFile()
     {
         string filePath = "shaders\\DepthTest_PS.hlsl";
         string entryPoint = "DepthTestPS";
@@ -273,6 +141,38 @@ internal sealed class DepthTestRenderPass : IDisposable
         );
     }
 
+    /// <inheritdoc/>
+    protected override void InitialisationImpl(GraphicDeviceRessourceFactory graphicDeviceRessourceFactory)
+    {
+        InitTextureSampler(graphicDeviceRessourceFactory.TextureManager);
+    }
+    #endregion
+
+    #region Private methods
+
+    private unsafe void InitTextureSampler(TextureManager textureManager)
+    {
+        // Initialisation des paramètres de sampling de la texture
+        SamplerDesc samplerDesc = new()
+        {
+            Filter = Filter.Anisotropic,
+            AddressU = TextureAddressMode.Wrap,
+            AddressV = TextureAddressMode.Wrap,
+            AddressW = TextureAddressMode.Wrap,
+            MipLODBias = 0f,
+            MaxAnisotropy = 4,
+            ComparisonFunc = ComparisonFunc.Always,
+            MinLOD = 0,
+            MaxLOD = float.MaxValue,
+        };
+        samplerDesc.BorderColor[0] = 0f;
+        samplerDesc.BorderColor[1] = 0f;
+        samplerDesc.BorderColor[2] = 0f;
+        samplerDesc.BorderColor[3] = 0f;
+
+        // Création de l’état de sampling
+        _sampleState = textureManager.Factory.CreateSampler(samplerDesc, $"{Name}_SamplerState");
+    }
     #endregion
 
     [StructLayout(LayoutKind.Sequential, Pack = 16)]
@@ -307,7 +207,7 @@ internal sealed class DepthTestRenderPass : IDisposable
         }
     }
 
-    private void Dispose(bool disposing)
+    protected override void Dispose(bool disposing)
     {
         if (!_disposedValue)
         {
@@ -320,10 +220,9 @@ internal sealed class DepthTestRenderPass : IDisposable
             // TODO: set large fields to null
             _vertexShaderConstantBuffer.Dispose();
             _pixelShaderConstantBuffer.Dispose();
-            _vertexShader.Dispose();
-            _vertexLayout.Dispose();
-            _pixelShader.Dispose();
             _sampleState.Dispose();
+
+            base.Dispose(disposing);
 
             _disposedValue = true;
         }
@@ -333,12 +232,5 @@ internal sealed class DepthTestRenderPass : IDisposable
     {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
         Dispose(disposing: false);
-    }
-
-    public void Dispose()
-    {
-        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-        Dispose(disposing: true);
-        GC.SuppressFinalize(this);
     }
 }

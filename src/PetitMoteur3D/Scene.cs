@@ -22,6 +22,7 @@ internal sealed class Scene : IDisposable
     private readonly List<IUpdatableObjet> _objectsUpdatable;
     private readonly Dictionary<RenderPassType, List<IDrawableObjet>> _objectsDrawablePerRenderPass;
     private ICamera _gameCamera;
+    private ICamera _debugCamera;
 
     public ComPtr<ID3D11RasterizerState> RasterizerState { get { return _rasterizerState; } set { _rasterizerState = value; } }
     private ComPtr<ID3D11RasterizerState> _rasterizerState;
@@ -104,43 +105,28 @@ internal sealed class Scene : IDisposable
         }
     }
 
-    public unsafe void Draw(D3D11GraphicPipeline graphicPipeline, ref readonly System.Numerics.Matrix4x4 matViewProj)
+    public void SetDebugCamera(ICamera camera)
     {
-        //// Initialiser et sélectionner les « constantes » des shaders
-        //ref Vector4 cameraPosParam = ref _shadersParams.CameraPos;
-        //ref readonly System.Numerics.Vector3 cameraPos = ref _gameCamera.Position;
-        //cameraPosParam.X = cameraPos.X;
-        //cameraPosParam.Y = cameraPos.Y;
-        //cameraPosParam.Z = cameraPos.Z;
+        _debugCamera = camera;
+    }
 
-        //_shadersShadowParams.DrawShadow = ShowShadow ? 1 : 0;
-        //_shadersDebugParams.IsDebugCameraUsed = UseDebugCam ? 1 : 0;
-
-        //graphicPipeline.RessourceFactory.UpdateSubresource(_constantBuffer, 0, in Unsafe.NullRef<Box>(), in _shadersParams, 0, 0);
-        //graphicPipeline.RessourceFactory.UpdateSubresource(_constantShadowBuffer, 0, in Unsafe.NullRef<Box>(), in _shadersShadowParams, 0, 0);
-        //graphicPipeline.RessourceFactory.UpdateSubresource(_constantDebugBuffer, 0, in Unsafe.NullRef<Box>(), in _shadersDebugParams, 0, 0);
-        //graphicPipeline.VertexShaderStage.SetConstantBuffers(0, 1, ref _constantBuffer);
-        //graphicPipeline.VertexShaderStage.SetConstantBuffers(2, 1, ref _constantShadowBuffer);
-        //graphicPipeline.VertexShaderStage.SetConstantBuffers(4, 1, ref _constantDebugBuffer);
-        //graphicPipeline.PixelShaderStage.SetConstantBuffers(0, 1, ref _constantBuffer);
-        //graphicPipeline.PixelShaderStage.SetConstantBuffers(2, 1, ref _constantShadowBuffer);
-        //graphicPipeline.VertexShaderStage.SetConstantBuffers(4, 1, ref _constantDebugBuffer);
-        //// Shadow Map : Texture + sampler
-        //if (_shadowMap.DepthTexture.TextureView.Handle is not null)
-        //{
-        //    ComPtr<ID3D11ShaderResourceView> shadowMapTexture = _shadowMap.DepthTexture.TextureView;
-        //    graphicPipeline.PixelShaderStage.SetShaderResources(2, 1, ref shadowMapTexture);
-        //}
-        //// Debug Depth Map : Texture + sampler
-        //if (_debugDepthMap.DepthTexture.TextureView.Handle is not null)
-        //{
-        //    ComPtr<ID3D11ShaderResourceView> debugDepthMapTexture = _debugDepthMap.DepthTexture.TextureView;
-        //    graphicPipeline.PixelShaderStage.SetShaderResources(3, 1, ref debugDepthMapTexture);
-        //}
-
-        //graphicPipeline.PixelShaderStage.SetSamplers(1, 1, in _shadowMap.SampleState);
-        //graphicPipeline.PixelShaderStage.SetSamplers(2, 1, in _debugDepthMap.SampleState);
+    public unsafe void Draw(D3D11GraphicPipeline graphicPipeline)
+    {
         graphicPipeline.RasterizerStage.SetState(_rasterizerState);
+
+        Matrix4x4 matViewProj;
+        if (UseDebugCam)
+        {
+            ref readonly Matrix4x4 matProj = ref _debugCamera.FrustrumView.MatProj;
+            _debugCamera.GetViewMatrix(out Matrix4x4 matView);
+            matViewProj = matView * matProj;
+        }
+        else
+        {
+            ref readonly Matrix4x4 matProj = ref _gameCamera.FrustrumView.MatProj;
+            _gameCamera.GetViewMatrix(out Matrix4x4 matView);
+            matViewProj = matView * matProj;
+        }
 
         _cameraLigth.SetPosition(_gameCamera.Position - (DistanceLight * _cameraLigth.Orientation.Forward));
         _cameraLigth.GetViewMatrix(out Matrix4x4 matViewLight);

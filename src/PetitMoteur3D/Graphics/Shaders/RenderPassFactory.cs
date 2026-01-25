@@ -1,4 +1,6 @@
-﻿namespace PetitMoteur3D.Graphics.Shaders;
+﻿using System;
+
+namespace PetitMoteur3D.Graphics.Shaders;
 
 internal class RenderPassFactory
 {
@@ -9,20 +11,27 @@ internal class RenderPassFactory
         _graphicPipeline = graphicPipeline;
     }
 
-    public DepthTestRenderPass CreateDepthTestRenderPass(string name = "")
+    public T Create<T>(string name = "") where T : BaseRenderPass
     {
-        return new DepthTestRenderPass(_graphicPipeline, name);
-    }
-    public MiniPhongNormalMapRenderPass CreateMiniPhongNormalMapRenderPass(string name = "")
-    {
-        return new MiniPhongNormalMapRenderPass(_graphicPipeline, name);
-    }
-    public MiniPhongRenderPass CreateMiniPhongRenderPass(string name = "")
-    {
-        return new MiniPhongRenderPass(_graphicPipeline, name);
-    }
-    public ShadowMapRenderPass CreateShadowMapRenderPass(string name = "")
-    {
-        return new ShadowMapRenderPass(_graphicPipeline, name);
+        if (typeof(T) == typeof(DepthTestRenderPass))
+        {
+            return new DepthTestRenderPass(_graphicPipeline, name) as T ?? throw new InvalidCastException();
+        }
+        else if (typeof(T) == typeof(MiniPhongNormalMapRenderPass))
+        {
+            return new MiniPhongNormalMapRenderPass(_graphicPipeline, name) as T ?? throw new InvalidCastException();
+        }
+        else if (typeof(T) == typeof(MiniPhongRenderPass))
+        {
+            return new MiniPhongRenderPass(_graphicPipeline, name) as T ?? throw new InvalidCastException();
+        }
+        else if (typeof(T) == typeof(ShadowMapRenderPass))
+        {
+            return new ShadowMapRenderPass(_graphicPipeline, name) as T ?? throw new InvalidCastException();
+        }
+        else
+        {
+            throw new ArgumentOutOfRangeException();
+        }
     }
 }

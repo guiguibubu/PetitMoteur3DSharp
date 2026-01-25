@@ -9,101 +9,37 @@ using Silk.NET.Direct3D11;
 
 namespace PetitMoteur3D.Graphics.Shaders;
 
-internal sealed class MiniPhongNormalMapRenderPass : IDisposable
+internal sealed class MiniPhongNormalMapRenderPass : BaseRenderPass, IDisposable
 {
-    public string Name { get; init; }
-
     public ComPtr<ID3D11Buffer> VertexShaderConstantBuffer => _sceneConstantBuffer;
     public ComPtr<ID3D11Buffer> PixelShaderConstantBuffer => _objectConstantBuffer;
-    public ComPtr<ID3D11VertexShader> VertexShader => _vertexShader;
-    public ComPtr<ID3D11InputLayout> VertexLayout => _vertexLayout;
-    public ComPtr<ID3D11PixelShader> PixelShader => _pixelShader;
     public ComPtr<ID3D11SamplerState> SampleState => _sampleState;
 
     private ComPtr<ID3D11Buffer> _sceneConstantBuffer;
     private ComPtr<ID3D11Buffer> _objectConstantBuffer;
-    private ComPtr<ID3D11VertexShader> _vertexShader;
-    private ComPtr<ID3D11InputLayout> _vertexLayout;
-    private ComPtr<ID3D11PixelShader> _pixelShader;
     private ComPtr<ID3D11SamplerState> _sampleState;
-
-    private ComPtr<ID3D11Buffer> _vertexBuffer;
-    private uint _vertexStride;
-    private ComPtr<ID3D11Buffer> _indexBuffer;
-    private Silk.NET.DXGI.Format _format;
-    private D3DPrimitiveTopology _topology;
 
     private ComPtr<ID3D11ShaderResourceView> _textureD3D;
     private ComPtr<ID3D11ShaderResourceView> _normalMap;
 
-    private readonly D3D11GraphicPipeline _graphicPipeline;
-
     private bool _disposedValue;
 
     public MiniPhongNormalMapRenderPass(D3D11GraphicPipeline graphicPipeline, string name = "")
+        : base(graphicPipeline, name)
     {
-        if (string.IsNullOrEmpty(name))
-        {
-            Name = this.GetType().Name + "_" + Guid.NewGuid().ToString();
-        }
-        else
-        {
-            Name = name;
-        }
-
-        _graphicPipeline = graphicPipeline;
-        Initialisation(graphicPipeline.GraphicDevice.RessourceFactory);
-
         _disposedValue = false;
     }
 
     #region Public methods
-
-    public void UpdatePrimitiveTopology(D3DPrimitiveTopology topology)
-    {
-        _topology = topology;
-    }
-
-    public void SetPrimitiveTopology()
-    {
-        _graphicPipeline.InputAssemblerStage.SetPrimitiveTopology(_topology);
-    }
-
-    public void UpdateVertexBuffer(ComPtr<ID3D11Buffer> vertexBuffer, uint vertexStride)
-    {
-        _vertexBuffer = vertexBuffer;
-        _vertexStride = vertexStride;
-    }
-
-    public void UpdateIndexBuffer(ComPtr<ID3D11Buffer> indexBuffer, Silk.NET.DXGI.Format format)
-    {
-        _indexBuffer = indexBuffer;
-        _format = format;
-    }
-
-    public void SetVertexBuffer(uint offset = 0)
-    {
-        _graphicPipeline.InputAssemblerStage.SetVertexBuffers(0, 1, ref _vertexBuffer, in _vertexStride, in offset);
-    }
-
-    public void SetIndexBuffer(uint offset = 0)
-    {
-        _graphicPipeline.InputAssemblerStage.SetIndexBuffer(_indexBuffer, _format, offset);
-    }
-
-    public void SetInputLayout()
-    {
-        _graphicPipeline.InputAssemblerStage.SetInputLayout(_vertexLayout);
-    }
-
+    #region Update Values
     public void UpdateSceneConstantBuffer(SceneConstantBufferParams value)
     {
-        _graphicPipeline.RessourceFactory.UpdateSubresource(_sceneConstantBuffer, 0, in Unsafe.NullRef<Box>(), in value, 0, 0);
+        GraphicPipeline.RessourceFactory.UpdateSubresource(_sceneConstantBuffer, 0, in Unsafe.NullRef<Box>(), in value, 0, 0);
     }
 
     public void UpdateObjectConstantBuffer(ObjectConstantBufferParams value)
     {
-        _graphicPipeline.RessourceFactory.UpdateSubresource(_objectConstantBuffer, 0, in Unsafe.NullRef<Box>(), in value, 0, 0);
+        GraphicPipeline.RessourceFactory.UpdateSubresource(_objectConstantBuffer, 0, in Unsafe.NullRef<Box>(), in value, 0, 0);
     }
 
     public void UpdateTexture(ComPtr<ID3D11ShaderResourceView> texture)
@@ -115,82 +51,60 @@ internal sealed class MiniPhongNormalMapRenderPass : IDisposable
     {
         _normalMap = normalMap;
     }
+    #endregion
 
-    public void SetVertexShader()
+    #region Vertex Shader
+    public override void SetVertexShaderConstantBuffers()
     {
-        _graphicPipeline.VertexShaderStage.SetShader(_vertexShader, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
+        GraphicPipeline.VertexShaderStage.SetConstantBuffers(0, 1, ref _sceneConstantBuffer);
+        GraphicPipeline.VertexShaderStage.SetConstantBuffers(1, 1, ref _objectConstantBuffer);
+    }
+    #endregion
+
+    #region Pixel Shader
+    public override void SetPixelShaderConstantBuffers()
+    {
+        GraphicPipeline.PixelShaderStage.SetConstantBuffers(0, 1, ref _sceneConstantBuffer);
+        GraphicPipeline.PixelShaderStage.SetConstantBuffers(1, 1, ref _objectConstantBuffer);
     }
 
-    public void SetVertexShaderConstantBuffers()
-    {
-        _graphicPipeline.VertexShaderStage.SetConstantBuffers(0, 1, ref _sceneConstantBuffer);
-        _graphicPipeline.VertexShaderStage.SetConstantBuffers(1, 1, ref _objectConstantBuffer);
-    }
-
-    public void SetGeometryShader()
-    {
-        _graphicPipeline.GeometryShaderStage.SetShader((ComPtr<ID3D11GeometryShader>)null, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
-    }
-
-    public void SetPixelShader()
-    {
-        _graphicPipeline.PixelShaderStage.SetShader(_pixelShader, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
-    }
-
-    public void SetPixelShaderConstantBuffers()
-    {
-        _graphicPipeline.PixelShaderStage.SetConstantBuffers(0, 1, ref _sceneConstantBuffer);
-        _graphicPipeline.PixelShaderStage.SetConstantBuffers(1, 1, ref _objectConstantBuffer);
-    }
-
-    public unsafe void SetPixelShaderRessources()
+    public override unsafe void SetPixelShaderRessources()
     {
         // Activation de la texture
         if (_textureD3D.Handle is not null)
         {
-            _graphicPipeline.PixelShaderStage.SetShaderResources(0, 1, ref _textureD3D);
+            GraphicPipeline.PixelShaderStage.SetShaderResources(0, 1, ref _textureD3D);
         }
         else
         {
-            _graphicPipeline.PixelShaderStage.ClearShaderResources(0);
+            GraphicPipeline.PixelShaderStage.ClearShaderResources(0);
         }
         if (_normalMap.Handle is not null)
         {
-            _graphicPipeline.PixelShaderStage.SetShaderResources(1, 1, ref _normalMap);
+            GraphicPipeline.PixelShaderStage.SetShaderResources(1, 1, ref _normalMap);
         }
         else
         {
-            _graphicPipeline.PixelShaderStage.ClearShaderResources(1);
+            GraphicPipeline.PixelShaderStage.ClearShaderResources(1);
         }
     }
 
-    public void ClearPixelShaderResources()
+    public override void SetSamplers()
     {
-        _graphicPipeline.PixelShaderStage.ClearShaderResources(0);
-        _graphicPipeline.PixelShaderStage.ClearShaderResources(1);
+        GraphicPipeline.PixelShaderStage.SetSamplers(0, 1, in _sampleState);
     }
 
-    public void SetSamplers()
+    public override void ClearPixelShaderResources()
     {
-        _graphicPipeline.PixelShaderStage.SetSamplers(0, 1, in _sampleState);
-    }
-
-    public void DrawIndexed(uint indexCount, uint startIndexLocation, int baseVertexLocation)
-    {
-        _graphicPipeline.DrawIndexed(indexCount, startIndexLocation, baseVertexLocation);
+        GraphicPipeline.PixelShaderStage.ClearShaderResources(0);
+        GraphicPipeline.PixelShaderStage.ClearShaderResources(1);
     }
     #endregion
+    #endregion
 
-    #region Private methods
-
-    private void Initialisation(GraphicDeviceRessourceFactory graphicDeviceRessourceFactory)
-    {
-        InitBuffers(graphicDeviceRessourceFactory.BufferFactory);
-        InitShaders(graphicDeviceRessourceFactory.ShaderManager);
-        InitTextureSampler(graphicDeviceRessourceFactory.TextureManager);
-    }
-
-    private unsafe void InitBuffers(GraphicBufferFactory bufferFactory)
+    #region Protected methods
+    /// <inheritdoc/>
+    protected override void InitBuffers(GraphicBufferFactory bufferFactory)
     {
         // Create our constant buffer.
         _sceneConstantBuffer = bufferFactory.CreateConstantBuffer<SceneConstantBufferParams>(Usage.Default, CpuAccessFlag.None, $"{Name}_SceneConstantBuffer");
@@ -199,63 +113,15 @@ internal sealed class MiniPhongNormalMapRenderPass : IDisposable
         _objectConstantBuffer = bufferFactory.CreateConstantBuffer<ObjectConstantBufferParams>(Usage.Default, CpuAccessFlag.None, $"{Name}_ObjectConstantBuffer");
     }
 
-    private unsafe void InitShaders(ShaderManager shaderManager)
+    /// <inheritdoc/>
+    protected override InputElementDesc[] GetInputLayoutDesc()
     {
-        InitVertexShader(shaderManager);
-        InitPixelShader(shaderManager);
+        return Sommet.InputLayoutDesc;
     }
 
-    private unsafe void InitTextureSampler(TextureManager textureManager)
-    {
-        // Initialisation des paramètres de sampling de la texture
-        SamplerDesc samplerDesc = new()
-        {
-            Filter = Filter.Anisotropic,
-            AddressU = TextureAddressMode.Wrap,
-            AddressV = TextureAddressMode.Wrap,
-            AddressW = TextureAddressMode.Wrap,
-            MipLODBias = 0f,
-            MaxAnisotropy = 4,
-            ComparisonFunc = ComparisonFunc.Always,
-            MinLOD = 0,
-            MaxLOD = float.MaxValue,
-        };
-        samplerDesc.BorderColor[0] = 0f;
-        samplerDesc.BorderColor[1] = 0f;
-        samplerDesc.BorderColor[2] = 0f;
-        samplerDesc.BorderColor[3] = 0f;
-
-        // Création de l’état de sampling
-        _sampleState = textureManager.Factory.CreateSampler(samplerDesc, $"{Name}_SamplerState");
-    }
-
-    /// <summary>
-    /// Compilation et chargement du vertex shader
-    /// </summary>
-    /// <param name="device"></param>
-    /// <param name="compiler"></param>
-    private unsafe void InitVertexShader(ShaderManager shaderManager)
-    {
-        ShaderCodeFile shaderFile = InitVertexShaderCodeFile();
-        shaderManager.GetOrLoadVertexShaderAndLayout(shaderFile, Sommet.InputLayoutDesc, ref _vertexShader, ref _vertexLayout);
-    }
-
-    /// <summary>
-    /// Compilation et chargement du pixel shader
-    /// </summary>
-    /// <param name="device"></param>
-    /// <param name="compiler"></param>
-    private unsafe void InitPixelShader(ShaderManager shaderManager)
-    {
-        ShaderCodeFile shaderFile = InitPixelShaderCodeFile();
-        _pixelShader = shaderManager.GetOrLoadPixelShader(shaderFile);
-    }
-
-    /// <summary>
-    /// VertexShader file
-    /// </summary>
+    /// <inheritdoc/>
     [return: NotNull]
-    private static ShaderCodeFile InitVertexShaderCodeFile()
+    protected override ShaderCodeFile InitVertexShaderCodeFile()
     {
         // Compilation et chargement du vertex shader
         string filePath = "shaders\\MiniPhongNormalMap_VS.hlsl";
@@ -283,11 +149,9 @@ internal sealed class MiniPhongNormalMapRenderPass : IDisposable
         );
     }
 
-    /// <summary>
-    /// PixelShader file
-    /// </summary>
+    /// <inheritdoc/>
     [return: NotNull]
-    private static ShaderCodeFile InitPixelShaderCodeFile()
+    protected override ShaderCodeFile? InitPixelShaderCodeFile()
     {
         string filePath = "shaders\\MiniPhongNormalMap_PS.hlsl";
         string entryPoint = "MiniPhongNormalMapPS";
@@ -314,6 +178,37 @@ internal sealed class MiniPhongNormalMapRenderPass : IDisposable
         );
     }
 
+    /// <inheritdoc/>
+    protected override void InitialisationImpl(GraphicDeviceRessourceFactory graphicDeviceRessourceFactory)
+    {
+        InitTextureSampler(graphicDeviceRessourceFactory.TextureManager);
+    }
+    #endregion
+
+    #region Private methods
+    private unsafe void InitTextureSampler(TextureManager textureManager)
+    {
+        // Initialisation des paramètres de sampling de la texture
+        SamplerDesc samplerDesc = new()
+        {
+            Filter = Filter.Anisotropic,
+            AddressU = TextureAddressMode.Wrap,
+            AddressV = TextureAddressMode.Wrap,
+            AddressW = TextureAddressMode.Wrap,
+            MipLODBias = 0f,
+            MaxAnisotropy = 4,
+            ComparisonFunc = ComparisonFunc.Always,
+            MinLOD = 0,
+            MaxLOD = float.MaxValue,
+        };
+        samplerDesc.BorderColor[0] = 0f;
+        samplerDesc.BorderColor[1] = 0f;
+        samplerDesc.BorderColor[2] = 0f;
+        samplerDesc.BorderColor[3] = 0f;
+
+        // Création de l’état de sampling
+        _sampleState = textureManager.Factory.CreateSampler(samplerDesc, $"{Name}_SamplerState");
+    }
     #endregion
 
     [StructLayout(LayoutKind.Sequential, Pack = 16)]
@@ -390,7 +285,7 @@ internal sealed class MiniPhongNormalMapRenderPass : IDisposable
         }
     }
 
-    private void Dispose(bool disposing)
+    protected override void Dispose(bool disposing)
     {
         if (!_disposedValue)
         {
@@ -403,10 +298,9 @@ internal sealed class MiniPhongNormalMapRenderPass : IDisposable
             // TODO: set large fields to null
             _sceneConstantBuffer.Dispose();
             _objectConstantBuffer.Dispose();
-            _vertexShader.Dispose();
-            _vertexLayout.Dispose();
-            _pixelShader.Dispose();
             _sampleState.Dispose();
+
+            base.Dispose(disposing);
 
             _disposedValue = true;
         }
@@ -416,12 +310,5 @@ internal sealed class MiniPhongNormalMapRenderPass : IDisposable
     {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
         Dispose(disposing: false);
-    }
-
-    public void Dispose()
-    {
-        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-        Dispose(disposing: true);
-        GC.SuppressFinalize(this);
     }
 }

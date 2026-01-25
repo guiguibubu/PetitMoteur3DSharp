@@ -463,6 +463,7 @@ public class Engine
         _gameCamera.Move(0f, 2f, -10f);
 
         _scene = InitDefaultScene(_graphicDevice.RessourceFactory, _graphicPipeline.ShaderFactory, _gameCamera, _window);
+        _scene.SetDebugCamera(_debugCamera);
         // Set default rasterizer state
         _scene.RasterizerState = _graphicPipeline.SolidCullBackRS;
     }
@@ -579,29 +580,7 @@ public class Engine
             _scene.ShowShadow = _showShadow;
             _scene.ShowDepthTest = _showDepthTest;
             _scene.UseDebugCam = _useDebugCamera;
-            if (_showShadow)
-            {
-                //_scene.DrawShadow(_graphicPipeline);
-            }
-            //if (_useDebugCamera)
-            {
-                //_scene.DrawDebugDepth(_graphicPipeline);
-            }
-
-            Matrix4x4 matViewProj;
-            if (_useDebugCamera)
-            {
-                ref readonly Matrix4x4 matProj = ref _debugCamera.FrustrumView.MatProj;
-                _debugCamera.GetViewMatrix(out Matrix4x4 matView);
-                matViewProj = matView * matProj;
-            }
-            else
-            {
-                ref readonly Matrix4x4 matProj = ref _gameCamera.FrustrumView.MatProj;
-                _gameCamera.GetViewMatrix(out Matrix4x4 matView);
-                matViewProj = matView * matProj;
-            }
-            _scene.Draw(_graphicPipeline, in matViewProj);
+            _scene.Draw(_graphicPipeline);
         }
     }
 }

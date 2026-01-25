@@ -87,9 +87,9 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
         _vertexBufferPosition = default;
         _indexBuffer = default;
 
-        _depthTestRenderPass = renderPassFactory.CreateDepthTestRenderPass($"{_name}_DepthTestRenderPass");
-        _mainRenderPass = renderPassFactory.CreateMiniPhongNormalMapRenderPass($"{_name}_MainRenderPass");
-        _shadowMapRenderPass = renderPassFactory.CreateShadowMapRenderPass($"{_name}_ShadowMapRenderPass");
+        _depthTestRenderPass = renderPassFactory.Create<DepthTestRenderPass>($"{_name}_DepthTestRenderPass");
+        _mainRenderPass = renderPassFactory.Create<MiniPhongNormalMapRenderPass>($"{_name}_MainRenderPass");
+        _shadowMapRenderPass = renderPassFactory.Create<ShadowMapRenderPass>($"{_name}_ShadowMapRenderPass");
 
         _disposed = false;
     }
