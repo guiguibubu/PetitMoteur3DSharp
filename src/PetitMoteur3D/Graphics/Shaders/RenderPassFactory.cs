@@ -17,17 +17,9 @@ internal class RenderPassFactory
         {
             return new DepthTestRenderPass(_graphicPipeline, name) as T ?? throw new InvalidCastException();
         }
-        else if (typeof(T) == typeof(MiniPhongNormalMapRenderPass))
+        else if (typeof(T) == typeof(ForwardOpaqueRenderPass))
         {
-            return new MiniPhongNormalMapRenderPass(_graphicPipeline, name) as T ?? throw new InvalidCastException();
-        }
-        else if (typeof(T) == typeof(MiniPhongNormalMapShadowMapRenderPass))
-        {
-            return new MiniPhongNormalMapShadowMapRenderPass(_graphicPipeline, name) as T ?? throw new InvalidCastException();
-        }
-        else if (typeof(T) == typeof(MiniPhongRenderPass))
-        {
-            return new MiniPhongRenderPass(_graphicPipeline, name) as T ?? throw new InvalidCastException();
+            return new ForwardOpaqueRenderPass(_graphicPipeline, name) as T ?? throw new InvalidCastException();
         }
         else if (typeof(T) == typeof(ShadowMapRenderPass))
         {

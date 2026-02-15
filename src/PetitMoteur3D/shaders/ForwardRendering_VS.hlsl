@@ -1,4 +1,7 @@
-#include "MiniPhongNormalMapShadowMap_VSOut.hlsl"
+#include "ForwardRendering_VSOut.hlsli"
+
+#ifndef FORWARD_RENDERING_VS
+#define FORWARD_RENDERING_VS
 
 struct LightParams
 {
@@ -6,6 +9,9 @@ struct LightParams
     float3 dir; // la direction de la source d’éclairage (Directionnelle)
     float4 vAEcl; // la valeur ambiante de l’éclairage
     float4 vDEcl; // la valeur diffuse de l’éclairage
+    bool enable; // l'éclairage est allumé
+    bool enableShadow; // autoriser ombre (ShadowMapping)
+    int2 offset; // Offset for memory alignment
 };
 
 cbuffer frameBuffer
@@ -21,16 +27,9 @@ cbuffer objectBuffer
     float4x4 matWorldViewProjLight; // Matrice VP pour lumière
 }
 
-cbuffer objectOptionsBuffer
+ForwardRendering_VertexParams ForwardRenderingVSImpl(uniform float4 Pos, uniform float3 Normale, uniform float2 coordTex, uniform float3 Tangent, uniform bool drawShadow)
 {
-    bool hasTexture; // indique si a une texture
-    bool hasNormalMap; // indique si a une normal map
-    bool drawShadow; // do we need to draw shadows
-}
-
-VS_Sortie MiniPhongNormalMapShadowMapVS(float4 Pos : POSITION, float3 Normale : NORMAL, float2 coordTex : TEXCOORD, float3 Tangent : TANGENT)
-{
-    VS_Sortie sortie = (VS_Sortie) 0;
+    ForwardRendering_VertexParams sortie = (ForwardRendering_VertexParams) 0;
     sortie.Pos = mul(Pos, matWorldViewProj);
     sortie.Norm = mul(float4(Normale, 0.0f), matWorld).xyz;
     sortie.Tang = mul(float4(Tangent, 0.0f), matWorld).xyz;
@@ -57,3 +56,16 @@ VS_Sortie MiniPhongNormalMapShadowMapVS(float4 Pos : POSITION, float3 Normale : 
 	
     return sortie;
 }
+
+// Render Techniques
+ForwardRendering_VertexParams ForwardRenderingVS(float4 Pos : POSITION, float3 Normale : NORMAL, float2 coordTex : TEXCOORD, float3 Tangent : TANGENT)
+{
+    return ForwardRenderingVSImpl(Pos, Normale, coordTex, Tangent, vLumiere.enableShadow);
+}
+
+ForwardRendering_VertexParams ForwardRenderingVS_NoShadow(float4 Pos : POSITION, float3 Normale : NORMAL, float2 coordTex : TEXCOORD, float3 Tangent : TANGENT)
+{
+    return ForwardRenderingVSImpl(Pos, Normale, coordTex, Tangent, false);
+}
+
+#endif

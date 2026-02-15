@@ -11,6 +11,8 @@ internal struct Material
     public readonly Vector4 Reflexion;
     public readonly float Puissance;
     public readonly bool Transparent;
+    public readonly bool HasDiffuseTexture;
+    public readonly bool HasNormalTexture;
 
     public Material()
     : this(Vector4.One, Vector4.One, Vector4.One, Vector4.One, Vector4.One, 1f, false)

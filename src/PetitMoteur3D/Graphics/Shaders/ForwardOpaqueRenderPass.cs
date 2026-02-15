@@ -9,10 +9,9 @@ using Silk.NET.Direct3D11;
 
 namespace PetitMoteur3D.Graphics.Shaders;
 
-internal sealed class MiniPhongNormalMapShadowMapRenderPass : BaseRenderPass, IDisposable
+internal sealed class ForwardOpaqueRenderPass : BaseRenderPass, IDisposable
 {
     private ComPtr<ID3D11Buffer> _sceneConstantBuffer;
-    private ComPtr<ID3D11Buffer> _objectOptionsConstantBuffer;
     private ComPtr<ID3D11Buffer> _pixelObjectConstantBuffer;
     private ComPtr<ID3D11Buffer> _vertexObjectConstantBuffer;
 
@@ -25,7 +24,7 @@ internal sealed class MiniPhongNormalMapShadowMapRenderPass : BaseRenderPass, ID
 
     private bool _disposedValue;
 
-    public MiniPhongNormalMapShadowMapRenderPass(D3D11GraphicPipeline graphicPipeline, string name = "")
+    public ForwardOpaqueRenderPass(D3D11GraphicPipeline graphicPipeline, string name = "")
         : base(graphicPipeline, name)
     {
         _disposedValue = false;
@@ -36,11 +35,6 @@ internal sealed class MiniPhongNormalMapShadowMapRenderPass : BaseRenderPass, ID
     public void UpdateSceneConstantBuffer(SceneConstantBufferParams value)
     {
         GraphicPipeline.RessourceFactory.UpdateSubresource(_sceneConstantBuffer, 0, in Unsafe.NullRef<Box>(), in value, 0, 0);
-    }
-
-    public void UpdateObjectOptionsConstantBuffer(ObjectOptionsConstantBufferParams value)
-    {
-        GraphicPipeline.RessourceFactory.UpdateSubresource(_objectOptionsConstantBuffer, 0, in Unsafe.NullRef<Box>(), in value, 0, 0);
     }
 
     public void UpdateVertexObjectConstantBuffer(VertexObjectConstantBufferParams value)
@@ -74,7 +68,6 @@ internal sealed class MiniPhongNormalMapShadowMapRenderPass : BaseRenderPass, ID
     {
         GraphicPipeline.VertexShaderStage.SetConstantBuffers(0, 1, ref _sceneConstantBuffer);
         GraphicPipeline.VertexShaderStage.SetConstantBuffers(1, 1, ref _vertexObjectConstantBuffer);
-        GraphicPipeline.VertexShaderStage.SetConstantBuffers(2, 1, ref _objectOptionsConstantBuffer);
     }
     #endregion
 
@@ -83,7 +76,6 @@ internal sealed class MiniPhongNormalMapShadowMapRenderPass : BaseRenderPass, ID
     {
         GraphicPipeline.PixelShaderStage.SetConstantBuffers(0, 1, ref _sceneConstantBuffer);
         GraphicPipeline.PixelShaderStage.SetConstantBuffers(1, 1, ref _pixelObjectConstantBuffer);
-        GraphicPipeline.PixelShaderStage.SetConstantBuffers(2, 1, ref _objectOptionsConstantBuffer);
     }
 
     public override unsafe void SetPixelShaderRessources()
@@ -132,19 +124,18 @@ internal sealed class MiniPhongNormalMapShadowMapRenderPass : BaseRenderPass, ID
 
     #region Protected methods
     /// <inheritdoc/>
-    protected override void InitBuffers(GraphicBufferFactory bufferFactory)
+    protected sealed override void InitBuffers(GraphicBufferFactory bufferFactory)
     {
         // Create our constant buffer.
         _sceneConstantBuffer = bufferFactory.CreateConstantBuffer<SceneConstantBufferParams>(Usage.Default, CpuAccessFlag.None, $"{Name}_SceneConstantBuffer");
 
         // Create our constant buffer.
-        _objectOptionsConstantBuffer = bufferFactory.CreateConstantBuffer<ObjectOptionsConstantBufferParams>(Usage.Default, CpuAccessFlag.None, $"{Name}_ObjectConstantBuffer");
-        _pixelObjectConstantBuffer = bufferFactory.CreateConstantBuffer<PixelObjectConstantBufferParams>(Usage.Default, CpuAccessFlag.None, $"{Name}_ObjectConstantBuffer");
+        _pixelObjectConstantBuffer = bufferFactory.CreateConstantBuffer<PixelObjectConstantBufferParams>(Usage.Default, CpuAccessFlag.None, $"{Name}_PixelObjectConstantBuffer");
         _vertexObjectConstantBuffer = bufferFactory.CreateConstantBuffer<VertexObjectConstantBufferParams>(Usage.Default, CpuAccessFlag.None, $"{Name}_VertexObjectConstantBuffer");
     }
 
     /// <inheritdoc/>
-    protected override InputElementDesc[] GetInputLayoutDesc()
+    protected sealed override InputElementDesc[] GetInputLayoutDesc()
     {
         return Sommet.InputLayoutDesc;
     }
@@ -154,8 +145,8 @@ internal sealed class MiniPhongNormalMapShadowMapRenderPass : BaseRenderPass, ID
     protected override ShaderCodeFile InitVertexShaderCodeFile()
     {
         // Compilation et chargement du vertex shader
-        string filePath = "shaders\\MiniPhongNormalMapShadowMap_VS.hlsl";
-        string entryPoint = "MiniPhongNormalMapShadowMapVS";
+        string filePath = "shaders\\ForwardRendering_VS.hlsl";
+        string entryPoint = "ForwardRenderingVS";
         string target = "vs_5_0";
         // #define D3DCOMPILE_ENABLE_STRICTNESS                    (1 << 11)
         uint flagStrictness = ((uint)1 << 11);
@@ -175,7 +166,7 @@ internal sealed class MiniPhongNormalMapShadowMapRenderPass : BaseRenderPass, ID
             entryPoint,
             target,
             compilationFlags,
-            name: "MiniPhongNormalMapShadowMap_VertexShader"
+            name: "ForwardRendering_VertexShader"
         );
     }
 
@@ -183,8 +174,8 @@ internal sealed class MiniPhongNormalMapShadowMapRenderPass : BaseRenderPass, ID
     [return: NotNull]
     protected override ShaderCodeFile? InitPixelShaderCodeFile()
     {
-        string filePath = "shaders\\MiniPhongNormalMapShadowMap_PS.hlsl";
-        string entryPoint = "MiniPhongNormalMapShadowMapPS";
+        string filePath = "shaders\\ForwardRendering_PS.hlsl";
+        string entryPoint = "ForwardRenderingPS";
         string target = "ps_5_0";
         // #define D3DCOMPILE_ENABLE_STRICTNESS                    (1 << 11)
         uint flagStrictness = ((uint)1 << 11);
@@ -204,12 +195,12 @@ internal sealed class MiniPhongNormalMapShadowMapRenderPass : BaseRenderPass, ID
            entryPoint,
            target,
            compilationFlags,
-           name: "MiniPhongNormalMapShadowMap_PixelShader"
+           name: "ForwardRendering_PixelShader"
         );
     }
 
     /// <inheritdoc/>
-    protected override void InitialisationImpl(GraphicDeviceRessourceFactory graphicDeviceRessourceFactory)
+    protected sealed override void InitialisationImpl(GraphicDeviceRessourceFactory graphicDeviceRessourceFactory)
     {
         InitTextureSampler(graphicDeviceRessourceFactory.TextureManager);
         InitShadowMapSampler(graphicDeviceRessourceFactory.TextureManager);
@@ -285,6 +276,16 @@ internal sealed class MiniPhongNormalMapShadowMapRenderPass : BaseRenderPass, ID
         /// la valeur diffuse de l’éclairage
         /// </summary>
         public Vector4 DiffuseColor;
+        /// <summary>
+        /// Indique la lumiere est active
+        /// </summary>
+        public int Enable;
+        /// <summary>
+        /// Indique la lumiere fait une ombre (ShadowMapping)
+        /// </summary>
+        public int EnableShadow;
+        private readonly uint alignement1_1;
+        private readonly uint alignement1_2;
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 16)]
@@ -306,29 +307,6 @@ internal sealed class MiniPhongNormalMapShadowMapRenderPass : BaseRenderPass, ID
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 16)]
-    internal struct ObjectOptionsConstantBufferParams : IResetable
-    {
-        /// <summary>
-        /// Indique la présence d'une texture
-        /// </summary>
-        public int hasTexture;
-        /// <summary>
-        /// Indique la présence d'une texture pour le "normal mapping"
-        /// </summary>
-        public int hasNormalMap;
-        /// <summary>
-        /// Indique s'il faut desssiner l'ombre
-        /// </summary>
-        public int drawShadow;
-        private readonly uint alignement1_1;
-
-        public void Reset()
-        {
-            MemoryHelper.ResetMemory(this);
-        }
-    }
-
-    [StructLayout(LayoutKind.Sequential, Pack = 16)]
     internal struct PixelObjectConstantBufferParams : IResetable
     {
         /// <summary>
@@ -339,6 +317,16 @@ internal sealed class MiniPhongNormalMapShadowMapRenderPass : BaseRenderPass, ID
         /// la valeur diffuse du matériau
         /// </summary>
         public Vector4 diffuseMaterialValue;
+        /// <summary>
+        /// Indique le matériaux a une texture sa valeur diffuse
+        /// </summary>
+        public int HasDiffuseTexture;
+        /// <summary>
+        /// Indique le matériaux a une texture pour le normal mapping
+        /// </summary>
+        public int HasNormalTexture;
+        private readonly uint alignement1_1;
+        private readonly uint alignement1_2;
 
         public void Reset()
         {
@@ -382,7 +370,6 @@ internal sealed class MiniPhongNormalMapShadowMapRenderPass : BaseRenderPass, ID
             // TODO: free unmanaged resources (unmanaged objects) and override finalizer
             // TODO: set large fields to null
             _sceneConstantBuffer.Dispose();
-            _objectOptionsConstantBuffer.Dispose();
             _pixelObjectConstantBuffer.Dispose();
             _vertexObjectConstantBuffer.Dispose();
             _sampleState.Dispose();
@@ -393,7 +380,7 @@ internal sealed class MiniPhongNormalMapShadowMapRenderPass : BaseRenderPass, ID
         }
     }
 
-    ~MiniPhongNormalMapShadowMapRenderPass()
+    ~ForwardOpaqueRenderPass()
     {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
         Dispose(disposing: false);

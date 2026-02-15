@@ -1,4 +1,4 @@
-struct VS_Sortie
+struct ForwardRendering_VertexParams
 {
     float4 Pos : SV_Position;
     float3 Norm : TEXCOORD0;

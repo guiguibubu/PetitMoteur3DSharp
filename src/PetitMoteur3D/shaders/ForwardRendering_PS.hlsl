@@ -1,16 +1,24 @@
-#include "MiniPhongNormalMapShadowMap_VSOut.hlsl"
+#include "ForwardRendering_VSOut.hlsli"
+#include "TextureHelper.hlsl"
+#include "LightHelper.hlsl"
+
+#ifndef FORWARD_RENDERING_PS
+#define FORWARD_RENDERING_PS
 
 struct LightParams
 {
-    float3 pos; // la position de la source d’éclairage (Point)
-    float3 dir; // la direction de la source d’éclairage (Directionnelle)
-    float4 vAEcl; // la valeur ambiante de l’éclairage
-    float4 vDEcl; // la valeur diffuse de l’éclairage
+    float3 pos; // la position de la source d'éclairage (Point)
+    float3 dir; // la direction de la source d'éclairage (Directionnelle)
+    float4 vAEcl; // la valeur ambiante de l'éclairage
+    float4 vDEcl; // la valeur diffuse de l'éclairage
+    bool enable; // l'éclairage est allumé
+    bool enableShadow; // autoriser ombre (ShadowMapping)
+    int2 offset; // Offset for memory alignment
 };
 
 cbuffer frameBuffer
 {
-    LightParams vLumiere; // la position de la source d’éclairage (Point)
+    LightParams vLumiere; // la position de la source d'éclairage (Point)
     float4 vCamera; // la position de la caméra
 }
 
@@ -18,77 +26,62 @@ cbuffer objectBuffer
 {
     float4 vAMat; // la valeur ambiante du matériau
     float4 vDMat; // la valeur diffuse du matériau
+    bool hasDiffuseTexture; // Has diffuse texture
+    bool hasNormalTexture; // Has normal texture
+    int2 offset; // Offset for memory alignment
 }
 
-cbuffer objectOptionsBuffer
-{
-    bool hasTexture; // indique si a une texture
-    bool hasNormalMap; // indique si a une normal map
-    bool drawShadow; // do we need to draw shadows
-}
-
-SamplerState SampleState; // l’état de sampling
+SamplerState SampleState; // l'état de sampling
 SamplerComparisonState ShadowMapSampler; // sampling pour la shadow map
 
 Texture2D textureEntree; // la texture
 Texture2D textureNormalMap; // la normal map
 Texture2D textureShadowMap; // la shadow map
 
-float4 MiniPhongNormalMapShadowMapPS(VS_Sortie vs) : SV_Target0
+struct PS_OUT
+{
+    float4 color : SV_Target;
+};
+
+PS_OUT ForwardRenderingPSImpl(ForwardRendering_VertexParams vertex, uniform bool useNormalMap, uniform bool useTextureColor, uniform bool drawShadow)
 {
     float3 couleur;
 
-    if (hasNormalMap)
+    if (useNormalMap)
     {
-        float3 normalMap = textureNormalMap.Sample(SampleState, vs.coordTex).rgb;
-
-        //Change normal map range from [0, 1] to [-1, 1]
-        normalMap = (2.0f * normalMap) - 1.0f;
-
-        //Make sure tangent is completely orthogonal to normal
-        vs.Tang = normalize(vs.Tang - dot(vs.Tang, vs.Norm) * vs.Norm);
-
-        //Create the biTangent
-        float3 biTangent = cross(vs.Norm, vs.Tang);
-
-        //Create the "Texture Space"
-        float3x3 texSpace = float3x3(vs.Tang, biTangent, vs.Norm);
-
-        //Convert normal from normal map to texture space and store in input.normal
-        vs.Norm = normalize(mul(normalMap, texSpace));
+        vertex.Norm = ReadNormalMap(textureNormalMap, SampleState, vertex.coordTex, vertex.Norm, vertex.Tang);
     }
 
-	// Normaliser les paramètres
-    float3 N = normalize(vs.Norm);
-    float3 L = normalize(vs.vDirLum);
-    float3 V = normalize(vs.vDirCam);
-	// Valeur de la composante diffuse
+    // Normaliser les paramétres
+    float3 N = normalize(vertex.Norm);
+    float3 L = normalize(vertex.vDirLum);
+    float3 V = normalize(vertex.vDirCam);
+    // Valeur de la composante diffuse
     float3 diff = saturate(dot(N, L));
-	// R = 2 * (N.L) * N – L
+    // R = 2 * (N.L) * N é L
     float3 R = normalize(2 * diff.xyz * N - L);
-	// Puissance de 4 - pour l’exemple
+    // Puissance de 4 - pour léexemple
     float S = pow(saturate(dot(R, V)), 64);
 
-	// Échantillonner la couleur du pixel à partir de la texture
+    // échantillonner la couleur du pixel é partir de la texture
     float3 couleurTexture;
-    if (hasTexture)
+    if (useTextureColor)
     {
-        couleurTexture = textureEntree.Sample(SampleState,
-	vs.coordTex).rgb;
+        couleurTexture = ReadTextureRGB(textureEntree, SampleState, vertex.coordTex);
     }
     else
     {
         couleurTexture = (0.5f, 0.5f, 0.5f);
     }
-	
-	// ********* OMBRE *********
+    
+    // ********* OMBRE *********
     bool isInShadow = false;
     if (drawShadow)
     {
         // Conversion space [-1;1] to texture space [0;1]
-        float2 shadowTexCoords = 0.5f * vs.lightSpacePos.xy / vs.lightSpacePos.w + float2(0.5f, 0.5f);
+        float2 shadowTexCoords = 0.5f * vertex.lightSpacePos.xy / vertex.lightSpacePos.w + float2(0.5f, 0.5f);
         shadowTexCoords.y = 1.0f - shadowTexCoords.y;
-        float pixelDepth = vs.lightSpacePos.z / vs.lightSpacePos.w;
+        float pixelDepth = vertex.lightSpacePos.z / vertex.lightSpacePos.w;
 
         // Check if the pixel texture coordinate is in the view frustum of the 
         // light before doing any shadow work.
@@ -117,7 +110,7 @@ float4 MiniPhongNormalMapShadowMapPS(VS_Sortie vs) : SV_Target0
         }
     }
 
-	// I = A + D * N.L + (R.V)n
+    // I = A + D * N.L + (R.V)n
     float3 couleurLumiereAmbiante = 0.4f * vLumiere.vAEcl.rgb * vAMat.rgb;
     float3 couleurLumiereDiffuse = vLumiere.vDEcl.rgb * vDMat.rgb * diff;
     float3 couleurLumiereSpecular = 0.1f * S;
@@ -131,6 +124,15 @@ float4 MiniPhongNormalMapShadowMapPS(VS_Sortie vs) : SV_Target0
         couleur = couleurTexture * (couleurLumiereAmbiante + couleurLumiereDiffuse + couleurLumiereSpecular);
     }
     
-    
-    return float4(couleur, 1.0f);
+    PS_OUT result = (PS_OUT) 0;
+    result.color = float4(couleur, 1.0f);
+    return result;
 }
+
+// Render Techniques
+PS_OUT ForwardRenderingPS(ForwardRendering_VertexParams vertex)
+{
+    return ForwardRenderingPSImpl(vertex, hasNormalTexture, hasDiffuseTexture, vLumiere.enableShadow);
+}
+
+#endif
