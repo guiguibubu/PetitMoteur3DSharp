@@ -7,6 +7,8 @@ namespace PetitMoteur3D;
 
 internal sealed class Plane : BaseObjet3D
 {
+    public Material Material => _subObjects[0].Material;
+
     private readonly Vector3[] _vertices;
     private readonly Vector3[] _normales;
     private readonly Vector3[] _tangentes;

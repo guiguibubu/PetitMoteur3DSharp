@@ -435,7 +435,7 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
         // Upload texture to graphics system
         {
             Texture texture = textureManager.GetOrCreateTexture("ImGuiFontTextureView", pixels, width, height, bytesPerPixel);
-            _backendRendererUserData.FontTextureView = texture.TextureView;
+            _backendRendererUserData.FontTextureView = texture.ShaderRessourceView;
         }
 
         // Store our identifier

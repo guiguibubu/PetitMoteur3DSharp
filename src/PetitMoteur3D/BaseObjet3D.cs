@@ -14,6 +14,7 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
 {
     #region Public Properties
     /// <inheritdoc/>
+    public ref readonly System.Numerics.Vector3 Scale { get { return ref _scale; } }
     public ref readonly System.Numerics.Vector3 Position { get { return ref _position; } }
     public Orientation3D Orientation { get { return _orientation; } }
     /// <inheritdoc/>
@@ -38,11 +39,9 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
     private ComPtr<ID3D11Buffer> _vertexBufferPosition;
     private ComPtr<ID3D11Buffer> _indexBuffer;
 
-    private ComPtr<ID3D11ShaderResourceView> _textureD3D;
-    private ComPtr<ID3D11ShaderResourceView> _normalMap;
-
     private System.Numerics.Matrix4x4 _matWorld;
 
+    private System.Numerics.Vector3 _scale;
     private System.Numerics.Vector3 _position;
     private readonly Orientation3D _orientation;
 
@@ -66,6 +65,7 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
 
     protected BaseObjet3D(GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, RenderPassFactory renderPassFactory, string name = "")
     {
+        _scale = System.Numerics.Vector3.One;
         _position = System.Numerics.Vector3.Zero;
         _orientation = new Orientation3D();
         _matWorld = System.Numerics.Matrix4x4.Identity;
@@ -157,6 +157,34 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
         _orientation.Rotate(in axis, angle);
         UpdateMatWorld();
         return ref ZeroRotation;
+    }
+
+    /// <inheritdoc/>
+    public ref readonly System.Numerics.Vector3 SetScale(float x, float y, float z)
+    {
+        _scale.X = x;
+        _scale.Y = y;
+        _scale.Z = z;
+        UpdateMatWorld();
+        return ref _scale;
+    }
+
+    /// <inheritdoc/>
+    public ref readonly System.Numerics.Vector3 SetScale(float scale)
+    {
+        return ref SetScale(scale, scale, scale);
+    }
+
+    /// <inheritdoc/>
+    public ref readonly System.Numerics.Vector3 SetScale(System.Numerics.Vector3 scale)
+    {
+        return ref SetScale(in scale);
+    }
+
+    /// <inheritdoc/>
+    public ref readonly System.Numerics.Vector3 SetScale(scoped ref readonly System.Numerics.Vector3 scale)
+    {
+        return ref SetScale(scale.X, scale.Y, scale.Z);
     }
 
     /// <inheritdoc/>
@@ -255,8 +283,8 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
                 {
                     ambiantMaterialValue = subObjet3D.Material.Ambient,
                     diffuseMaterialValue = subObjet3D.Material.Diffuse,
-                    HasDiffuseTexture = Convert.ToInt32(_textureD3D.Handle is not null),
-                    HasNormalTexture = Convert.ToInt32(_normalMap.Handle is not null),
+                    HasDiffuseTexture = Convert.ToInt32(subObjet3D.Material.DiffuseTexture is not null),
+                    HasNormalTexture = Convert.ToInt32(subObjet3D.Material.NormalTexture is not null),
                 });
 
                 // Activer le VS
@@ -268,9 +296,9 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
                 _mainRenderPass.SetPixelShader();
                 _mainRenderPass.SetPixelShaderConstantBuffers();
                 // Activation de la texture
-                _mainRenderPass.UpdateTexture(_textureD3D);
-                _mainRenderPass.UpdateNormalMap(_normalMap);
-                _mainRenderPass.UpdateShadowMap(scene.ShadowMap.DepthTexture.TextureView);
+                _mainRenderPass.UpdateTexture(subObjet3D.Material.DiffuseTexture?.ShaderRessourceView ?? new ComPtr<ID3D11ShaderResourceView>());
+                _mainRenderPass.UpdateNormalMap(subObjet3D.Material.NormalTexture?.ShaderRessourceView ?? new ComPtr<ID3D11ShaderResourceView>());
+                _mainRenderPass.UpdateShadowMap(scene.ShadowMap.DepthTexture.ShaderRessourceView);
                 _mainRenderPass.SetPixelShaderRessources();
 
                 // Le sampler state
@@ -317,16 +345,6 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
         }
     }
 
-    public void SetTexture(Texture texture)
-    {
-        _textureD3D = texture.TextureView;
-    }
-
-    public void SetNormalMapTexture(Texture texture)
-    {
-        _normalMap = texture.TextureView;
-    }
-
     protected virtual void Initialisation()
     {
         _sommets = InitVertex();
@@ -367,16 +385,15 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
 
     protected void UpdateMatWorld()
     {
-        _matWorld = System.Numerics.Matrix4x4.CreateFromQuaternion(_orientation.Quaternion) * System.Numerics.Matrix4x4.CreateTranslation(_position);
+        _matWorld = System.Numerics.Matrix4x4.CreateScale(_scale) * System.Numerics.Matrix4x4.CreateFromQuaternion(_orientation.Quaternion) * System.Numerics.Matrix4x4.CreateTranslation(_position);
     }
 
-    public struct SubObjet3D
+    public class SubObjet3D
     {
         public IReadOnlyList<ushort> Indices;
         public System.Numerics.Matrix4x4 Transformation;
         public Material Material;
     }
-
 
     ~BaseObjet3D()
     {
