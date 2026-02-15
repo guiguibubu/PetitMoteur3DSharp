@@ -472,8 +472,8 @@ public class Engine
     {
         Scene scene = new(ressourceFactory, gameCamera, window.Size);
         Bloc bloc1 = new(4.0f, 4.0f, 4.0f, ressourceFactory, shaderFactory);
-        bloc1.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall.jpg");
-        bloc1.Material.NormalTexture = ressourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall_normal.jpg");
+        bloc1.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTexture("textures\\herringbone_brick_diff.jpg");
+        bloc1.Material.NormalTexture = ressourceFactory.TextureManager.GetOrLoadTexture("textures\\herringbone_brick_norm.jpg");
         bloc1.Move(-4f, 2f, 0f);
 
         Bloc bloc2 = new(4.0f, 4.0f, 4.0f, ressourceFactory, shaderFactory);

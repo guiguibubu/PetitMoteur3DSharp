@@ -1,10 +1,10 @@
 struct ForwardRendering_VertexParams
 {
     float4 Pos : SV_Position;
-    float3 Norm : TEXCOORD0;
-    float3 Tang : TEXCOORD1;
-    float3 vDirLum : TEXCOORD2;
-    float3 vDirCam : TEXCOORD3;
-    float2 coordTex : TEXCOORD4;
-    float4 lightSpacePos : TEXCOORD5;
+    float3 Norm : NORMAL;
+    float3 Tang : TANGENT;
+    float3 vDirLum : TEXCOORD1;
+    float3 vDirCam : TEXCOORD2;
+    float2 coordTex : TEXCOORD3;
+    float4 lightSpacePos : TEXCOORD4;
 };
