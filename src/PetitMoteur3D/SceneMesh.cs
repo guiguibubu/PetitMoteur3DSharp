@@ -15,7 +15,7 @@ internal sealed class SceneMesh
     private System.Numerics.Matrix4x4 _transformation;
     private readonly List<SceneMesh> _children;
 
-    public SceneMesh(Mesh mesh, System.Numerics.Matrix4x4 transformation, IReadOnlyList<SceneMesh> children)
+    public SceneMesh(Mesh mesh, System.Numerics.Matrix4x4 transformation, SceneMesh[] children)
     {
         _mesh = mesh;
         _transformation = transformation;

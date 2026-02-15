@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Numerics;
+using ImGuiNET;
 using Silk.NET.Assimp;
 
 namespace PetitMoteur3D.Graphics;
@@ -15,7 +16,7 @@ internal sealed class MeshLoader
         _importer = Assimp.GetApi();
     }
 
-    public unsafe IReadOnlyList<SceneMesh> Load(string filePath)
+    public unsafe SceneMesh[] Load(string filePath)
     {
         byte[] fileData = System.IO.File.ReadAllBytes(filePath);
         uint postProcessFlags = (uint)PostProcessSteps.Triangulate
@@ -26,7 +27,7 @@ internal sealed class MeshLoader
         | (uint)PostProcessSteps.FlipWindingOrder
         | (uint)PostProcessSteps.FlipUVs;
         Silk.NET.Assimp.Scene* scenePtr = _importer.ImportFileFromMemory(in fileData[0], (uint)fileData.Length, postProcessFlags, (byte*)0);
-        IReadOnlyList<SceneMesh> sceneMeshes;
+        SceneMesh[] sceneMeshes;
         try
         {
             if (scenePtr is null)
@@ -37,12 +38,12 @@ internal sealed class MeshLoader
 
             Material[] materials = ReadMaterials(scene, _importer);
 
-            IReadOnlyList<Mesh> meshes = ReadMeshes(scene, materials);
+            Mesh[] meshes = ReadMeshes(scene, materials);
 
             Node* rootNode = scene.MRootNode;
             if (rootNode is null)
             {
-                sceneMeshes = meshes.Select(m => new SceneMesh(m)).ToList();
+                sceneMeshes = meshes.Select(m => new SceneMesh(m)).ToArray();
             }
             else
             {
@@ -96,22 +97,22 @@ internal sealed class MeshLoader
         for (int i = 0; i < nbSubmesh; i++)
         {
             Silk.NET.Assimp.Mesh mesh = *scene.MMeshes[i];
-            IReadOnlyList<Sommet> vertices = ReadVertices(mesh);
+            Sommet[] vertices = ReadVertices(mesh);
 
-            IReadOnlyList<ushort> indices = ReadIndices(mesh);
+            ushort[] indices = ReadIndices(mesh);
 
             meshes[i] = new Mesh(vertices, indices, sceneMaterials[(int)mesh.MMaterialIndex]);
         }
         return meshes;
     }
 
-    private static unsafe List<SceneMesh> ReadNode(Node node, IReadOnlyList<Mesh> meshes)
+    private static unsafe SceneMesh[] ReadNode(Node node, Mesh[] meshes)
     {
         uint nbSubmesh = node.MNumMeshes;
-        List<SceneMesh> sceneMeshes;
+        SceneMesh[] sceneMeshes;
         if (nbSubmesh > 0)
         {
-            sceneMeshes = new List<SceneMesh>((int)nbSubmesh);
+            sceneMeshes = new SceneMesh[(int)nbSubmesh];
             for (int i = 0; i < nbSubmesh; i++)
             {
                 uint indexMesh = node.MMeshes[i];
@@ -128,13 +129,13 @@ internal sealed class MeshLoader
                     }
                     sceneMesh.AddChildren(ReadNode(*child, meshes));
                 }
-                sceneMeshes.Add(sceneMesh);
+                sceneMeshes[i] = sceneMesh;
             }
         }
         else
         {
             uint nbChildren = node.MNumChildren;
-            sceneMeshes = new List<SceneMesh>((int)nbChildren);
+            List<SceneMesh> sceneMeshesTmp = new((int)nbChildren);
             for (int j = 0; j < nbChildren; j++)
             {
                 Node* child = node.MChildren[j];
@@ -142,8 +143,9 @@ internal sealed class MeshLoader
                 {
                     continue;
                 }
-                sceneMeshes.AddRange(ReadNode(*child, meshes));
+                sceneMeshesTmp.AddRange(ReadNode(*child, meshes));
             }
+            sceneMeshes = sceneMeshesTmp.ToArray();
         }
         return sceneMeshes;
     }
@@ -172,21 +174,30 @@ internal sealed class MeshLoader
         return vertices;
     }
 
-    private unsafe static List<ushort> ReadIndices(Silk.NET.Assimp.Mesh mesh)
+    private unsafe static ushort[] ReadIndices(Silk.NET.Assimp.Mesh mesh)
     {
         uint nbFaces = mesh.MNumFaces;
-        List<ushort> indices = new();
-        int totalIndices = 0;
+        ushort[][] indicesPerFace = new ushort[nbFaces][];
+        int indicesCount = 0;
         for (int j = 0; j < nbFaces; j++)
         {
             Face face = mesh.MFaces[j];
             int nbIndices = (int)face.MNumIndices;
-            totalIndices += nbIndices;
-            Span<uint> indicesFace = new Span<uint>(face.MIndices, (int)face.MNumIndices);
-            indices.EnsureCapacity(totalIndices);
+            indicesCount += nbIndices;
+            Span<uint> indicesFace = new Span<uint>(face.MIndices, nbIndices);
             for (int l = 0; l < indicesFace.Length; l++)
             {
-                indices.Add((ushort)indicesFace[l]);
+                indicesPerFace[j] = indicesFace.ToArray().Select(x => (ushort)x).ToArray();
+            }
+        }
+        ushort[] indices = new ushort[indicesCount];
+        int currentIndex = 0;
+        foreach (ushort[] faceIndices in indicesPerFace)
+        {
+            foreach (ushort faceIndice in faceIndices)
+            {
+                indices[currentIndex] = faceIndice;
+                currentIndex++;
             }
         }
         return indices;

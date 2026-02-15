@@ -390,7 +390,7 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
 
     public class SubObjet3D
     {
-        public IReadOnlyList<ushort> Indices;
+        public ushort[] Indices;
         public System.Numerics.Matrix4x4 Transformation;
         public Material Material;
     }

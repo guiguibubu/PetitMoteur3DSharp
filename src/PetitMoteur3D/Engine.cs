@@ -492,7 +492,7 @@ public class Engine
         bloc4.Move(4f, 2f, 4f);
 
         MeshLoader meshLoader = new();
-        IReadOnlyList<SceneMesh>? meshes = meshLoader.Load("models\\teapot.obj");
+        SceneMesh[] meshes = meshLoader.Load("models\\teapot.obj");
 
         SceneMesh rootMesh = meshes[0];
         BoundingBox boundingBox = rootMesh.GetBoundingBox();
