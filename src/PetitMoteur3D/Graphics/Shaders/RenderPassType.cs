@@ -2,7 +2,11 @@
 
 internal enum RenderPassType
 {
-    Standart,
+    ForwardOpac,
+    ForwardTransparent,
+    DeferredShadingGeometry,
+    DeferredShadingLightning,
+    DeferredShadingTransparent,
     DepthTest,
     Shadow,
 }

@@ -36,6 +36,7 @@ public class Engine
     private bool _imGuiShowDemo;
     private bool _imGuiShowDebugLogs;
     private bool _imGuiShowEngineLogs;
+    private bool _imGuiShowGraphicOptions;
     private bool _imGuiShowGameCameraOptions;
     private bool _imGuiShowDebugCameraOptions;
     private bool _imGuiShowMetrics;
@@ -48,6 +49,8 @@ public class Engine
     private bool _isShadowOrthographique;
     private bool _isCameraOrthographique;
     private bool _useDebugCamera;
+    private SceneRenderingType[] _sceneRenderingTypeValues = Enum.GetValues<SceneRenderingType>();
+    private SceneRenderingType _sceneRenderingType;
     private Vector4 _backgroundColour;
 
     private readonly Stopwatch _horlogeEngine;
@@ -280,6 +283,7 @@ public class Engine
                         ImGui.Checkbox("Show Shadow Orthographique", ref _isShadowOrthographique);     // Edit bool
                         ImGui.Checkbox("Show Debug Camera Options", ref _imGuiShowDebugCameraOptions);     // Edit bool
                         ImGui.Checkbox("Show Game Camera Options", ref _imGuiShowGameCameraOptions);     // Edit bool
+                        ImGui.Checkbox("Show Graphics Options", ref _imGuiShowGraphicOptions);     // Edit bool
                         ImGui.Checkbox("Show Logs", ref _imGuiShowEngineLogs);     // Edit bool
                         ImGui.End();
 
@@ -332,6 +336,28 @@ public class Engine
                             ImGui.SliderFloat("farPlaneDistance", ref farPlaneDistance, nearPlaneDistance + 0.1f, 500f);
                             gameFrustrumView.NearPlaneDistance = nearPlaneDistance;
                             gameFrustrumView.FarPlaneDistance = farPlaneDistance;
+                            ImGui.End();
+                        }
+
+                        if (_imGuiShowGraphicOptions)
+                        {
+                            ImGui.Begin("PetitMoteur3D Graphics");
+                            if(ImGui.BeginCombo("SceneRenderType", _sceneRenderingType.ToString()))
+                            {
+                                foreach (SceneRenderingType option in _sceneRenderingTypeValues)
+                                {
+                                    bool isSelected = _sceneRenderingType == option; // You can store your selection however you want, outside or inside your objects
+                                    if (ImGui.Selectable(option.ToString(), isSelected))
+                                    {
+                                        _sceneRenderingType = option;
+                                    }
+                                    if (isSelected)
+                                    {
+                                        ImGui.SetItemDefaultFocus();   // You may set the initial focus when opening the combo (scrolling + for keyboard navigation support)
+                                    }
+                                }
+                                ImGui.EndCombo();
+                            }
                             ImGui.End();
                         }
 
@@ -573,6 +599,7 @@ public class Engine
         BeginRender();
         if (_initAnimationFinished)
         {
+            _scene.RenderingType = _sceneRenderingType;
             _scene.ShowShadow = _showShadow;
             _scene.ShowDepthTest = _showDepthTest;
             _scene.UseDebugCam = _useDebugCamera;

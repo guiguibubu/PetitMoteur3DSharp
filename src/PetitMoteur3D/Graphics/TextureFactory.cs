@@ -78,6 +78,11 @@ internal sealed class TextureFactory
         return new TextureBuilder(this, textureDesc);
     }
 
+    public TextureBuilder CreateBuilder(Texture2DDesc textureDesc, ComPtr<ID3D11Texture2D> texture)
+    {
+        return new TextureBuilder(this, textureDesc, texture);
+    }
+
     public unsafe Texture CreateEmpty(string name, int width, int height)
     {
         Texture2DDesc textureDesc = CreateDefaultTextureDesc((uint)width, (uint)height);
@@ -173,6 +178,20 @@ internal sealed class TextureFactory
             _device.CreateDepthStencilView(pResource, in pDesc, ref depthStencilView)
         );
         return depthStencilView;
+    }
+
+    public ComPtr<ID3D11RenderTargetView> CreateRenderTargetView(ComPtr<ID3D11Texture2D> pResource, in RenderTargetViewDesc pDesc)
+    {
+        ComPtr<ID3D11RenderTargetView> renderTargetView = default;
+        SilkMarshal.ThrowHResult(
+            _device.CreateRenderTargetView(pResource, in pDesc, ref renderTargetView)
+        );
+        return renderTargetView;
+    }
+
+    public ComPtr<ID3D11RenderTargetView> CreateRenderTargetView(ComPtr<ID3D11Texture2D> pResource)
+    {
+        return CreateRenderTargetView(pResource, in Unsafe.NullRef<RenderTargetViewDesc>());
     }
 
     private static Texture2DDesc CreateDefaultTextureDesc(uint width, uint height)

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.Numerics;
 using System.Runtime.CompilerServices;
@@ -16,6 +17,7 @@ internal sealed class Scene : IDisposable
     public bool ShowDepthTest { get; set; }
     public bool ShowShadow { get; set; }
     public bool UseDebugCam { get; set; }
+    public SceneRenderingType RenderingType { get; set; }
     public ICamera GameCamera => _gameCamera;
     public LightShadersParams Light => _light;
     public ComPtr<ID3D11RasterizerState> RasterizerState { get { return _rasterizerState; } set { _rasterizerState = value; } }
@@ -32,6 +34,14 @@ internal sealed class Scene : IDisposable
     private readonly ShadowMap _shadowMap;
     private readonly ShadowMap _debugDepthMap;
     private readonly FreeCamera _cameraLigth;
+
+    //private Texture _deferredShadingLightAccumulationTexture;
+    //private Texture _deferredShadingDiffuseTexture;
+    //private Texture _deferredShadingSpecularTexture;
+    //private Texture _deferredShadingNormalTexture;
+    //private ComPtr<ID3D11RenderTargetView>[] _deferredShadingRenderTargets;
+
+    //private TextureManager _textureManager;
 
     private const int DistanceLight = 50;
     private bool _disposed;
@@ -71,6 +81,10 @@ internal sealed class Scene : IDisposable
         };
         _cameraLigth.LookTo(new Vector3(_light.Direction.X, _light.Direction.Y, _light.Direction.Z));
         _cameraLigth.SetPosition(_gameCamera.Position - (DistanceLight * _cameraLigth.Orientation.Forward));
+
+        //_textureManager = graphicDeviceRessourceFactory.TextureManager;
+
+        //InitDeferredTextures(windowSize.Width, windowSize.Height);
 
         _disposed = false;
     }
@@ -140,36 +154,47 @@ internal sealed class Scene : IDisposable
             Light = _light,
             GameCameraPos = new Vector4(_gameCamera.Position, 1.0f),
             ShowShadow = ShowShadow,
-            ShadowMap = _shadowMap
+            ShadowMap = _shadowMap,
         };
 
         if (ShowDepthTest)
         {
-            foreach (IDrawableObjet obj in _objectsDrawablePerRenderPass[RenderPassType.DepthTest])
-            {
-                obj.Draw(RenderPassType.DepthTest, sceneContext);
-            }
+            Draw(RenderPassType.DepthTest, sceneContext);
         }
 
-        if (ShowShadow)
+        if (RenderingType == SceneRenderingType.Forward)
         {
-            //Utiliser la surface de la texture comme surface de rendu
-            graphicPipeline.OutputMergerStage.SetRenderTarget(0, in Unsafe.NullRef<ComPtr<ID3D11RenderTargetView>>(), _shadowMap.DepthTexture.TextureDepthStencilView);
-            // Effacer le shadow map
-            graphicPipeline.GraphicDevice.DeviceContext.ClearDepthStencilView(_shadowMap.DepthTexture.TextureDepthStencilView, (uint)(ClearFlag.Depth | ClearFlag.Stencil), 1.0f, 0);
-            // Rasterizer
-            graphicPipeline.RasterizerStage.SetState(graphicPipeline.SolidCullFrontRS);
-            foreach (IDrawableObjet obj in _objectsDrawablePerRenderPass[RenderPassType.Shadow])
+            if (ShowShadow)
             {
-                obj.Draw(RenderPassType.Shadow, sceneContext);
-            }
-            graphicPipeline.SetRenderTarget(clear: false);
-            graphicPipeline.RasterizerStage.SetState(_rasterizerState);
-        }
+                RenderTargetType renderTargetType = graphicPipeline.RenderTargetType;
+                //Utiliser la surface de la texture comme surface de rendu
+                graphicPipeline.OutputMergerStage.SetRenderTarget(0, in Unsafe.NullRef<ComPtr<ID3D11RenderTargetView>>(), _shadowMap.DepthTexture.TextureDepthStencilView);
+                // Effacer le shadow map
+                graphicPipeline.GraphicDevice.DeviceContext.ClearDepthStencilView(_shadowMap.DepthTexture.TextureDepthStencilView, (uint)(ClearFlag.Depth | ClearFlag.Stencil), 1.0f, 0);
+                // Rasterizer
+                graphicPipeline.RasterizerStage.SetState(graphicPipeline.SolidCullFrontRS);
 
-        foreach (IDrawableObjet obj in _objectsDrawablePerRenderPass[RenderPassType.Standart])
+                Draw(RenderPassType.Shadow, sceneContext);
+
+                graphicPipeline.SetRenderTarget(renderTargetType, clear: false);
+                graphicPipeline.RasterizerStage.SetState(_rasterizerState);
+            }
+            Draw(RenderPassType.ForwardOpac, sceneContext);
+        }
+        else if (RenderingType == SceneRenderingType.DeferredShading)
         {
-            obj.Draw(RenderPassType.Standart, sceneContext);
+            RenderTargetType renderTargetType = graphicPipeline.RenderTargetType;
+            graphicPipeline.SetRenderTarget(RenderTargetType.GeometryBuffers, clear: false);
+            Draw(RenderPassType.DeferredShadingGeometry, sceneContext);
+            graphicPipeline.SetRenderTarget(renderTargetType, clear: false);
+        }
+    }
+
+    private void Draw(RenderPassType renderPassType, SceneViewContext sceneContext)
+    {
+        foreach (IDrawableObjet obj in _objectsDrawablePerRenderPass[renderPassType])
+        {
+            obj.Draw(renderPassType, sceneContext);
         }
     }
 

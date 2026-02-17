@@ -21,6 +21,10 @@ internal class RenderPassFactory
         {
             return new ForwardOpaqueRenderPass(_graphicPipeline, name) as T ?? throw new InvalidCastException();
         }
+        else if (typeof(T) == typeof(DeferredGeometryRenderPass))
+        {
+            return new DeferredGeometryRenderPass(_graphicPipeline, name) as T ?? throw new InvalidCastException();
+        }
         else if (typeof(T) == typeof(ShadowMapRenderPass))
         {
             return new ShadowMapRenderPass(_graphicPipeline, name) as T ?? throw new InvalidCastException();

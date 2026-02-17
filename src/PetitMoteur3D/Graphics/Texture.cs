@@ -16,6 +16,11 @@ internal sealed class Texture : IDisposable
     private ComPtr<ID3D11ShaderResourceView> _shaderRessourceView;
     public ComPtr<ID3D11DepthStencilView> TextureDepthStencilView { get { return _textureDepthStencilView; } }
     private ComPtr<ID3D11DepthStencilView> _textureDepthStencilView;
+    public ComPtr<ID3D11RenderTargetView> RenderTargetView { get { return _renderTargetView; } }
+    public ref ComPtr<ID3D11RenderTargetView> RenderTargetViewRef { get { return ref _renderTargetView; } }
+    private ComPtr<ID3D11RenderTargetView> _renderTargetView;
+
+    private bool _textureOwner;
 
     private bool _disposed;
 
@@ -26,7 +31,7 @@ internal sealed class Texture : IDisposable
     /// <param name="width"></param>
     /// <param name="heigth"></param>
     /// <param name="texture">Released when Texture is disposed</param>
-    public unsafe Texture(string name, int width, int heigth, ComPtr<ID3D11Texture2D> texture)
+    public unsafe Texture(string name, int width, int heigth, ComPtr<ID3D11Texture2D> texture, bool textureOwner = true)
     {
         Name = name;
         Width = width;
@@ -34,6 +39,9 @@ internal sealed class Texture : IDisposable
         _texture = texture;
         _shaderRessourceView = null;
         _textureDepthStencilView = null;
+        _renderTargetView = null;
+
+        _textureOwner = textureOwner;
 
         if (!string.IsNullOrEmpty(Name))
         {
@@ -57,6 +65,10 @@ internal sealed class Texture : IDisposable
     public void SetTextureDepthStencilView(ComPtr<ID3D11DepthStencilView> textureDepthStencilView)
     {
         _textureDepthStencilView = textureDepthStencilView;
+    }
+    public void SetTextureRenderTargetView(ComPtr<ID3D11RenderTargetView> textureRenderTargetView)
+    {
+        _renderTargetView = textureRenderTargetView;
     }
 
     ~Texture()
@@ -99,9 +111,13 @@ internal sealed class Texture : IDisposable
             // unmanaged resources here.
             // If disposing is false,
             // only the following code is executed.
-            _texture.Dispose();
+            if (_textureOwner)
+            {
+                _texture.Dispose();
+            }
             _shaderRessourceView.Dispose();
             _textureDepthStencilView.Dispose();
+            _renderTargetView.Dispose();
 
             // Note disposing has been done.
             _disposed = true;

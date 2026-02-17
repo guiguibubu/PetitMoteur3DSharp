@@ -82,15 +82,6 @@ internal sealed class GraphicDeviceRessourceFactory : IDisposable
         return swapChain;
     }
 
-    public ComPtr<ID3D11RenderTargetView> CreateRenderTargetView(ComPtr<ID3D11Texture2D> pResource, in RenderTargetViewDesc pDesc)
-    {
-        ComPtr<ID3D11RenderTargetView> renderTargetView = default;
-        SilkMarshal.ThrowHResult(
-            _device.CreateRenderTargetView(pResource, ref Unsafe.NullRef<RenderTargetViewDesc>(), ref renderTargetView)
-        );
-        return renderTargetView;
-    }
-
     public TextureBuilder CreateBuilder(Texture2DDesc textureDesc)
     {
         return new TextureBuilder(_textureManager.Factory, textureDesc);

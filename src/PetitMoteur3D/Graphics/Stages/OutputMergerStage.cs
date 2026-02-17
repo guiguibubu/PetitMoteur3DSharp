@@ -1,4 +1,6 @@
-﻿using Silk.NET.Core.Native;
+﻿using System;
+using System.Runtime.InteropServices;
+using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
 
 namespace PetitMoteur3D.Graphics.Stages;
@@ -33,6 +35,14 @@ internal sealed class OutputMergerStage
         _deviceContext.OMSetRenderTargets(NumViews, in ppRenderTargetViews, pDepthStencilView);
     }
 
+    public unsafe void SetRenderTarget(uint NumViews, in ComPtr<ID3D11RenderTargetView>[] ppRenderTargetViews, ComPtr<ID3D11DepthStencilView> pDepthStencilView)
+    {
+        GCHandle handle = GCHandle.Alloc(ppRenderTargetViews, GCHandleType.Pinned);
+        IntPtr address = handle.AddrOfPinnedObject();
+        _deviceContext.OMSetRenderTargets(NumViews, (ID3D11RenderTargetView**)address, (ID3D11DepthStencilView*)pDepthStencilView.Handle);
+        handle.Free();
+    }
+
     public unsafe void SetRenderTarget(uint NumViews, in ComPtr<ID3D11RenderTargetView> ppRenderTargetViews, ComPtr<ID3D11DepthStencilView> pDepthStencilView)
     {
         _deviceContext.OMSetRenderTargets(NumViews, (ID3D11RenderTargetView**)ppRenderTargetViews.GetAddressOf(), (ID3D11DepthStencilView*)pDepthStencilView.Handle);
@@ -41,5 +51,13 @@ internal sealed class OutputMergerStage
     public unsafe void SetRenderTarget(uint NumViews, in ComPtr<ID3D11RenderTargetView> ppRenderTargetViews)
     {
         _deviceContext.OMSetRenderTargets(NumViews, (ID3D11RenderTargetView**)ppRenderTargetViews.GetAddressOf(), (ID3D11DepthStencilView*)null);
+    }
+
+    public unsafe void SetRenderTarget(uint NumViews, in ComPtr<ID3D11RenderTargetView>[] ppRenderTargetViews)
+    {
+        GCHandle handle = GCHandle.Alloc(ppRenderTargetViews, GCHandleType.Pinned);
+        IntPtr address = handle.AddrOfPinnedObject();
+        _deviceContext.OMSetRenderTargets(NumViews, (ID3D11RenderTargetView**)address, (ID3D11DepthStencilView*)null);
+        handle.Free();
     }
 }
