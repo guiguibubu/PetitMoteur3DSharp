@@ -92,6 +92,7 @@ PS_OUT DeferredShadingGeometryPassPSImpl(DeferredShadingGeometryPass_VertexParam
 }
 
 // Render Techniques
+[earlydepthstencil]
 PS_OUT DeferredShadingGeometryPassPS(DeferredShadingGeometryPass_VertexParams vertex)
 {
     return DeferredShadingGeometryPassPSImpl(vertex, hasNormalTexture, hasDiffuseTexture);

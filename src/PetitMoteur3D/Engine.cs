@@ -50,7 +50,7 @@ public class Engine
     private bool _isCameraOrthographique;
     private bool _useDebugCamera;
     private SceneRenderingType[] _sceneRenderingTypeValues = Enum.GetValues<SceneRenderingType>();
-    private SceneRenderingType _sceneRenderingType;
+    private SceneRenderingType _sceneRenderingType = SceneRenderingType.DeferredShading;
     private Vector4 _backgroundColour;
 
     private readonly Stopwatch _horlogeEngine;
@@ -342,7 +342,7 @@ public class Engine
                         if (_imGuiShowGraphicOptions)
                         {
                             ImGui.Begin("PetitMoteur3D Graphics");
-                            if(ImGui.BeginCombo("SceneRenderType", _sceneRenderingType.ToString()))
+                            if (ImGui.BeginCombo("SceneRenderType", _sceneRenderingType.ToString()))
                             {
                                 foreach (SceneRenderingType option in _sceneRenderingTypeValues)
                                 {

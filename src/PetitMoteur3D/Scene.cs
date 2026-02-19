@@ -166,8 +166,8 @@ internal sealed class Scene : IDisposable
         {
             if (ShowShadow)
             {
-                RenderTargetType renderTargetType = graphicPipeline.RenderTargetType;
                 //Utiliser la surface de la texture comme surface de rendu
+                graphicPipeline.SetRenderTarget(RenderTargetType.NoRenderTarget);
                 graphicPipeline.OutputMergerStage.SetRenderTarget(0, in Unsafe.NullRef<ComPtr<ID3D11RenderTargetView>>(), _shadowMap.DepthTexture.TextureDepthStencilView);
                 // Effacer le shadow map
                 graphicPipeline.GraphicDevice.DeviceContext.ClearDepthStencilView(_shadowMap.DepthTexture.TextureDepthStencilView, (uint)(ClearFlag.Depth | ClearFlag.Stencil), 1.0f, 0);
@@ -176,17 +176,17 @@ internal sealed class Scene : IDisposable
 
                 Draw(RenderPassType.Shadow, sceneContext);
 
-                graphicPipeline.SetRenderTarget(renderTargetType, clear: false);
                 graphicPipeline.RasterizerStage.SetState(_rasterizerState);
             }
+            graphicPipeline.SetRenderTarget(RenderTargetType.BackBuffer, clear: true);
             Draw(RenderPassType.ForwardOpac, sceneContext);
         }
         else if (RenderingType == SceneRenderingType.DeferredShading)
         {
-            RenderTargetType renderTargetType = graphicPipeline.RenderTargetType;
             graphicPipeline.SetRenderTarget(RenderTargetType.GeometryBuffers, clear: false);
             Draw(RenderPassType.DeferredShadingGeometry, sceneContext);
-            graphicPipeline.SetRenderTarget(renderTargetType, clear: false);
+            graphicPipeline.SetRenderTarget(RenderTargetType.BackBuffer, clear: false);
+            Draw(RenderPassType.DeferredShadingLightning, sceneContext);
         }
     }
 

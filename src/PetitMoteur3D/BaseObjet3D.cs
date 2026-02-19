@@ -21,7 +21,7 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
     public string Name { get { return _name; } }
 
     /// <inheritdoc/>
-    public RenderPassType[] SupportedRenderPasses => [RenderPassType.ForwardOpac, RenderPassType.DeferredShadingGeometry, RenderPassType.DepthTest, RenderPassType.Shadow];
+    public RenderPassType[] SupportedRenderPasses => [RenderPassType.ForwardOpac, RenderPassType.DeferredShadingGeometry, RenderPassType.DeferredShadingLightning, RenderPassType.DepthTest, RenderPassType.Shadow];
     #endregion
 
     #region Protected Properties
@@ -62,6 +62,7 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
     private readonly DepthTestRenderPass _depthTestRenderPass;
     private readonly ForwardOpaqueRenderPass _forwardOpaqueRenderPass;
     private readonly DeferredGeometryRenderPass _deferredGeometryRenderPass;
+    private readonly DeferredLightningRenderPass _deferredLightningRenderPass;
     private readonly ShadowMapRenderPass _shadowMapRenderPass;
 
     protected BaseObjet3D(GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, RenderPassFactory renderPassFactory, string name = "")
@@ -91,7 +92,8 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
 
         _depthTestRenderPass = renderPassFactory.Create<DepthTestRenderPass>($"{_name}_DepthTestRenderPass");
         _forwardOpaqueRenderPass = renderPassFactory.Create<ForwardOpaqueRenderPass>($"{_name}_ForwardRenderPass");
-        _deferredGeometryRenderPass = renderPassFactory.Create<DeferredGeometryRenderPass>($"{_name}_DeferredRenderPass");
+        _deferredGeometryRenderPass = renderPassFactory.Create<DeferredGeometryRenderPass>($"{_name}_DeferredGeometryRenderPass");
+        _deferredLightningRenderPass = renderPassFactory.Create<DeferredLightningRenderPass>($"{_name}_DeferredLightningRenderPass");
         _shadowMapRenderPass = renderPassFactory.Create<ShadowMapRenderPass>($"{_name}_ShadowMapRenderPass");
 
         _disposed = false;
@@ -379,6 +381,63 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
                 _deferredGeometryRenderPass.ClearPixelShaderResources();
             }
         }
+        else if (renderPass == RenderPassType.DeferredShadingLightning)
+        {
+            // Choisir la topologie des primitives
+            _deferredLightningRenderPass.UpdatePrimitiveTopology(D3DPrimitiveTopology.D3D11PrimitiveTopologyTrianglelist);
+            _deferredLightningRenderPass.SetPrimitiveTopology();
+            // Source des sommets
+            _deferredLightningRenderPass.UpdateVertexBuffer(_vertexBuffer, _vertexStride);
+            _deferredLightningRenderPass.SetVertexBuffer();
+            // Source des index
+            _deferredLightningRenderPass.UpdateIndexBuffer(_indexBuffer, Silk.NET.DXGI.Format.FormatR16Uint);
+            _deferredLightningRenderPass.SetIndexBuffer();
+            // input layout des sommets
+            _deferredLightningRenderPass.SetInputLayout();
+
+            foreach (SubObjet3D subObjet3D in _subObjects)
+            {
+                // Initialiser et sélectionner les « constantes » des shaders
+                _deferredLightningRenderPass.UpdateSceneConstantBuffer(new DeferredLightningRenderPass.SceneConstantBufferParams()
+                {
+                    LightParams = new DeferredLightningRenderPass.LightParams()
+                    {
+                        Position = scene.Light.Position,
+                        Direction = scene.Light.Direction,
+                        AmbiantColor = scene.Light.AmbiantColor,
+                        DiffuseColor = scene.Light.DiffuseColor,
+                        Enable = Convert.ToInt32(scene.ShowShadow),
+                    },
+                    CameraPos = scene.GameCameraPos
+                });
+
+                Matrix4x4 matrixWorld = subObjet3D.Transformation * _matWorld;
+                _deferredLightningRenderPass.UpdateVertexObjectConstantBuffer(new DeferredLightningRenderPass.VertexObjectConstantBufferParams()
+                {
+                    matWorldViewProj = System.Numerics.Matrix4x4.Transpose(matrixWorld * matViewProj),
+                    matWorld = System.Numerics.Matrix4x4.Transpose(matrixWorld),
+                });
+
+                // Activer le VS
+                _deferredLightningRenderPass.SetVertexShader();
+                _deferredLightningRenderPass.SetVertexShaderConstantBuffers();
+                // Activer le GS
+                _deferredLightningRenderPass.SetGeometryShader();
+                // Activer le PS
+                _deferredLightningRenderPass.SetPixelShader();
+                _deferredLightningRenderPass.SetPixelShaderConstantBuffers();
+                // Activation de la texture
+                _deferredLightningRenderPass.SetPixelShaderRessources();
+
+                // Le sampler state
+                _deferredLightningRenderPass.SetSamplers();
+
+                // **** Rendu de l’objet
+                _deferredLightningRenderPass.DrawIndexed((uint)_indices.Length, 0, 0);
+
+                _deferredLightningRenderPass.ClearPixelShaderResources();
+            }
+        }
         else if (renderPass == RenderPassType.Shadow)
         {
             // Choisir la topologie des primitives
@@ -484,8 +543,10 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
             _vertexBuffer.Dispose();
             _indexBuffer.Dispose();
 
+            _forwardOpaqueRenderPass.Dispose();
             _depthTestRenderPass.Dispose();
             _deferredGeometryRenderPass.Dispose();
+            _deferredLightningRenderPass.Dispose();
             _shadowMapRenderPass.Dispose();
 
             _disposed = true;
