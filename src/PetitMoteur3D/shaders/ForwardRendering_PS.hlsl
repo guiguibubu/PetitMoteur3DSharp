@@ -49,7 +49,7 @@ PS_OUT ForwardRenderingPSImpl(ForwardRendering_VertexParams vertex, uniform bool
 
     if (useNormalMap)
     {
-        vertex.Norm = ReadNormalMap(textureNormalMap, SampleState, vertex.coordTex, vertex.Norm, vertex.Tang);
+        vertex.Norm = DoNormalMapping(textureNormalMap, SampleState, vertex.coordTex, vertex.Norm, vertex.Tang);
     }
 
     // Normaliser les paramétres

@@ -50,7 +50,7 @@ public class Engine
     private bool _isCameraOrthographique;
     private bool _useDebugCamera;
     private SceneRenderingType[] _sceneRenderingTypeValues = Enum.GetValues<SceneRenderingType>();
-    private SceneRenderingType _sceneRenderingType;
+    private SceneRenderingType _sceneRenderingType = SceneRenderingType.DeferredShading;
     private Vector4 _backgroundColour;
 
     private readonly Stopwatch _horlogeEngine;
@@ -342,7 +342,7 @@ public class Engine
                         if (_imGuiShowGraphicOptions)
                         {
                             ImGui.Begin("PetitMoteur3D Graphics");
-                            if(ImGui.BeginCombo("SceneRenderType", _sceneRenderingType.ToString()))
+                            if (ImGui.BeginCombo("SceneRenderType", _sceneRenderingType.ToString()))
                             {
                                 foreach (SceneRenderingType option in _sceneRenderingTypeValues)
                                 {
@@ -494,25 +494,25 @@ public class Engine
         _scene.RasterizerState = _graphicPipeline.SolidCullBackRS;
     }
 
-    private static Scene InitDefaultScene(GraphicDeviceRessourceFactory ressourceFactory, RenderPassFactory shaderFactory, ICamera gameCamera, IWindow window)
+    private static Scene InitDefaultScene(GraphicDeviceRessourceFactory ressourceFactory, RenderPassFactory renderPassFactory, ICamera gameCamera, IWindow window)
     {
-        Scene scene = new(ressourceFactory, gameCamera, window.Size);
-        Bloc bloc1 = new(4.0f, 4.0f, 4.0f, ressourceFactory, shaderFactory);
+        Scene scene = new(ressourceFactory, renderPassFactory, gameCamera, window.Size);
+        Bloc bloc1 = new(4.0f, 4.0f, 4.0f, ressourceFactory, renderPassFactory);
         bloc1.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTexture("textures\\herringbone_brick_diff.jpg");
         bloc1.Material.NormalTexture = ressourceFactory.TextureManager.GetOrLoadTexture("textures\\herringbone_brick_norm.jpg");
         bloc1.Move(-4f, 2f, 0f);
 
-        Bloc bloc2 = new(4.0f, 4.0f, 4.0f, ressourceFactory, shaderFactory);
+        Bloc bloc2 = new(4.0f, 4.0f, 4.0f, ressourceFactory, renderPassFactory);
         bloc2.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall.jpg");
         bloc2.Material.NormalTexture = ressourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall_normal.jpg");
         bloc2.Move(4f, 2f, 0f);
 
-        Bloc bloc3 = new(4.0f, 4.0f, 4.0f, ressourceFactory, shaderFactory);
+        Bloc bloc3 = new(4.0f, 4.0f, 4.0f, ressourceFactory, renderPassFactory);
         bloc3.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall.jpg");
         bloc3.Material.NormalTexture = ressourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall_normal.jpg");
         bloc3.Move(-4f, 2f, 4f);
 
-        Bloc bloc4 = new(4.0f, 4.0f, 4.0f, ressourceFactory, shaderFactory);
+        Bloc bloc4 = new(4.0f, 4.0f, 4.0f, ressourceFactory, renderPassFactory);
         bloc4.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall.jpg");
         bloc4.Material.NormalTexture = ressourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall_normal.jpg");
         bloc4.Move(4f, 2f, 4f);
@@ -529,11 +529,11 @@ public class Engine
         float dimY = boundingBox.Max.Y - boundingBox.Min.Y;
         float dimZ = boundingBox.Max.Z - boundingBox.Min.Z;
 
-        ObjetMesh objetMesh = new(rootMesh, ressourceFactory, shaderFactory);
+        ObjetMesh objetMesh = new(rootMesh, ressourceFactory, renderPassFactory);
         objetMesh.Move(0f, 2f, 0f);
         objetMesh.SetScale(4f / float.Max(float.Max(dimX, dimY), dimZ));
 
-        Plane ground = new(10f, 10f, ressourceFactory, shaderFactory);
+        Plane ground = new(10f, 10f, ressourceFactory, renderPassFactory);
         ground.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTexture("textures\\silk.png");
         ground.Rotate(Vector3.UnitX, (float)(Math.PI / 2f));
 

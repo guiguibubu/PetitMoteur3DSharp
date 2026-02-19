@@ -9,20 +9,15 @@ using Silk.NET.Direct3D11;
 
 namespace PetitMoteur3D.Graphics.Shaders;
 
-internal sealed class DeferredGeometryRenderPass : BaseRenderPass, IDisposable
+internal sealed class DeferredLightningRenderPass : BaseRenderPass, IDisposable
 {
     private ComPtr<ID3D11Buffer> _sceneConstantBuffer;
     private ComPtr<ID3D11Buffer> _pixelObjectConstantBuffer;
     private ComPtr<ID3D11Buffer> _vertexObjectConstantBuffer;
 
-    private ComPtr<ID3D11SamplerState> _sampleState;
-
-    private ComPtr<ID3D11ShaderResourceView> _textureD3D;
-    private ComPtr<ID3D11ShaderResourceView> _normalMap;
-
     private bool _disposedValue;
 
-    public DeferredGeometryRenderPass(D3D11GraphicPipeline graphicPipeline, string name = "")
+    public DeferredLightningRenderPass(D3D11GraphicPipeline graphicPipeline, string name = "")
         : base(graphicPipeline, name)
     {
         _disposedValue = false;
@@ -39,67 +34,65 @@ internal sealed class DeferredGeometryRenderPass : BaseRenderPass, IDisposable
     {
         GraphicPipeline.RessourceFactory.UpdateSubresource(_vertexObjectConstantBuffer, 0, in Unsafe.NullRef<Box>(), in value, 0, 0);
     }
-
-    public void UpdatePixelObjectConstantBuffer(PixelObjectConstantBufferParams value)
-    {
-        GraphicPipeline.RessourceFactory.UpdateSubresource(_pixelObjectConstantBuffer, 0, in Unsafe.NullRef<Box>(), in value, 0, 0);
-    }
-
-    public void UpdateTexture(ComPtr<ID3D11ShaderResourceView> texture)
-    {
-        _textureD3D = texture;
-    }
-
-    public void UpdateNormalMap(ComPtr<ID3D11ShaderResourceView> normalMap)
-    {
-        _normalMap = normalMap;
-    }
     #endregion
 
     #region Vertex Shader
     public override void SetVertexShaderConstantBuffers()
     {
-        GraphicPipeline.VertexShaderStage.SetConstantBuffers(0, 1, ref _sceneConstantBuffer);
-        GraphicPipeline.VertexShaderStage.SetConstantBuffers(1, 1, ref _vertexObjectConstantBuffer);
+        GraphicPipeline.VertexShaderStage.SetConstantBuffers(0, 1, ref _vertexObjectConstantBuffer);
     }
     #endregion
 
     #region Pixel Shader
     public override void SetPixelShaderConstantBuffers()
     {
-        GraphicPipeline.PixelShaderStage.SetConstantBuffers(0, 1, ref _pixelObjectConstantBuffer);
+        GraphicPipeline.PixelShaderStage.SetConstantBuffers(0, 1, ref _sceneConstantBuffer);
     }
 
     public override unsafe void SetPixelShaderRessources()
     {
+        ComPtr<ID3D11ShaderResourceView> textureDiffuse = GraphicPipeline.GeometryBufferDiffuseSRV;
+        ComPtr<ID3D11ShaderResourceView> textureSpecular = GraphicPipeline.GeometryBufferSpecularSRV;
+        ComPtr<ID3D11ShaderResourceView> textureNormal = GraphicPipeline.GeometryBufferNormalSRV;
+
         // Activation de la texture
-        if (_textureD3D.Handle is not null)
+        if (textureDiffuse.Handle is not null)
         {
-            GraphicPipeline.PixelShaderStage.SetShaderResources(0, 1, ref _textureD3D);
+            GraphicPipeline.PixelShaderStage.SetShaderResources(0, 1, ref textureDiffuse);
         }
         else
         {
             GraphicPipeline.PixelShaderStage.ClearShaderResources(0);
         }
-        if (_normalMap.Handle is not null)
+
+        if (textureSpecular.Handle is not null)
         {
-            GraphicPipeline.PixelShaderStage.SetShaderResources(1, 1, ref _normalMap);
+            GraphicPipeline.PixelShaderStage.SetShaderResources(1, 1, ref textureSpecular);
         }
         else
         {
             GraphicPipeline.PixelShaderStage.ClearShaderResources(1);
         }
+
+        if (textureNormal.Handle is not null)
+        {
+            GraphicPipeline.PixelShaderStage.SetShaderResources(2, 1, ref textureNormal);
+        }
+        else
+        {
+            GraphicPipeline.PixelShaderStage.ClearShaderResources(2);
+        }
     }
 
     public override void SetSamplers()
     {
-        GraphicPipeline.PixelShaderStage.SetSamplers(0, 1, in _sampleState);
     }
 
     public override void ClearPixelShaderResources()
     {
         GraphicPipeline.PixelShaderStage.ClearShaderResources(0);
         GraphicPipeline.PixelShaderStage.ClearShaderResources(1);
+        GraphicPipeline.PixelShaderStage.ClearShaderResources(2);
     }
     #endregion
     #endregion
@@ -112,7 +105,6 @@ internal sealed class DeferredGeometryRenderPass : BaseRenderPass, IDisposable
         _sceneConstantBuffer = bufferFactory.CreateConstantBuffer<SceneConstantBufferParams>(Usage.Default, CpuAccessFlag.None, $"{Name}_SceneConstantBuffer");
 
         // Create our constant buffer.
-        _pixelObjectConstantBuffer = bufferFactory.CreateConstantBuffer<PixelObjectConstantBufferParams>(Usage.Default, CpuAccessFlag.None, $"{Name}_PixelObjectConstantBuffer");
         _vertexObjectConstantBuffer = bufferFactory.CreateConstantBuffer<VertexObjectConstantBufferParams>(Usage.Default, CpuAccessFlag.None, $"{Name}_VertexObjectConstantBuffer");
     }
 
@@ -127,8 +119,8 @@ internal sealed class DeferredGeometryRenderPass : BaseRenderPass, IDisposable
     protected override ShaderCodeFile InitVertexShaderCodeFile()
     {
         // Compilation et chargement du vertex shader
-        string filePath = "shaders\\DeferredShadingGeometryPass_VS.hlsl";
-        string entryPoint = "DeferredShadingGeometryPassVS";
+        string filePath = "shaders\\DeferredShadingLightningPass_VS.hlsl";
+        string entryPoint = "DeferredShadingLightningPassVS";
         string target = "vs_5_0";
         // #define D3DCOMPILE_ENABLE_STRICTNESS                    (1 << 11)
         uint flagStrictness = ((uint)1 << 11);
@@ -148,7 +140,7 @@ internal sealed class DeferredGeometryRenderPass : BaseRenderPass, IDisposable
             entryPoint,
             target,
             compilationFlags,
-            name: "DeferredShadingGeometryPass_VertexShader"
+            name: "DeferredShadingLightningPass_VertexShader"
         );
     }
 
@@ -156,8 +148,8 @@ internal sealed class DeferredGeometryRenderPass : BaseRenderPass, IDisposable
     [return: NotNull]
     protected override ShaderCodeFile? InitPixelShaderCodeFile()
     {
-        string filePath = "shaders\\DeferredShadingGeometryPass_PS.hlsl";
-        string entryPoint = "DeferredShadingGeometryPassPS";
+        string filePath = "shaders\\DeferredShadingLightningPass_PS.hlsl";
+        string entryPoint = "DeferredShadingLightningPassPS";
         string target = "ps_5_0";
         // #define D3DCOMPILE_ENABLE_STRICTNESS                    (1 << 11)
         uint flagStrictness = ((uint)1 << 11);
@@ -177,41 +169,17 @@ internal sealed class DeferredGeometryRenderPass : BaseRenderPass, IDisposable
            entryPoint,
            target,
            compilationFlags,
-           name: "DeferredShadingGeometryPass_PixelShader"
+           name: "DeferredShadingLightningPass_PixelShader"
         );
     }
 
     /// <inheritdoc/>
     protected sealed override void InitialisationImpl(GraphicDeviceRessourceFactory graphicDeviceRessourceFactory)
     {
-        InitTextureSampler(graphicDeviceRessourceFactory.TextureManager);
     }
     #endregion
 
     #region Private methods
-    private unsafe void InitTextureSampler(TextureManager textureManager)
-    {
-        // Initialisation des paramètres de sampling de la texture
-        SamplerDesc samplerDesc = new()
-        {
-            Filter = Filter.Anisotropic,
-            AddressU = TextureAddressMode.Wrap,
-            AddressV = TextureAddressMode.Wrap,
-            AddressW = TextureAddressMode.Wrap,
-            MipLODBias = 0f,
-            MaxAnisotropy = 4,
-            ComparisonFunc = ComparisonFunc.Always,
-            MinLOD = 0,
-            MaxLOD = float.MaxValue,
-        };
-        samplerDesc.BorderColor[0] = 0f;
-        samplerDesc.BorderColor[1] = 0f;
-        samplerDesc.BorderColor[2] = 0f;
-        samplerDesc.BorderColor[3] = 0f;
-
-        // Création de l’état de sampling
-        _sampleState = textureManager.Factory.CreateSampler(samplerDesc, $"{Name}_SamplerState");
-    }
     #endregion
 
     [StructLayout(LayoutKind.Sequential, Pack = 16)]
@@ -261,34 +229,6 @@ internal sealed class DeferredGeometryRenderPass : BaseRenderPass, IDisposable
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 16)]
-    internal struct PixelObjectConstantBufferParams : IResetable
-    {
-        /// <summary>
-        /// la valeur ambiante du matériau
-        /// </summary>
-        public Vector4 ambiantMaterialValue;
-        /// <summary>
-        /// la valeur diffuse du matériau
-        /// </summary>
-        public Vector4 diffuseMaterialValue;
-        /// <summary>
-        /// Indique le matériaux a une texture sa valeur diffuse
-        /// </summary>
-        public int HasDiffuseTexture;
-        /// <summary>
-        /// Indique le matériaux a une texture pour le normal mapping
-        /// </summary>
-        public int HasNormalTexture;
-        private readonly uint alignement1_1;
-        private readonly uint alignement1_2;
-
-        public void Reset()
-        {
-            MemoryHelper.ResetMemory(this);
-        }
-    }
-
-    [StructLayout(LayoutKind.Sequential, Pack = 16)]
     internal struct VertexObjectConstantBufferParams : IResetable
     {
         /// <summary>
@@ -321,7 +261,6 @@ internal sealed class DeferredGeometryRenderPass : BaseRenderPass, IDisposable
             _sceneConstantBuffer.Dispose();
             _pixelObjectConstantBuffer.Dispose();
             _vertexObjectConstantBuffer.Dispose();
-            _sampleState.Dispose();
 
             base.Dispose(disposing);
 
@@ -329,7 +268,7 @@ internal sealed class DeferredGeometryRenderPass : BaseRenderPass, IDisposable
         }
     }
 
-    ~DeferredGeometryRenderPass()
+    ~DeferredLightningRenderPass()
     {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
         Dispose(disposing: false);

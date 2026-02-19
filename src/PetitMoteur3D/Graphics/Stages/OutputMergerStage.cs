@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Diagnostics;
+using System.Linq;
 using System.Runtime.InteropServices;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
@@ -30,16 +32,39 @@ internal sealed class OutputMergerStage
         _deviceContext.OMSetDepthStencilState(pDepthStencilState, StencilRef);
     }
 
+    public void SetDepthStencilState(ComPtr<ID3D11DepthStencilState> pDepthStencilState)
+    {
+        SetDepthStencilState(pDepthStencilState, 0);
+    }
+
+    public void SetDefaultDepthStencilState()
+    {
+        SetDepthStencilState((ComPtr<ID3D11DepthStencilState>) null, 0);
+    }
+
+    public unsafe void UnbindRenderTargets()
+    {
+        _deviceContext.OMSetRenderTargets(0, (ID3D11RenderTargetView**)null, (ID3D11DepthStencilView*)null);
+
+        ComPtr<ID3D11RenderTargetView>[] renderTargetsAfter = new ComPtr<ID3D11RenderTargetView>[Windows.Win32.PInvoke.D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT];
+        GCHandle handle = GCHandle.Alloc(renderTargetsAfter, GCHandleType.Pinned);
+        IntPtr address = handle.AddrOfPinnedObject();
+        _deviceContext.OMGetRenderTargets(Windows.Win32.PInvoke.D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT, (ID3D11RenderTargetView**)address, (ID3D11DepthStencilView**) null);
+        handle.Free();
+
+        Debug.Assert(!renderTargetsAfter.Any(p => p.Handle != null));
+    }
+
     public unsafe void SetRenderTarget(uint NumViews, in ID3D11RenderTargetView* ppRenderTargetViews, ComPtr<ID3D11DepthStencilView> pDepthStencilView)
     {
         _deviceContext.OMSetRenderTargets(NumViews, in ppRenderTargetViews, pDepthStencilView);
     }
 
-    public unsafe void SetRenderTarget(uint NumViews, in ComPtr<ID3D11RenderTargetView>[] ppRenderTargetViews, ComPtr<ID3D11DepthStencilView> pDepthStencilView)
+    public unsafe void SetRenderTarget(in ComPtr<ID3D11RenderTargetView>[] ppRenderTargetViews, ComPtr<ID3D11DepthStencilView> pDepthStencilView)
     {
         GCHandle handle = GCHandle.Alloc(ppRenderTargetViews, GCHandleType.Pinned);
         IntPtr address = handle.AddrOfPinnedObject();
-        _deviceContext.OMSetRenderTargets(NumViews, (ID3D11RenderTargetView**)address, (ID3D11DepthStencilView*)pDepthStencilView.Handle);
+        _deviceContext.OMSetRenderTargets((uint)ppRenderTargetViews.Length, (ID3D11RenderTargetView**)address, (ID3D11DepthStencilView*)pDepthStencilView.Handle);
         handle.Free();
     }
 
@@ -53,11 +78,11 @@ internal sealed class OutputMergerStage
         _deviceContext.OMSetRenderTargets(NumViews, (ID3D11RenderTargetView**)ppRenderTargetViews.GetAddressOf(), (ID3D11DepthStencilView*)null);
     }
 
-    public unsafe void SetRenderTarget(uint NumViews, in ComPtr<ID3D11RenderTargetView>[] ppRenderTargetViews)
+    public unsafe void SetRenderTarget(in ComPtr<ID3D11RenderTargetView>[] ppRenderTargetViews)
     {
         GCHandle handle = GCHandle.Alloc(ppRenderTargetViews, GCHandleType.Pinned);
         IntPtr address = handle.AddrOfPinnedObject();
-        _deviceContext.OMSetRenderTargets(NumViews, (ID3D11RenderTargetView**)address, (ID3D11DepthStencilView*)null);
+        _deviceContext.OMSetRenderTargets((uint)ppRenderTargetViews.Length, (ID3D11RenderTargetView**)address, (ID3D11DepthStencilView*)null);
         handle.Free();
     }
 }

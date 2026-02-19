@@ -5,22 +5,6 @@
 #ifndef DEFERRED_SHADING_GEOMETRY_PASS_PS
 #define DEFERRED_SHADING_GEOMETRY_PASS_PS
 
-struct LightParams
-{
-    float3 pos; // la position de la source d'éclairage (Point)
-    float3 dir; // la direction de la source d'éclairage (Directionnelle)
-    float4 vAEcl; // la valeur ambiante de l'éclairage
-    float4 vDEcl; // la valeur diffuse de l'éclairage
-    bool enable; // l'éclairage est allumé
-    int3 offset; // Offset for memory alignment
-};
-
-cbuffer frameBuffer
-{
-    LightParams vLumiere; // la position de la source d'éclairage (Point)
-    float4 vCamera; // la position de la caméra
-}
-
 cbuffer objectBuffer
 {
     float4 vAMat; // la valeur ambiante du matériau
@@ -33,7 +17,7 @@ cbuffer objectBuffer
 SamplerState SampleState; // l'état de sampling
 SamplerComparisonState ShadowMapSampler; // sampling pour la shadow map
 
-Texture2D textureEntree; // la texture
+Texture2D textureDiffuse; // la texture
 Texture2D textureNormalMap; // la normal map
 
 struct PS_OUT
@@ -49,49 +33,43 @@ PS_OUT DeferredShadingGeometryPassPSImpl(DeferredShadingGeometryPass_VertexParam
     // Normal Geometry
     if (useNormalMap)
     {
-        vertex.Norm = ReadNormalMap(textureNormalMap, SampleState, vertex.coordTex, vertex.Norm, vertex.Tang);
+        vertex.Norm = DoNormalMapping(textureNormalMap, SampleState, vertex.coordTex, vertex.Norm, vertex.Tang);
     }
     else
     {
         vertex.Norm = normalize(vertex.Norm);
     }
 
-    // Normaliser les paramétres
-    float3 N = normalize(vertex.Norm);
-    float3 L = normalize(vertex.vDirLum);
-    float3 V = normalize(vertex.vDirCam);
-    // Valeur de la composante diffuse
-    float3 diff = saturate(dot(N, L));
-    // R = 2 * (N.L) * N é L
-    float3 R = normalize(2 * diff.xyz * N - L);
-    // Puissance de 4 - pour léexemple
-    float S = pow(saturate(dot(R, V)), 64);
-
     // échantillonner la couleur du pixel é partir de la texture
-    float3 couleurTexture;
+    float3 couleurDiffuseTexture;
     if (useTextureColor)
     {
-        couleurTexture = ReadTextureRGB(textureEntree, SampleState, vertex.coordTex);
+        couleurDiffuseTexture = ReadTextureRGB(textureDiffuse, SampleState, vertex.coordTex);
     }
     else
     {
-        couleurTexture = (0.5f, 0.5f, 0.5f);
+        couleurDiffuseTexture = (0.5f, 0.5f, 0.5f);
     }
     
-    // I = A + D * N.L + (R.V)n
-    float3 couleurLumiereAmbiante = 0.4f * vLumiere.vAEcl.rgb * vAMat.rgb;
-    float3 couleurLumiereDiffuse = vLumiere.vDEcl.rgb * vDMat.rgb * diff;
-    float3 couleurLumiereSpecular = 0.1f * S;
+    float3 ambianteMaterial = vAMat.rgb;
+    float3 diffuseMaterial = vDMat.rgb;
+    float3 specularMaterial = (1,1,1);
+    float specularPower = 64;
+    // Method of packing specular power from "Deferred Rendering in Killzone 2" presentation 
+    // from Michiel van der Leeuw, Guerrilla (2007)
+    float specularPowerPacked = log2(specularPower) / 10.5f;
+    
     
     PS_OUT result = (PS_OUT) 0;
-    result.LightAccumulation = float4(couleurTexture * couleurLumiereAmbiante, 0);
-    result.Diffuse = float4(couleurTexture * couleurLumiereDiffuse, 0);
-    result.Specular = float4(couleurTexture * couleurLumiereSpecular, 0);
+    result.LightAccumulation = float4(ambianteMaterial, 0);
+    result.Diffuse = float4(couleurDiffuseTexture * diffuseMaterial, 0);
+    result.Specular = float4(specularMaterial, specularPowerPacked);
     result.NormalVS = float4(vertex.Norm, 0);
     return result;
 }
 
 // Render Techniques
+[earlydepthstencil]
 PS_OUT DeferredShadingGeometryPassPS(DeferredShadingGeometryPass_VertexParams vertex)
 {
     return DeferredShadingGeometryPassPSImpl(vertex, hasNormalTexture, hasDiffuseTexture);

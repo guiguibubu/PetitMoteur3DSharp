@@ -2,6 +2,7 @@
 
 public enum RenderTargetType
 {
+    NoRenderTarget,
     BackBuffer,
     GeometryBuffers
 }

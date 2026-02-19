@@ -5,8 +5,8 @@ internal enum RenderPassType
     ForwardOpac,
     ForwardTransparent,
     DeferredShadingGeometry,
+    DeferredShadingGeometryTransparent,
     DeferredShadingLightning,
-    DeferredShadingTransparent,
     DepthTest,
-    Shadow,
+    ShadowMap,
 }
