@@ -2,4 +2,5 @@
 
 internal interface IObjet3D : INamedObjet, IDrawableObjet, ISceneObjet, IMovableObjet, IRotationObjet, IScalableObjet
 {
+    SubObjet3D[] SubObjects { get; }
 }

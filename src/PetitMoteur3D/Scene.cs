@@ -20,7 +20,9 @@ internal sealed class Scene : IDisposable
     public ICamera GameCamera => _gameCamera;
     public LightShadersParams Light => _light;
     public ComPtr<ID3D11RasterizerState> RasterizerState { get { return _rasterizerState; } set { _rasterizerState = value; } }
+    public IObjet3D[] Content => _allObjects.ToArray();
 
+    private readonly List<IObjet3D> _allObjects;
     private readonly List<IUpdatableObjet> _objectsUpdatable;
     private readonly Dictionary<RenderPassType, List<IDrawableObjet>> _objectsDrawablePerRenderPass;
     private ICamera _gameCamera;
@@ -47,6 +49,7 @@ internal sealed class Scene : IDisposable
 
     public Scene(GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, RenderPassFactory renderPassFactory, ICamera camera, Size windowSize)
     {
+        _allObjects = new List<IObjet3D>();
         _objectsUpdatable = new List<IUpdatableObjet>();
         _objectsDrawablePerRenderPass = new Dictionary<RenderPassType, List<IDrawableObjet>>();
         _gameCamera = camera;
@@ -102,6 +105,8 @@ internal sealed class Scene : IDisposable
         {
             _objectsUpdatable.Add(updatableObjet);
         }
+
+        _allObjects.Add(obj);
     }
 
     public void Anime(float elapsedTime)

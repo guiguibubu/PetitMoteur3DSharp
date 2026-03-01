@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Numerics;
 using System.Runtime.InteropServices;
+using BepuPhysics.Constraints.Contact;
 using ImGuiNET;
 using PetitMoteur3D.Camera;
 using PetitMoteur3D.DebugGui;
@@ -40,6 +41,7 @@ public class Engine
     private bool _imGuiShowGameCameraOptions;
     private bool _imGuiShowDebugCameraOptions;
     private bool _imGuiShowMetrics;
+    private bool _imGuiShowSceneEditor;
     private bool _debugToolKeyPressed;
     private bool _showDebugTool;
     private bool _showWireFrame;
@@ -100,6 +102,7 @@ public class Engine
         _imGuiShowDebugCameraOptions = false;
         _imGuiShowGameCameraOptions = false;
         _imGuiShowMetrics = false;
+        _imGuiShowSceneEditor = false;
         _debugToolKeyPressed = false;
         _showDebugTool = false;
         _showWireFrame = false;
@@ -267,19 +270,19 @@ public class Engine
                         float f = 0.0f;
                         ImGui.Begin("Title : PetitMoteur3D (DebugTools)!");
                         ImGui.Text("Window : " + _window.GetType().Name);
-                        ImGui.SliderFloat("float", ref f, 0.0f, 1.0f);
                         ImGui.Text(string.Format("Application average {0} ms/frame ({1} FPS)", (1000.0f / io.Framerate).ToString("F3", System.Globalization.CultureInfo.InvariantCulture), io.Framerate.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)));
                         ImGui.Text(string.Format("Application memory usage {0} kB", _currentProcess.WorkingSet64 / 1000));
                         ImGui.Text(string.Format("Application (managed) heap usage {0} kB", GC.GetTotalMemory(false) / 1000));
                         bool runGc = ImGui.Button("Run GC");
-                        bool colorChanged = ImGui.ColorEdit4("Background Color", ref _backgroundColour);     // Edit 4 floats representing a color
+                        bool backGroundColorChanged = ImGui.ColorEdit4("Background Color", ref _backgroundColour);     // Edit 4 floats representing a color
                         bool wireFrameChanged = ImGui.Checkbox("WireFrame", ref _showWireFrame);     // Edit bool
                         ImGui.Checkbox("Show Demo", ref _imGuiShowDemo);     // Edit bool
                         ImGui.Checkbox("Show Debug Logs", ref _imGuiShowDebugLogs);     // Edit bool
                         ImGui.Checkbox("Show Metrics", ref _imGuiShowMetrics);     // Edit bool
+                        ImGui.Checkbox("Show SceneEditor", ref _imGuiShowSceneEditor);     // Edit bool
                         ImGui.Checkbox("Show Scene", ref _showScene);     // Edit bool
                         ImGui.Checkbox("Show Shadow", ref _showShadow);     // Edit bool
-                        ImGui.Checkbox("Show DepthTest", ref _showDepthTest);     // Edit bool
+                        bool showDeptTestChanged = ImGui.Checkbox("Show DepthTest", ref _showDepthTest);     // Edit bool
                         ImGui.Checkbox("Show Shadow Orthographique", ref _isShadowOrthographique);     // Edit bool
                         ImGui.Checkbox("Show Debug Camera Options", ref _imGuiShowDebugCameraOptions);     // Edit bool
                         ImGui.Checkbox("Show Game Camera Options", ref _imGuiShowGameCameraOptions);     // Edit bool
@@ -296,6 +299,47 @@ public class Engine
 
                         if (_imGuiShowMetrics)
                             ImGui.ShowMetricsWindow();
+
+                        if (_imGuiShowSceneEditor)
+                        {
+                            ImGui.Begin("PetitMoteur3D Scene Editor");
+                            foreach (IObjet3D objet3D in _scene.Content)
+                            {
+                                if (ImGui.TreeNode(objet3D.Name))
+                                {
+                                    ImGui.SeparatorText("Position (WIP)");
+                                    ImGui.SeparatorText("Material");
+                                    foreach (SubObjet3D subObjet in objet3D.SubObjects)
+                                    {
+                                        Material material = subObjet.Material;
+                                        ImGui.ColorEdit4("Ambient Color", ref material.Ambient);
+                                        ImGui.ColorEdit4("Diffuse Color", ref material.Diffuse);
+                                        ImGui.ColorEdit4("Specular Color", ref material.Specular);
+                                        if (material.DiffuseTexture is not null)
+                                        {
+                                            if (ImGui.TreeNode("Diffuse Texture"))
+                                            {
+                                                ImGui.Text(string.Format("size = {0} x {1}", material.DiffuseTexture.Width, material.DiffuseTexture.Height));
+                                                ImGui.Image((nint)material.DiffuseTexture.ShaderRessourceView.Handle, new Vector2(int.Min(material.DiffuseTexture.Width, 256), int.Min(material.DiffuseTexture.Height, 256)));
+                                                ImGui.TreePop();
+                                            }
+                                        }
+                                        if (material.NormalTexture is not null)
+                                        {
+                                            if (ImGui.TreeNode("Normal Texture"))
+                                            {
+                                                ImGui.Text(string.Format("size = {0} x {1}", material.NormalTexture.Width, material.NormalTexture.Height));
+                                                ImGui.Image((nint)material.NormalTexture.ShaderRessourceView.Handle, new Vector2(int.Min(material.NormalTexture.Width, 256), int.Min(material.NormalTexture.Height, 256)));
+                                                ImGui.TreePop();
+                                            }
+                                        }
+                                    }
+                                    ImGui.TreePop();
+                                }
+                                ImGui.Separator();
+                            }
+                            ImGui.End();
+                        }
 
                         if (_imGuiShowDebugCameraOptions)
                         {
@@ -344,11 +388,13 @@ public class Engine
                             ImGui.Begin("PetitMoteur3D Graphics");
                             if (ImGui.BeginCombo("SceneRenderType", _sceneRenderingType.ToString()))
                             {
+                                bool renderingTypeChanged = false;
                                 foreach (SceneRenderingType option in _sceneRenderingTypeValues)
                                 {
                                     bool isSelected = _sceneRenderingType == option; // You can store your selection however you want, outside or inside your objects
                                     if (ImGui.Selectable(option.ToString(), isSelected))
                                     {
+                                        renderingTypeChanged = true;
                                         _sceneRenderingType = option;
                                     }
                                     if (isSelected)
@@ -357,6 +403,11 @@ public class Engine
                                     }
                                 }
                                 ImGui.EndCombo();
+
+                                if (renderingTypeChanged)
+                                {
+                                    _scene.RenderingType = _sceneRenderingType;
+                                }
                             }
                             ImGui.End();
                         }
@@ -369,7 +420,7 @@ public class Engine
                         }
                         _imGuiController.Render(false);
 
-                        if (colorChanged)
+                        if (backGroundColorChanged)
                         {
                             _graphicPipeline.SetBackgroundColour(_backgroundColour.X / _backgroundColour.W, _backgroundColour.Y / _backgroundColour.W, _backgroundColour.Z / _backgroundColour.W, _backgroundColour.W);
                         }
@@ -382,6 +433,7 @@ public class Engine
                                 if (rasterizerState.Handle != _graphicPipeline.WireFrameCullBackRS.Handle)
                                 {
                                     _scene.RasterizerState = _graphicPipeline.WireFrameCullBackRS;
+                                    _scene.RenderingType = SceneRenderingType.Forward;
                                 }
                             }
                             else
@@ -390,6 +442,19 @@ public class Engine
                                 {
                                     _scene.RasterizerState = _graphicPipeline.SolidCullBackRS;
                                 }
+                            }
+                        }
+
+                        if (showDeptTestChanged)
+                        {
+                            if (_showDepthTest)
+                            {
+                                _scene.ShowDepthTest = true;
+                                _scene.RenderingType = SceneRenderingType.Forward;
+                            }
+                            else
+                            {
+                                _scene.ShowDepthTest = false;
                             }
                         }
 
@@ -599,9 +664,7 @@ public class Engine
         BeginRender();
         if (_initAnimationFinished)
         {
-            _scene.RenderingType = _sceneRenderingType;
             _scene.ShowShadow = _showShadow;
-            _scene.ShowDepthTest = _showDepthTest;
             _scene.UseDebugCam = _useDebugCamera;
             _scene.Draw(_graphicPipeline);
         }

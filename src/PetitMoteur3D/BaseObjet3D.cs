@@ -18,6 +18,7 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
     public Orientation3D Orientation { get { return _orientation; } }
     /// <inheritdoc/>
     public string Name { get { return _name; } }
+    public SubObjet3D[] SubObjects { get { return _subObjects; } }
 
     /// <inheritdoc/>
     public RenderPassType[] SupportedRenderPasses { get; set; } = [RenderPassType.ForwardOpac, RenderPassType.DeferredShadingGeometry, RenderPassType.DepthTest, RenderPassType.ShadowMap];
@@ -26,7 +27,6 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
     #region Protected Properties
     protected abstract bool SupportShadow { get; }
     protected ref readonly System.Numerics.Matrix4x4 MatWorld { get { return ref _matWorld; } }
-    protected ref readonly SubObjet3D[] SubObjects { get { return ref _subObjects; } }
     protected ComPtr<ID3D11Buffer> IndexBuffer { get { return _indexBuffer; } }
     protected int NbIndices { get { return _indices.Length; } }
     protected GraphicBufferFactory BufferFactory { get { return _bufferFactory; } }
@@ -513,13 +513,6 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
     protected void UpdateMatWorld()
     {
         _matWorld = System.Numerics.Matrix4x4.CreateScale(_scale) * System.Numerics.Matrix4x4.CreateFromQuaternion(_orientation.Quaternion) * System.Numerics.Matrix4x4.CreateTranslation(_position);
-    }
-
-    public class SubObjet3D
-{
-    public ushort[] Indices;
-    public System.Numerics.Matrix4x4 Transformation;
-    public Material Material;
     }
 
     ~BaseObjet3D()
