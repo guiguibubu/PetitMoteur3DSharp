@@ -5,13 +5,20 @@
 #ifndef DEFERRED_SHADING_GEOMETRY_PASS_PS
 #define DEFERRED_SHADING_GEOMETRY_PASS_PS
 
-cbuffer objectBuffer
+struct MaterialParams
 {
-    float4 vAMat; // la valeur ambiante du matériau
-    float4 vDMat; // la valeur diffuse du matériau
+    float4 ambiantColor; // la valeur ambiante du matériau
+    float4 diffuseColor; // la valeur diffuse du matériau
+    float4 specularColor; // la valeur specular du matériau
+    float specularPower; // la valeur specular du matériau
     bool hasDiffuseTexture; // Has diffuse texture
     bool hasNormalTexture; // Has normal texture
-    int2 offset; // Offset for memory alignment
+    int offset; // Offset for memory alignment
+};
+
+cbuffer objectBuffer
+{
+    MaterialParams vMaterial;
 }
 
 SamplerState SampleState; // l'état de sampling
@@ -51,10 +58,10 @@ PS_OUT DeferredShadingGeometryPassPSImpl(DeferredShadingGeometryPass_VertexParam
         couleurDiffuseTexture = (0.5f, 0.5f, 0.5f);
     }
     
-    float3 ambianteMaterial = vAMat.rgb;
-    float3 diffuseMaterial = vDMat.rgb;
-    float3 specularMaterial = (1,1,1);
-    float specularPower = 64;
+    float3 ambianteMaterial = vMaterial.ambiantColor.rgb;
+    float3 diffuseMaterial = vMaterial.diffuseColor.rgb;
+    float3 specularMaterial = vMaterial.specularColor.rgb;
+    float specularPower = vMaterial.specularPower;
     // Method of packing specular power from "Deferred Rendering in Killzone 2" presentation 
     // from Michiel van der Leeuw, Guerrilla (2007)
     float specularPowerPacked = log2(specularPower) / 10.5f;
@@ -72,7 +79,7 @@ PS_OUT DeferredShadingGeometryPassPSImpl(DeferredShadingGeometryPass_VertexParam
 [earlydepthstencil]
 PS_OUT DeferredShadingGeometryPassPS(DeferredShadingGeometryPass_VertexParams vertex)
 {
-    return DeferredShadingGeometryPassPSImpl(vertex, hasNormalTexture, hasDiffuseTexture);
+    return DeferredShadingGeometryPassPSImpl(vertex, vMaterial.hasNormalTexture, vMaterial.hasDiffuseTexture);
 }
 
 #endif

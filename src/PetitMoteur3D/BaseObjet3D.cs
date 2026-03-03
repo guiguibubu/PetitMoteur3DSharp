@@ -284,10 +284,15 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
 
                 _forwardOpaqueRenderPass.UpdatePixelObjectConstantBuffer(new ForwardOpaqueRenderPass.PixelObjectConstantBufferParams()
                 {
-                    ambiantMaterialValue = subObjet3D.Material.Ambient,
-                    diffuseMaterialValue = subObjet3D.Material.Diffuse,
-                    HasDiffuseTexture = Convert.ToInt32(subObjet3D.Material.DiffuseTexture is not null),
-                    HasNormalTexture = Convert.ToInt32(subObjet3D.Material.NormalTexture is not null),
+                    Material = new ForwardOpaqueRenderPass.MaterialParams()
+                    {
+                        AmbiantColor = subObjet3D.Material.Ambient,
+                        DiffuseColor = subObjet3D.Material.Diffuse,
+                        SpecularColor = subObjet3D.Material.Specular,
+                        SpecularPower = subObjet3D.Material.SpecularPower,
+                        HasDiffuseTexture = Convert.ToInt32(subObjet3D.Material.DiffuseTexture is not null),
+                        HasNormalTexture = Convert.ToInt32(subObjet3D.Material.NormalTexture is not null),
+                    }
                 });
 
                 // Activer le VS
@@ -352,10 +357,15 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
 
                 _deferredGeometryRenderPass.UpdatePixelObjectConstantBuffer(new DeferredGeometryRenderPass.PixelObjectConstantBufferParams()
                 {
-                    ambiantMaterialValue = subObjet3D.Material.Ambient,
-                    diffuseMaterialValue = subObjet3D.Material.Diffuse,
-                    HasDiffuseTexture = Convert.ToInt32(subObjet3D.Material.DiffuseTexture is not null),
-                    HasNormalTexture = Convert.ToInt32(subObjet3D.Material.NormalTexture is not null),
+                    Material = new DeferredGeometryRenderPass.MaterialParams()
+                    {
+                        AmbiantColor = subObjet3D.Material.Ambient,
+                        DiffuseColor = subObjet3D.Material.Diffuse,
+                        SpecularColor = subObjet3D.Material.Specular,
+                        SpecularPower = subObjet3D.Material.SpecularPower,
+                        HasDiffuseTexture = Convert.ToInt32(subObjet3D.Material.DiffuseTexture is not null),
+                        HasNormalTexture = Convert.ToInt32(subObjet3D.Material.NormalTexture is not null),
+                    }
                 });
 
                 // Activer le VS

@@ -52,7 +52,7 @@ public class Engine
     private bool _isCameraOrthographique;
     private bool _useDebugCamera;
     private SceneRenderingType[] _sceneRenderingTypeValues = Enum.GetValues<SceneRenderingType>();
-    private SceneRenderingType _sceneRenderingType = SceneRenderingType.DeferredShading;
+    private SceneRenderingType _sceneRenderingType;
     private Vector4 _backgroundColour;
 
     private readonly Stopwatch _horlogeEngine;
@@ -315,6 +315,7 @@ public class Engine
                                         ImGui.ColorEdit4("Ambient Color", ref material.Ambient);
                                         ImGui.ColorEdit4("Diffuse Color", ref material.Diffuse);
                                         ImGui.ColorEdit4("Specular Color", ref material.Specular);
+                                        ImGui.InputFloat("Specular Power", ref material.SpecularPower);
                                         if (material.DiffuseTexture is not null)
                                         {
                                             if (ImGui.TreeNode("Diffuse Texture"))
@@ -557,27 +558,33 @@ public class Engine
         _scene.SetDebugCamera(_debugCamera);
         // Set default rasterizer state
         _scene.RasterizerState = _graphicPipeline.SolidCullBackRS;
+        // Set default rendering technique
+        _scene.RenderingType = SceneRenderingType.DeferredShading;
     }
 
     private static Scene InitDefaultScene(GraphicDeviceRessourceFactory ressourceFactory, RenderPassFactory renderPassFactory, ICamera gameCamera, IWindow window)
     {
         Scene scene = new(ressourceFactory, renderPassFactory, gameCamera, window.Size);
         Bloc bloc1 = new(4.0f, 4.0f, 4.0f, ressourceFactory, renderPassFactory);
+        bloc1.Material.Specular = Vector4.Zero;
         bloc1.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTexture("textures\\herringbone_brick_diff.jpg");
         bloc1.Material.NormalTexture = ressourceFactory.TextureManager.GetOrLoadTexture("textures\\herringbone_brick_norm.jpg");
         bloc1.Move(-4f, 2f, 0f);
 
         Bloc bloc2 = new(4.0f, 4.0f, 4.0f, ressourceFactory, renderPassFactory);
+        bloc2.Material.Specular = Vector4.Zero;
         bloc2.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall.jpg");
         bloc2.Material.NormalTexture = ressourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall_normal.jpg");
         bloc2.Move(4f, 2f, 0f);
 
         Bloc bloc3 = new(4.0f, 4.0f, 4.0f, ressourceFactory, renderPassFactory);
+        bloc3.Material.Specular = Vector4.Zero;
         bloc3.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall.jpg");
         bloc3.Material.NormalTexture = ressourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall_normal.jpg");
         bloc3.Move(-4f, 2f, 4f);
 
         Bloc bloc4 = new(4.0f, 4.0f, 4.0f, ressourceFactory, renderPassFactory);
+        bloc4.Material.Specular = Vector4.Zero;
         bloc4.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall.jpg");
         bloc4.Material.NormalTexture = ressourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall_normal.jpg");
         bloc4.Move(4f, 2f, 4f);

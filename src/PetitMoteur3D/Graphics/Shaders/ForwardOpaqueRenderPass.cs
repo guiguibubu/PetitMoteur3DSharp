@@ -257,6 +257,10 @@ internal sealed class ForwardOpaqueRenderPass : BaseRenderPass, IDisposable
     }
     #endregion
 
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <remarks>5 x 16 bytes = 80 bytes</remarks>
     [StructLayout(LayoutKind.Sequential, Pack = 16)]
     internal struct LightParams
     {
@@ -264,18 +268,22 @@ internal sealed class ForwardOpaqueRenderPass : BaseRenderPass, IDisposable
         /// la position de la source d’éclairage (Source Point)
         /// </summary>
         public Vector4 Position;
+        // ---- 16 bytes ----
         /// <summary>
         /// la direction de la source d’éclairage (Source Directionnelle)
         /// </summary>
         public Vector4 Direction;
+        // ---- 16 bytes ----
         /// <summary>
         /// la valeur ambiante de l’éclairage
         /// </summary>
         public Vector4 AmbiantColor;
+        // ---- 16 bytes ----
         /// <summary>
         /// la valeur diffuse de l’éclairage
         /// </summary>
         public Vector4 DiffuseColor;
+        // ---- 16 bytes ----
         /// <summary>
         /// Indique la lumiere est active
         /// </summary>
@@ -286,6 +294,7 @@ internal sealed class ForwardOpaqueRenderPass : BaseRenderPass, IDisposable
         public int EnableShadow;
         private readonly uint alignement1_1;
         private readonly uint alignement1_2;
+        // ---- 16 bytes ----
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 16)]
@@ -295,10 +304,12 @@ internal sealed class ForwardOpaqueRenderPass : BaseRenderPass, IDisposable
         /// les infos de la lumiere
         /// </summary>
         public LightParams LightParams;
+        // ---- 5 x 16 bytes ----
         /// <summary>
         /// la position de la caméra
         /// </summary>
         public Vector4 CameraPos;
+        // ---- 16 bytes ----
 
         public void Reset()
         {
@@ -306,17 +317,32 @@ internal sealed class ForwardOpaqueRenderPass : BaseRenderPass, IDisposable
         }
     }
 
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <remarks>4 x 16 bytes = 64 bytes</remarks>
     [StructLayout(LayoutKind.Sequential, Pack = 16)]
-    internal struct PixelObjectConstantBufferParams : IResetable
+    internal struct MaterialParams
     {
         /// <summary>
         /// la valeur ambiante du matériau
         /// </summary>
-        public Vector4 ambiantMaterialValue;
+        public Vector4 AmbiantColor;
+        // ---- 16 bytes ----
         /// <summary>
         /// la valeur diffuse du matériau
         /// </summary>
-        public Vector4 diffuseMaterialValue;
+        public Vector4 DiffuseColor;
+        // ---- 16 bytes ----
+        /// <summary>
+        /// la valeur specular du matériau
+        /// </summary>
+        public Vector4 SpecularColor;
+        // ---- 16 bytes ----
+        /// <summary>
+        /// la puissance specular du matériau
+        /// </summary>
+        public float SpecularPower;
         /// <summary>
         /// Indique le matériaux a une texture sa valeur diffuse
         /// </summary>
@@ -326,7 +352,17 @@ internal sealed class ForwardOpaqueRenderPass : BaseRenderPass, IDisposable
         /// </summary>
         public int HasNormalTexture;
         private readonly uint alignement1_1;
-        private readonly uint alignement1_2;
+        // ---- 16 bytes ----
+    }
+
+    [StructLayout(LayoutKind.Sequential, Pack = 16)]
+    internal struct PixelObjectConstantBufferParams : IResetable
+    {
+        /// <summary>
+        /// la valeur ambiante du matériau
+        /// </summary>
+        public MaterialParams Material;
+        // ---- 4 x 16 bytes ----
 
         public void Reset()
         {

@@ -10,7 +10,7 @@ internal class Material : IDisposable
     public Vector4 Specular;
     public Vector4 Emission;
     public Vector4 Reflexion;
-    public float Puissance;
+    public float SpecularPower;
     public bool Transparent;
     public Texture? DiffuseTexture;
     public Texture? NormalTexture;
@@ -18,7 +18,7 @@ internal class Material : IDisposable
     private bool _disposed;
 
     public Material()
-    : this(Vector4.One, Vector4.One, Vector4.One, Vector4.One, Vector4.One, 1f, transparent: false)
+    : this(Vector4.One, Vector4.One, Vector4.One, Vector4.One, Vector4.One, 64f, transparent: false)
     { }
 
     public Material(Vector4 ambient,
@@ -26,7 +26,7 @@ internal class Material : IDisposable
     Vector4 specular,
     Vector4 emission,
     Vector4 reflexion,
-    float puissance,
+    float specularPower,
     bool transparent)
     {
         Ambient = ambient;
@@ -34,7 +34,7 @@ internal class Material : IDisposable
         Specular = specular;
         Emission = emission;
         Reflexion = reflexion;
-        Puissance = puissance;
+        SpecularPower = specularPower;
         Transparent = transparent;
 
         _disposed = false;
@@ -48,7 +48,7 @@ internal class Material : IDisposable
             new Vector4(Specular.X, Specular.Y, Specular.Z, Specular.W),
             new Vector4(Emission.X, Emission.Y, Emission.Z, Emission.W),
             new Vector4(Reflexion.X, Reflexion.Y, Reflexion.Z, Reflexion.W),
-            Puissance,
+            SpecularPower,
             Transparent
         );
     }

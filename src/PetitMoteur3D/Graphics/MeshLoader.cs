@@ -71,21 +71,43 @@ internal sealed class MeshLoader
             Vector4 reflexion = Vector4.Zero;
             float shininess = 0;
             uint max = 1;
-            importer.GetMaterialColor(material, Assimp.MatkeyColorDiffuse, 0, 0, ref diffuse);
-            importer.GetMaterialColor(material, Assimp.MatkeyColorSpecular, 0, 0, ref specular);
-            importer.GetMaterialColor(material, Assimp.MatkeyColorAmbient, 0, 0, ref ambient);
-            importer.GetMaterialColor(material, Assimp.MatkeyColorEmissive, 0, 0, ref emission);
-            importer.GetMaterialColor(material, Assimp.MatkeyColorReflective, 0, 0, ref reflexion);
-            importer.GetMaterialFloatArray(material, Assimp.MatkeyShininess, 0, 0, ref shininess, ref max);
+            if (importer.GetMaterialColor(material, Assimp.MatkeyColorDiffuse, 0, 0, ref diffuse) != Return.Success)
+            {
+
+            }
+            if (importer.GetMaterialColor(material, Assimp.MatkeyColorSpecular, 0, 0, ref specular) != Return.Success)
+            {
+
+            }
+            if (importer.GetMaterialColor(material, Assimp.MatkeyColorAmbient, 0, 0, ref ambient) != Return.Success)
+            {
+
+            }
+            if (importer.GetMaterialColor(material, Assimp.MatkeyColorEmissive, 0, 0, ref emission) != Return.Success)
+            {
+
+            }
+            if (importer.GetMaterialColor(material, Assimp.MatkeyColorReflective, 0, 0, ref reflexion) != Return.Success)
+            {
+
+            }
+            if (importer.GetMaterialFloatArray(material, Assimp.MatkeyShininess, 0, 0, ref shininess, ref max) != Return.Success)
+            {
+
+            }
+            if (importer.GetMaterialFloatArray(material, Assimp.MaterialShininess, 0, 0, ref shininess, ref max) != Return.Success)
+            {
+
+            }
             materials[i] = new Material(
-                ambient,
-                diffuse,
-                specular,
-                emission,
-                reflexion,
-                shininess,
-                false
-            );
+                    ambient,
+                    diffuse,
+                    specular,
+                    emission,
+                    reflexion,
+                    shininess,
+                    false
+                );
         }
         return materials;
     }

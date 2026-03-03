@@ -260,17 +260,32 @@ internal sealed class DeferredGeometryRenderPass : BaseRenderPass, IDisposable
         }
     }
 
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <remarks>4 x 16 bytes = 64 bytes</remarks>
     [StructLayout(LayoutKind.Sequential, Pack = 16)]
-    internal struct PixelObjectConstantBufferParams : IResetable
+    internal struct MaterialParams
     {
         /// <summary>
         /// la valeur ambiante du matériau
         /// </summary>
-        public Vector4 ambiantMaterialValue;
+        public Vector4 AmbiantColor;
+        // ---- 16 bytes ----
         /// <summary>
         /// la valeur diffuse du matériau
         /// </summary>
-        public Vector4 diffuseMaterialValue;
+        public Vector4 DiffuseColor;
+        // ---- 16 bytes ----
+        /// <summary>
+        /// la valeur specular du matériau
+        /// </summary>
+        public Vector4 SpecularColor;
+        // ---- 16 bytes ----
+        /// <summary>
+        /// la puissance specular du matériau
+        /// </summary>
+        public float SpecularPower;
         /// <summary>
         /// Indique le matériaux a une texture sa valeur diffuse
         /// </summary>
@@ -280,7 +295,16 @@ internal sealed class DeferredGeometryRenderPass : BaseRenderPass, IDisposable
         /// </summary>
         public int HasNormalTexture;
         private readonly uint alignement1_1;
-        private readonly uint alignement1_2;
+        // ---- 16 bytes ----
+    }
+
+    [StructLayout(LayoutKind.Sequential, Pack = 16)]
+    internal struct PixelObjectConstantBufferParams : IResetable
+    {
+        /// <summary>
+        /// Valeurs du matériau
+        /// </summary>
+        public MaterialParams Material;
 
         public void Reset()
         {

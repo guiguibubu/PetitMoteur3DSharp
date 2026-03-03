@@ -22,13 +22,20 @@ cbuffer frameBuffer
     float4 vCamera; // la position de la caméra
 }
 
-cbuffer objectBuffer
+struct MaterialParams
 {
-    float4 vAMat; // la valeur ambiante du matériau
-    float4 vDMat; // la valeur diffuse du matériau
+    float4 ambiantColor; // la valeur ambiante du matériau
+    float4 diffuseColor; // la valeur diffuse du matériau
+    float4 specularColor; // la valeur specular du matériau
+    float specularPower; // la valeur specular du matériau
     bool hasDiffuseTexture; // Has diffuse texture
     bool hasNormalTexture; // Has normal texture
-    int2 offset; // Offset for memory alignment
+    int offset; // Offset for memory alignment
+};
+
+cbuffer objectBuffer
+{
+    MaterialParams vMaterial;
 }
 
 SamplerState SampleState; // l'état de sampling
@@ -111,8 +118,8 @@ PS_OUT ForwardRenderingPSImpl(ForwardRendering_VertexParams vertex, uniform bool
     }
 
     // I = A + D * N.L + (R.V)n
-    float3 couleurLumiereAmbiante = 0.4f * vLumiere.vAEcl.rgb * vAMat.rgb;
-    float3 couleurLumiereDiffuse = vLumiere.vDEcl.rgb * vDMat.rgb * diff;
+    float3 couleurLumiereAmbiante = 0.4f * vLumiere.vAEcl.rgb * vMaterial.ambiantColor.rgb;
+    float3 couleurLumiereDiffuse = vLumiere.vDEcl.rgb * vMaterial.diffuseColor.rgb * diff;
     float3 couleurLumiereSpecular = 0.1f * S;
     // If in shadow
     if (isInShadow)
@@ -132,7 +139,7 @@ PS_OUT ForwardRenderingPSImpl(ForwardRendering_VertexParams vertex, uniform bool
 // Render Techniques
 PS_OUT ForwardRenderingPS(ForwardRendering_VertexParams vertex)
 {
-    return ForwardRenderingPSImpl(vertex, hasNormalTexture, hasDiffuseTexture, vLumiere.enableShadow);
+    return ForwardRenderingPSImpl(vertex, vMaterial.hasNormalTexture, vMaterial.hasDiffuseTexture, vLumiere.enableShadow);
 }
 
 #endif
