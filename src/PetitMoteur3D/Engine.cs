@@ -590,7 +590,7 @@ public class Engine
         bloc4.Move(4f, 2f, 4f);
 
         MeshLoader meshLoader = new();
-        SceneMesh[] meshes = meshLoader.Load("models\\teapot.obj");
+        SceneMesh[] meshes = meshLoader.Load("models\\teapot.gltf");
 
         SceneMesh rootMesh = meshes[0];
         BoundingBox boundingBox = rootMesh.GetBoundingBox();
