@@ -229,7 +229,7 @@ internal sealed class ForwardOpaqueRenderPass : BaseRenderPass, IDisposable
         samplerDesc.BorderColor[3] = 0f;
 
         // Création de l’état de sampling
-        _sampleState = textureManager.Factory.CreateSampler(samplerDesc, $"{Name}_SamplerState");
+        _sampleState = textureManager.Factory.CreateSampler(samplerDesc);
     }
 
     private unsafe void InitShadowMapSampler(TextureManager textureManager)
@@ -253,7 +253,7 @@ internal sealed class ForwardOpaqueRenderPass : BaseRenderPass, IDisposable
         samplerDesc.BorderColor[3] = 1f;
 
         // Création de l’état de sampling
-        _shadowMapSampleState = textureManager.Factory.CreateSampler(samplerDesc, $"{Name}_ShadowMapSamplerState");
+        _shadowMapSampleState = textureManager.Factory.CreateSampler(samplerDesc);
     }
     #endregion
 

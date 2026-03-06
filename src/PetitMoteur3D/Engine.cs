@@ -567,26 +567,26 @@ public class Engine
         Scene scene = new(ressourceFactory, renderPassFactory, gameCamera, window.Size);
         Bloc bloc1 = new(4.0f, 4.0f, 4.0f, ressourceFactory, renderPassFactory);
         bloc1.Material.Specular = Vector4.Zero;
-        bloc1.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTexture("textures\\herringbone_brick_diff.jpg");
-        bloc1.Material.NormalTexture = ressourceFactory.TextureManager.GetOrLoadTexture("textures\\herringbone_brick_norm.jpg");
+        bloc1.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\herringbone_brick_diff.jpg");
+        bloc1.Material.NormalTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\herringbone_brick_norm.jpg");
         bloc1.Move(-4f, 2f, 0f);
 
         Bloc bloc2 = new(4.0f, 4.0f, 4.0f, ressourceFactory, renderPassFactory);
         bloc2.Material.Specular = Vector4.Zero;
-        bloc2.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall.jpg");
-        bloc2.Material.NormalTexture = ressourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall_normal.jpg");
+        bloc2.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\brickwall.jpg");
+        bloc2.Material.NormalTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\brickwall_normal.jpg");
         bloc2.Move(4f, 2f, 0f);
 
         Bloc bloc3 = new(4.0f, 4.0f, 4.0f, ressourceFactory, renderPassFactory);
         bloc3.Material.Specular = Vector4.Zero;
-        bloc3.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall.jpg");
-        bloc3.Material.NormalTexture = ressourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall_normal.jpg");
+        bloc3.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\brickwall.jpg");
+        bloc3.Material.NormalTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\brickwall_normal.jpg");
         bloc3.Move(-4f, 2f, 4f);
 
         Bloc bloc4 = new(4.0f, 4.0f, 4.0f, ressourceFactory, renderPassFactory);
         bloc4.Material.Specular = Vector4.Zero;
-        bloc4.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall.jpg");
-        bloc4.Material.NormalTexture = ressourceFactory.TextureManager.GetOrLoadTexture("textures\\brickwall_normal.jpg");
+        bloc4.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\brickwall.jpg");
+        bloc4.Material.NormalTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\brickwall_normal.jpg");
         bloc4.Move(4f, 2f, 4f);
 
         MeshLoader meshLoader = new();
@@ -606,7 +606,7 @@ public class Engine
         objetMesh.SetScale(4f / float.Max(float.Max(dimX, dimY), dimZ));
 
         Plane ground = new(10f, 10f, ressourceFactory, renderPassFactory);
-        ground.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTexture("textures\\silk.png");
+        ground.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\silk.png");
         ground.Rotate(Vector3.UnitX, (float)(Math.PI / 2f));
 
         scene.AddObjet(bloc1);

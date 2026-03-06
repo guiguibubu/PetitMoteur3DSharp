@@ -45,30 +45,70 @@ internal sealed class Texture : IDisposable
 
         if (!string.IsNullOrEmpty(Name))
         {
+            string nameDebug = Name + "_Texture";
             // Set Debug Name
-            using (GlobalMemory unmanagedName = SilkMarshal.StringToMemory(name, NativeStringEncoding.Ansi))
+            using (GlobalMemory unmanagedName = SilkMarshal.StringToMemory(nameDebug, NativeStringEncoding.Ansi))
             {
                 nint namePtr = unmanagedName.Handle;
                 fixed (Guid* guidPtr = &Windows.Win32.PInvoke.WKPDID_D3DDebugObjectName)
                 {
-                    _texture.SetPrivateData(guidPtr, (uint)name.Length, namePtr.ToPointer());
+                    _texture.SetPrivateData(guidPtr, (uint)nameDebug.Length, namePtr.ToPointer());
                 }
             }
         }
         _disposed = false;
     }
 
-    public void SetTextureView(ComPtr<ID3D11ShaderResourceView> textureView)
+    public unsafe void SetTextureView(ComPtr<ID3D11ShaderResourceView> textureView)
     {
         _shaderRessourceView = textureView;
+        if (_shaderRessourceView.Handle is not null && !string.IsNullOrEmpty(Name))
+        {
+            string name = Name + "_ShaderRessourceView";
+            // Set Debug Name
+            using (GlobalMemory unmanagedName = SilkMarshal.StringToMemory(name, NativeStringEncoding.Ansi))
+            {
+                nint namePtr = unmanagedName.Handle;
+                fixed (Guid* guidPtr = &Windows.Win32.PInvoke.WKPDID_D3DDebugObjectName)
+                {
+                    _shaderRessourceView.SetPrivateData(guidPtr, (uint)name.Length, namePtr.ToPointer());
+                }
+            }
+        }
     }
-    public void SetTextureDepthStencilView(ComPtr<ID3D11DepthStencilView> textureDepthStencilView)
+    public unsafe void SetTextureDepthStencilView(ComPtr<ID3D11DepthStencilView> textureDepthStencilView)
     {
         _textureDepthStencilView = textureDepthStencilView;
+        if (_textureDepthStencilView.Handle is not null && !string.IsNullOrEmpty(Name))
+        {
+            string name = Name + "_DepthStencilView";
+            // Set Debug Name
+            using (GlobalMemory unmanagedName = SilkMarshal.StringToMemory(name, NativeStringEncoding.Ansi))
+            {
+                nint namePtr = unmanagedName.Handle;
+                fixed (Guid* guidPtr = &Windows.Win32.PInvoke.WKPDID_D3DDebugObjectName)
+                {
+                    _textureDepthStencilView.SetPrivateData(guidPtr, (uint)name.Length, namePtr.ToPointer());
+                }
+            }
+        }
     }
-    public void SetTextureRenderTargetView(ComPtr<ID3D11RenderTargetView> textureRenderTargetView)
+    public unsafe void SetTextureRenderTargetView(ComPtr<ID3D11RenderTargetView> textureRenderTargetView)
     {
         _renderTargetView = textureRenderTargetView;
+        if (_renderTargetView.Handle is not null && !string.IsNullOrEmpty(Name))
+        {
+            string name = Name + "_RenderTargetView";
+            // Set Debug Name
+            using (GlobalMemory unmanagedName = SilkMarshal.StringToMemory(name, NativeStringEncoding.Ansi))
+            {
+                nint namePtr = unmanagedName.Handle;
+                fixed (Guid* guidPtr = &Windows.Win32.PInvoke.WKPDID_D3DDebugObjectName)
+                {
+                    _renderTargetView.SetPrivateData(guidPtr, (uint)name.Length, namePtr.ToPointer());
+                }
+            }
+        }
     }
 
     ~Texture()

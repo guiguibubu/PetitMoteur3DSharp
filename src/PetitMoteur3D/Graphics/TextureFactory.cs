@@ -1,7 +1,9 @@
 using System;
 using System.Buffers;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using PetitMoteur3D.Logging;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
 using Silk.NET.DXGI;
@@ -152,10 +154,27 @@ internal sealed class TextureFactory
         return textureView;
     }
 
-    public unsafe ComPtr<ID3D11SamplerState> CreateSampler(SamplerDesc desc, string? name = null)
+    private Dictionary<SamplerDesc, ComPtr<ID3D11SamplerState>> _samplerCache = new();
+
+    public unsafe ComPtr<ID3D11SamplerState> CreateSampler(SamplerDesc desc)
     {
-        ComPtr<ID3D11SamplerState> sampler = default;
+        if (_samplerCache.TryGetValue(desc, out ComPtr<ID3D11SamplerState> sampler))
+        {
+            return sampler;
+        }
+
         SilkMarshal.ThrowHResult(_device.CreateSamplerState(ref desc, ref sampler));
+        string[] descProperties = [
+            $"Filter = {desc.Filter}",
+            $"ComparisonFunc = {desc.ComparisonFunc}",
+            $"AddressU = {desc.AddressU}",
+            $"AddressV = {desc.AddressV}",
+            $"AddressW = {desc.AddressW}",
+            ];
+        Log.Information("[TextureFactory] CreateSampler with desc : {0}", string.Join("; ", descProperties));
+        _samplerCache.Add(desc, sampler);
+
+        string name = desc.Filter.ToString() + desc.ComparisonFunc.ToString() + desc.AddressU.ToString()+ "_SamplerState";
         if (!string.IsNullOrEmpty(name))
         {
             // Set Debug Name

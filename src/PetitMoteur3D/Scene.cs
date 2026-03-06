@@ -63,7 +63,7 @@ internal sealed class Scene : IDisposable
         };
 
         _shadowMap = new ShadowMap(graphicDeviceRessourceFactory, windowSize, name: "SceneShadowMap");
-        _debugDepthMap = new ShadowMap(graphicDeviceRessourceFactory, windowSize, name: "DebugDepthMap");
+        _debugDepthMap = new ShadowMap(graphicDeviceRessourceFactory, windowSize, name: "SceneDebugDepthMap");
 
         _fullScreenQuad = new ScreenQuad(-1, 1, -1, 1, 1, graphicDeviceRessourceFactory, renderPassFactory);
         _fullScreenQuad.SupportedRenderPasses = [RenderPassType.DeferredShadingLightning];

@@ -81,7 +81,7 @@ internal sealed class ShadowMap
         samplerDesc.BorderColor[3] = 1f;
 
         // Création de l’état de sampling
-        _sampleState = textureManager.Factory.CreateSampler(samplerDesc, $"{_name}_SamplerState");
+        _sampleState = textureManager.Factory.CreateSampler(samplerDesc);
     }
 
     [MemberNotNull(nameof(_depthTexture))]

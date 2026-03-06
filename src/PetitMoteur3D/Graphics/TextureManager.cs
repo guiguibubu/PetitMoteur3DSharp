@@ -21,7 +21,7 @@ internal sealed class TextureManager : IDisposable
         _disposed = false;
     }
 
-    public Texture GetOrLoadTexture(string fileName)
+    public Texture GetOrLoadTextureFromFile(string fileName)
     {
         if (TryGet(fileName, out Texture? texture))
         {
@@ -35,7 +35,7 @@ internal sealed class TextureManager : IDisposable
         }
     }
 
-    public Texture GetOrCreateTexture(string name, nint pixels, int width, int height, int bytesPerPixel)
+    public Texture GetOrCreateTextureFromMemory(string name, nint pixels, int width, int height, int bytesPerPixel)
     {
         if (TryGet(name, out Texture? texture))
         {

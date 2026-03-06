@@ -210,7 +210,7 @@ internal sealed class DeferredGeometryRenderPass : BaseRenderPass, IDisposable
         samplerDesc.BorderColor[3] = 0f;
 
         // Création de l’état de sampling
-        _sampleState = textureManager.Factory.CreateSampler(samplerDesc, $"{Name}_SamplerState");
+        _sampleState = textureManager.Factory.CreateSampler(samplerDesc);
     }
     #endregion
 

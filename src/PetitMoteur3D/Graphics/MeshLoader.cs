@@ -4,29 +4,30 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Numerics;
 using ImGuiNET;
-using Silk.NET.Assimp;
+using PetitMoteur3D.Logging;
+using Assimp = Silk.NET.Assimp;
 
 namespace PetitMoteur3D.Graphics;
 
 internal sealed class MeshLoader
 {
-    private readonly Assimp _importer;
+    private readonly Assimp.Assimp _importer;
     public MeshLoader()
     {
-        _importer = Assimp.GetApi();
+        _importer = Assimp.Assimp.GetApi();
     }
 
     public unsafe SceneMesh[] Load(string filePath)
     {
         byte[] fileData = System.IO.File.ReadAllBytes(filePath);
-        uint postProcessFlags = (uint)PostProcessSteps.Triangulate
-        | (uint)PostProcessSteps.FindInvalidData
-        | (uint)PostProcessSteps.GenerateNormals
-        | (uint)PostProcessSteps.CalculateTangentSpace
-        | (uint)PostProcessSteps.MakeLeftHanded
-        | (uint)PostProcessSteps.FlipWindingOrder
-        | (uint)PostProcessSteps.FlipUVs;
-        Silk.NET.Assimp.Scene* scenePtr = _importer.ImportFileFromMemory(in fileData[0], (uint)fileData.Length, postProcessFlags, (byte*)0);
+        uint postProcessFlags = (uint)Assimp.PostProcessSteps.Triangulate
+        | (uint)Assimp.PostProcessSteps.FindInvalidData
+        | (uint)Assimp.PostProcessSteps.GenerateNormals
+        | (uint)Assimp.PostProcessSteps.CalculateTangentSpace
+        | (uint)Assimp.PostProcessSteps.MakeLeftHanded
+        | (uint)Assimp.PostProcessSteps.FlipWindingOrder
+        | (uint)Assimp.PostProcessSteps.FlipUVs;
+        Assimp.Scene* scenePtr = _importer.ImportFileFromMemory(in fileData[0], (uint)fileData.Length, postProcessFlags, (byte*)0);
         SceneMesh[] sceneMeshes;
         try
         {
@@ -34,13 +35,13 @@ internal sealed class MeshLoader
             {
                 throw new MeshLoaderException("Failed to import : {FilePath}", filePath);
             }
-            Silk.NET.Assimp.Scene scene = *scenePtr;
+            Assimp.Scene scene = *scenePtr;
 
-            Material[] materials = ReadMaterials(scene, _importer);
+            Material[] materials = ReadMaterials(scene);
 
             Mesh[] meshes = ReadMeshes(scene, materials);
 
-            Node* rootNode = scene.MRootNode;
+            Assimp.Node* rootNode = scene.MRootNode;
             if (rootNode is null)
             {
                 sceneMeshes = meshes.Select(m => new SceneMesh(m)).ToArray();
@@ -57,48 +58,82 @@ internal sealed class MeshLoader
         return sceneMeshes;
     }
 
-    private static unsafe Material[] ReadMaterials(Silk.NET.Assimp.Scene scene, Assimp importer)
+    private unsafe Material[] ReadMaterials(Assimp.Scene scene)
     {
         uint nbMaterials = scene.MNumMaterials;
         Material[] materials = new Material[nbMaterials];
         for (int i = 0; i < nbMaterials; i++)
         {
-            Silk.NET.Assimp.Material* material = scene.MMaterials[i];
+            Assimp.Material* material = scene.MMaterials[i];
             Vector4 diffuse = new Vector4(0.8f, 0.8f, 0.8f, 1f);
             Vector4 specular = Vector4.Zero;
             Vector4 ambient = new Vector4(0.2f, 0.2f, 0.2f, 1f);
             Vector4 emission = Vector4.Zero;
             Vector4 reflexion = Vector4.Zero;
             float shininess = 0;
-            uint max = 1;
-            if (importer.GetMaterialColor(material, Assimp.MatkeyColorDiffuse, 0, 0, ref diffuse) != Return.Success)
+            Assimp.AssimpString materialNameTmp = "";
+            string materialName;
+            if (_importer.GetMaterialString(material, Assimp.Assimp.MatkeyName, (uint)Assimp.TextureType.None, 0, ref materialNameTmp) == Assimp.Return.Success)
             {
-
+                materialName = materialNameTmp.AsString;
             }
-            if (importer.GetMaterialColor(material, Assimp.MatkeyColorSpecular, 0, 0, ref specular) != Return.Success)
+            else
             {
-
+                materialName = scene.MName.AsString + " - Material " + i;
             }
-            if (importer.GetMaterialColor(material, Assimp.MatkeyColorAmbient, 0, 0, ref ambient) != Return.Success)
+
+            Log.Information("[MeshLoader] Loading of {0} started", materialName);
+
+            if (_importer.GetMaterialColor(material, Assimp.Assimp.MatkeyColorDiffuse, (uint)Assimp.TextureType.None, 0, ref diffuse) == Assimp.Return.Success)
             {
-
+                Log.Information("[MeshLoader] {0} : DiffuseColor = {1}", materialName, diffuse);
             }
-            if (importer.GetMaterialColor(material, Assimp.MatkeyColorEmissive, 0, 0, ref emission) != Return.Success)
+            else
             {
-
+                Log.Information("[MeshLoader] {0} : No DiffuseColor", materialName);
             }
-            if (importer.GetMaterialColor(material, Assimp.MatkeyColorReflective, 0, 0, ref reflexion) != Return.Success)
+            if (_importer.GetMaterialColor(material, Assimp.Assimp.MatkeyColorSpecular, (uint)Assimp.TextureType.None, 0, ref specular) == Assimp.Return.Success)
             {
-
+                Log.Information("[MeshLoader] {0} : SpecularColor = {1}", materialName, specular);
             }
-            if (importer.GetMaterialFloatArray(material, Assimp.MatkeyShininess, 0, 0, ref shininess, ref max) != Return.Success)
+            else
             {
-
+                Log.Information("[MeshLoader] {0} : No SpecularColor", materialName);
             }
-            if (importer.GetMaterialFloatArray(material, Assimp.MaterialShininess, 0, 0, ref shininess, ref max) != Return.Success)
+            if (_importer.GetMaterialColor(material, Assimp.Assimp.MatkeyColorAmbient, (uint)Assimp.TextureType.None, 0, ref ambient) == Assimp.Return.Success)
             {
-
+                Log.Information("[MeshLoader] {0} : AmbientColor = {1}", materialName, ambient);
             }
+            else
+            {
+                Log.Information("[MeshLoader] {0} : No AmbientColor", materialName);
+            }
+            if (_importer.GetMaterialColor(material, Assimp.Assimp.MatkeyColorEmissive, (uint)Assimp.TextureType.None, 0, ref emission) == Assimp.Return.Success)
+            {
+                Log.Information("[MeshLoader] {0} : EmissiveColor = {1}", materialName, emission);
+            }
+            else
+            {
+                Log.Information("[MeshLoader] {0} : No EmissiveColor", materialName);
+            }
+            if (_importer.GetMaterialColor(material, Assimp.Assimp.MatkeyColorReflective, (uint)Assimp.TextureType.None, 0, ref reflexion) == Assimp.Return.Success)
+            {
+                Log.Information("[MeshLoader] {0} : ReflectiveColor = {1}", materialName, reflexion);
+            }
+            else
+            {
+                Log.Information("[MeshLoader] {0} : No ReflectiveColor", materialName);
+            }
+            // Defines the shininess of a phong-shaded material. This is actually the exponent of the phong specular equation
+            if (_importer.GetMaterialFloatArray(material, Assimp.Assimp.MatkeyShininess, (uint)Assimp.TextureType.None, 0, ref shininess, null) == Assimp.Return.Success)
+            {
+                Log.Information("[MeshLoader] {0} : Shininess = {1}", materialName, reflexion);
+            }
+            else
+            {
+                Log.Information("[MeshLoader] {0} : No Shininess", materialName);
+            }
+
             materials[i] = new Material(
                     ambient,
                     diffuse,
@@ -108,17 +143,19 @@ internal sealed class MeshLoader
                     shininess,
                     false
                 );
+
+            Log.Information("[MeshLoader] Loading of {0} finished", materialName);
         }
         return materials;
     }
 
-    private static unsafe Mesh[] ReadMeshes(Silk.NET.Assimp.Scene scene, Material[] sceneMaterials)
+    private static unsafe Mesh[] ReadMeshes(Assimp.Scene scene, Material[] sceneMaterials)
     {
         uint nbSubmesh = scene.MNumMeshes;
         Mesh[] meshes = new Mesh[nbSubmesh];
         for (int i = 0; i < nbSubmesh; i++)
         {
-            Silk.NET.Assimp.Mesh mesh = *scene.MMeshes[i];
+            Assimp.Mesh mesh = *scene.MMeshes[i];
             Sommet[] vertices = ReadVertices(mesh);
 
             ushort[] indices = ReadIndices(mesh);
@@ -128,7 +165,7 @@ internal sealed class MeshLoader
         return meshes;
     }
 
-    private static unsafe SceneMesh[] ReadNode(Node node, Mesh[] meshes)
+    private static unsafe SceneMesh[] ReadNode(Assimp.Node node, Mesh[] meshes)
     {
         uint nbSubmesh = node.MNumMeshes;
         SceneMesh[] sceneMeshes;
@@ -144,7 +181,7 @@ internal sealed class MeshLoader
                 uint nbChildren = node.MNumChildren;
                 for (int j = 0; j < nbChildren; j++)
                 {
-                    Node* child = node.MChildren[j];
+                    Assimp.Node* child = node.MChildren[j];
                     if (child is null)
                     {
                         continue;
@@ -160,7 +197,7 @@ internal sealed class MeshLoader
             List<SceneMesh> sceneMeshesTmp = new((int)nbChildren);
             for (int j = 0; j < nbChildren; j++)
             {
-                Node* child = node.MChildren[j];
+                Assimp.Node* child = node.MChildren[j];
                 if (child is null)
                 {
                     continue;
@@ -172,7 +209,7 @@ internal sealed class MeshLoader
         return sceneMeshes;
     }
 
-    private unsafe static Sommet[] ReadVertices(Silk.NET.Assimp.Mesh mesh)
+    private unsafe static Sommet[] ReadVertices(Assimp.Mesh mesh)
     {
         uint nbVertices = mesh.MNumVertices;
         Sommet[] vertices = new Sommet[nbVertices];
@@ -196,14 +233,14 @@ internal sealed class MeshLoader
         return vertices;
     }
 
-    private unsafe static ushort[] ReadIndices(Silk.NET.Assimp.Mesh mesh)
+    private unsafe static ushort[] ReadIndices(Assimp.Mesh mesh)
     {
         uint nbFaces = mesh.MNumFaces;
         ushort[][] indicesPerFace = new ushort[nbFaces][];
         int indicesCount = 0;
         for (int j = 0; j < nbFaces; j++)
         {
-            Face face = mesh.MFaces[j];
+            Assimp.Face face = mesh.MFaces[j];
             int nbIndices = (int)face.MNumIndices;
             indicesCount += nbIndices;
             Span<uint> indicesFace = new Span<uint>(face.MIndices, nbIndices);
@@ -225,13 +262,13 @@ internal sealed class MeshLoader
         return indices;
     }
 
-    private static void ThrowIfFailed(Return returnCode)
+    private static void ThrowIfFailed(Assimp.Return returnCode)
     {
-        if (returnCode == Return.Success)
+        if (returnCode == Assimp.Return.Success)
         {
             return;
         }
-        if (returnCode == Return.Outofmemory)
+        if (returnCode == Assimp.Return.Outofmemory)
         {
             throw new MeshLoaderException("'ReturnOutofmemory' returned by ASSIMP");
         }

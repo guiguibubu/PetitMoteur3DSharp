@@ -434,7 +434,7 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
 
         // Upload texture to graphics system
         {
-            Texture texture = textureManager.GetOrCreateTexture("ImGuiFontTextureView", pixels, width, height, bytesPerPixel);
+            Texture texture = textureManager.GetOrCreateTextureFromMemory("ImGuiFontTextureView", pixels, width, height, bytesPerPixel);
             _backendRendererUserData.FontTextureView = texture.ShaderRessourceView;
         }
 
@@ -457,7 +457,7 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
             samplerDesc.MinLOD = 0f;
             samplerDesc.MaxLOD = float.MaxValue;
 
-            _backendRendererUserData.FontSampler = textureManager.Factory.CreateSampler(samplerDesc, "ImGuiFontSampler");
+            _backendRendererUserData.FontSampler = textureManager.Factory.CreateSampler(samplerDesc);
 
             _shaderDescPool.Return(samplerDescWrapper);
         }
