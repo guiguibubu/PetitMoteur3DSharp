@@ -4,14 +4,14 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using PetitMoteur3D.Core.Memory;
-using Silk.NET.Core.Native;
+using PetitMoteur3D.Graphics.Buffers;
 using Silk.NET.Direct3D11;
 
 namespace PetitMoteur3D.Graphics.Shaders;
 
 internal sealed class ShadowMapRenderPass : BaseRenderPass, IDisposable
 {
-    private ComPtr<ID3D11Buffer> _vertexShaderConstantBuffer;
+    private ConstantBuffer _vertexShaderConstantBuffer;
 
     private bool _disposedValue;
 
@@ -25,21 +25,21 @@ internal sealed class ShadowMapRenderPass : BaseRenderPass, IDisposable
     #region Update Values
     public void UpdateVertexShaderConstantBuffer(VertexShaderConstantBufferParams value)
     {
-        GraphicPipeline.RessourceFactory.UpdateSubresource(_vertexShaderConstantBuffer, 0, in Unsafe.NullRef<Box>(), in value, 0, 0);
+        _vertexShaderConstantBuffer.Buffer.UpdateSubresource(GraphicPipeline.DeviceContext, 0, in Unsafe.NullRef<Box>(), in value, 0, 0);
     }
     #endregion
 
     #region Vertex Shader
     public override void SetVertexShaderConstantBuffers()
     {
-        GraphicPipeline.VertexShaderStage.SetConstantBuffers(0, 1, ref _vertexShaderConstantBuffer);
+        _vertexShaderConstantBuffer.Bind(GraphicPipeline, ShaderType.VertexShader, idSlot: 0);
     }
     #endregion
 
     #region Pixel Shader
     public override void SetPixelShaderConstantBuffers()
     {
-        GraphicPipeline.PixelShaderStage.SetConstantBuffers(0, 1, ref _vertexShaderConstantBuffer);
+        _vertexShaderConstantBuffer.Bind(GraphicPipeline, ShaderType.VertexShader, idSlot: 0);
     }
     public override void SetPixelShaderRessources() { }
 

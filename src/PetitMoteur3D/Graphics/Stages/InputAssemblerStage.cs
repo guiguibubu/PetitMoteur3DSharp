@@ -18,9 +18,23 @@ internal sealed class InputAssemblerStage
         _deviceContext.IASetVertexBuffers(startSlot, numBuffers, ref ppVertexBuffers, in pStrides, in pOffsets);
     }
 
+    public unsafe void UnbindVertexBuffers(uint startSlot, uint numBuffers)
+    {
+        ID3D11Buffer* buffer = (ID3D11Buffer*)null;
+        uint stride = 0;
+        uint offset = 0;
+        _deviceContext.IASetVertexBuffers(startSlot, numBuffers, in buffer, in stride, in offset);
+    }
+
     public void SetIndexBuffer(ComPtr<ID3D11Buffer> pIndexBuffer, Silk.NET.DXGI.Format Format, uint Offset)
     {
         _deviceContext.IASetIndexBuffer(pIndexBuffer, Format, Offset);
+    }
+
+    public unsafe void UnbindIndexBuffer()
+    {
+        ID3D11Buffer* buffer = (ID3D11Buffer*)null;
+        _deviceContext.IASetIndexBuffer(buffer, Silk.NET.DXGI.Format.FormatUnknown, 0);
     }
 
     public void SetInputLayout(ComPtr<ID3D11InputLayout> pInputLayout)

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
+using PetitMoteur3D.Graphics.Buffers;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
 using Silk.NET.DXGI;
@@ -20,7 +21,7 @@ internal sealed class GraphicDeviceRessourceFactory : IDisposable
     private bool _disposed;
 
     public GraphicDeviceRessourceFactory(D3D11GraphicDevice graphicDevice)
-        : this(graphicDevice, new GraphicBufferFactory(graphicDevice.Device), new ShaderManager(graphicDevice.Device), new TextureManager(graphicDevice.Device))
+        : this(graphicDevice, new GraphicBufferFactory(graphicDevice), new ShaderManager(graphicDevice.Device), new TextureManager(graphicDevice.Device))
     { }
 
     public GraphicDeviceRessourceFactory(D3D11GraphicDevice graphicDevice, GraphicBufferFactory bufferFactory, ShaderManager shaderManager, TextureManager textureManager)

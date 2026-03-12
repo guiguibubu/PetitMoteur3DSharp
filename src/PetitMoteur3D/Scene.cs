@@ -168,7 +168,7 @@ internal sealed class Scene : IDisposable
                 graphicPipeline.SetRenderTarget(RenderTargetType.NoRenderTarget);
                 graphicPipeline.OutputMergerStage.SetRenderTarget(0, in Unsafe.NullRef<ComPtr<ID3D11RenderTargetView>>(), _shadowMap.DepthTexture.TextureDepthStencilView);
                 // Effacer le shadow map
-                graphicPipeline.GraphicDevice.DeviceContext.ClearDepthStencilView(_shadowMap.DepthTexture.TextureDepthStencilView, (uint)(ClearFlag.Depth | ClearFlag.Stencil), 1.0f, 0);
+                graphicPipeline.GraphicDevice.ImmediateContext.ClearDepthStencilView(_shadowMap.DepthTexture.TextureDepthStencilView, (uint)(ClearFlag.Depth | ClearFlag.Stencil), 1.0f, 0);
                 // Rasterizer
                 graphicPipeline.RasterizerStage.SetState(graphicPipeline.SolidCullFrontRS);
 

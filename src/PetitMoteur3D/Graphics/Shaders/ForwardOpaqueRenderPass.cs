@@ -4,6 +4,7 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using PetitMoteur3D.Core.Memory;
+using PetitMoteur3D.Graphics.Buffers;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
 
@@ -11,9 +12,9 @@ namespace PetitMoteur3D.Graphics.Shaders;
 
 internal sealed class ForwardOpaqueRenderPass : BaseRenderPass, IDisposable
 {
-    private ComPtr<ID3D11Buffer> _sceneConstantBuffer;
-    private ComPtr<ID3D11Buffer> _pixelObjectConstantBuffer;
-    private ComPtr<ID3D11Buffer> _vertexObjectConstantBuffer;
+    private ConstantBuffer _sceneConstantBuffer;
+    private ConstantBuffer _pixelObjectConstantBuffer;
+    private ConstantBuffer _vertexObjectConstantBuffer;
 
     private ComPtr<ID3D11SamplerState> _sampleState;
     private ComPtr<ID3D11SamplerState> _shadowMapSampleState;
@@ -34,17 +35,17 @@ internal sealed class ForwardOpaqueRenderPass : BaseRenderPass, IDisposable
     #region Update Values
     public void UpdateSceneConstantBuffer(SceneConstantBufferParams value)
     {
-        GraphicPipeline.RessourceFactory.UpdateSubresource(_sceneConstantBuffer, 0, in Unsafe.NullRef<Box>(), in value, 0, 0);
+        _sceneConstantBuffer.Buffer.UpdateSubresource(GraphicPipeline.DeviceContext, 0, in Unsafe.NullRef<Box>(), in value, 0, 0);
     }
 
     public void UpdateVertexObjectConstantBuffer(VertexObjectConstantBufferParams value)
     {
-        GraphicPipeline.RessourceFactory.UpdateSubresource(_vertexObjectConstantBuffer, 0, in Unsafe.NullRef<Box>(), in value, 0, 0);
+        _vertexObjectConstantBuffer.Buffer.UpdateSubresource(GraphicPipeline.DeviceContext, 0, in Unsafe.NullRef<Box>(), in value, 0, 0);
     }
 
     public void UpdatePixelObjectConstantBuffer(PixelObjectConstantBufferParams value)
     {
-        GraphicPipeline.RessourceFactory.UpdateSubresource(_pixelObjectConstantBuffer, 0, in Unsafe.NullRef<Box>(), in value, 0, 0);
+        _pixelObjectConstantBuffer.Buffer.UpdateSubresource(GraphicPipeline.DeviceContext, 0, in Unsafe.NullRef<Box>(), in value, 0, 0);
     }
 
     public void UpdateTexture(ComPtr<ID3D11ShaderResourceView> texture)
@@ -66,16 +67,16 @@ internal sealed class ForwardOpaqueRenderPass : BaseRenderPass, IDisposable
     #region Vertex Shader
     public override void SetVertexShaderConstantBuffers()
     {
-        GraphicPipeline.VertexShaderStage.SetConstantBuffers(0, 1, ref _sceneConstantBuffer);
-        GraphicPipeline.VertexShaderStage.SetConstantBuffers(1, 1, ref _vertexObjectConstantBuffer);
+        _sceneConstantBuffer.Bind(GraphicPipeline, ShaderType.VertexShader, idSlot: 0);
+        _vertexObjectConstantBuffer.Bind(GraphicPipeline, ShaderType.VertexShader, idSlot: 1);
     }
     #endregion
 
     #region Pixel Shader
     public override void SetPixelShaderConstantBuffers()
     {
-        GraphicPipeline.PixelShaderStage.SetConstantBuffers(0, 1, ref _sceneConstantBuffer);
-        GraphicPipeline.PixelShaderStage.SetConstantBuffers(1, 1, ref _pixelObjectConstantBuffer);
+        _sceneConstantBuffer.Bind(GraphicPipeline, ShaderType.PixelShader, idSlot: 0);
+        _pixelObjectConstantBuffer.Bind(GraphicPipeline, ShaderType.PixelShader, idSlot: 1);
     }
 
     public override unsafe void SetPixelShaderRessources()

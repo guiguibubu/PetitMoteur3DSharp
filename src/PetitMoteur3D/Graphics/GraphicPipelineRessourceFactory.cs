@@ -69,18 +69,18 @@ internal sealed class GraphicPipelineRessourceFactory
         return rasterizerState;
     }
 
-    public void Map(ComPtr<ID3D11Buffer> pResource, uint Subresource, Map MapType, uint MapFlags, ref MappedSubresource pMappedResource)
-    {
-        SilkMarshal.ThrowHResult(_graphicDevice.DeviceContext.Map(pResource, Subresource, MapType, MapFlags, ref pMappedResource));
-    }
+    //public void Map(ComPtr<ID3D11Buffer> pResource, uint Subresource, Map MapType, uint MapFlags, ref MappedSubresource pMappedResource)
+    //{
+    //    SilkMarshal.ThrowHResult(_graphicDevice.DeviceContext.Map(pResource, Subresource, MapType, MapFlags, ref pMappedResource));
+    //}
 
-    public void Unmap(ComPtr<ID3D11Buffer> pResource, uint Subresource)
-    {
-        _graphicDevice.DeviceContext.Unmap(pResource, Subresource);
-    }
+    //public void Unmap(ComPtr<ID3D11Buffer> pResource, uint Subresource)
+    //{
+    //    _graphicDevice.DeviceContext.Unmap(pResource, Subresource);
+    //}
 
-    public void UpdateSubresource<T>(ComPtr<ID3D11Buffer> pDstResource, uint DstSubresource, in Box pDstBox, in T pSrcData, uint SrcRowPitch, uint SrcDepthPitch) where T : unmanaged
-    {
-        _graphicDevice.DeviceContext.UpdateSubresource(pDstResource, DstSubresource, in pDstBox, in pSrcData, SrcRowPitch, SrcDepthPitch);
-    }
+    //public void UpdateSubresource<T>(ComPtr<ID3D11Buffer> pDstResource, uint DstSubresource, in Box pDstBox, in T pSrcData, uint SrcRowPitch, uint SrcDepthPitch) where T : unmanaged
+    //{
+    //    _graphicDevice.DeviceContext.UpdateSubresource(pDstResource, DstSubresource, in pDstBox, in pSrcData, SrcRowPitch, SrcDepthPitch);
+    //}
 }

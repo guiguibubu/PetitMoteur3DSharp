@@ -3,6 +3,7 @@ using System.Linq;
 using System.Numerics;
 using PetitMoteur3D.Core.Math;
 using PetitMoteur3D.Graphics;
+using PetitMoteur3D.Graphics.Buffers;
 using PetitMoteur3D.Graphics.Shaders;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
@@ -27,16 +28,14 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
     #region Protected Properties
     protected abstract bool SupportShadow { get; }
     protected ref readonly System.Numerics.Matrix4x4 MatWorld { get { return ref _matWorld; } }
-    protected ComPtr<ID3D11Buffer> IndexBuffer { get { return _indexBuffer; } }
-    protected int NbIndices { get { return _indices.Length; } }
     protected GraphicBufferFactory BufferFactory { get { return _bufferFactory; } }
     protected Action<D3D11GraphicPipeline, SubObjet3D> AdditionalDrawConfig { get; set; }
     protected Action<D3D11GraphicPipeline, SubObjet3D> PostDrawConfig { get; set; }
     #endregion
 
-    private ComPtr<ID3D11Buffer> _vertexBuffer;
-    private ComPtr<ID3D11Buffer> _vertexBufferPosition;
-    private ComPtr<ID3D11Buffer> _indexBuffer;
+    private VertexBuffer _vertexBuffer;
+    private VertexBuffer _vertexBufferPosition;
+    private IndexBuffer _indexBuffer;
 
     private System.Numerics.Matrix4x4 _matWorld;
 
@@ -207,10 +206,10 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
             _depthTestRenderPass.UpdatePrimitiveTopology(D3DPrimitiveTopology.D3D11PrimitiveTopologyTrianglelist);
             _depthTestRenderPass.SetPrimitiveTopology();
             // Source des sommets
-            _depthTestRenderPass.UpdateVertexBuffer(_vertexBufferPosition, _vertexPositionStride);
-            _depthTestRenderPass.SetVertexBuffer();
+            _depthTestRenderPass.UpdateVertexBuffer(_vertexBufferPosition);
+            _depthTestRenderPass.BindVertexBuffer();
             // Source des index
-            _depthTestRenderPass.UpdateIndexBuffer(_indexBuffer, Silk.NET.DXGI.Format.FormatR16Uint);
+            _depthTestRenderPass.UpdateIndexBuffer(_indexBuffer);
             _depthTestRenderPass.SetIndexBuffer();
             // input layout des sommets
             _depthTestRenderPass.SetInputLayout();
@@ -249,10 +248,10 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
             _forwardOpaqueRenderPass.UpdatePrimitiveTopology(D3DPrimitiveTopology.D3D11PrimitiveTopologyTrianglelist);
             _forwardOpaqueRenderPass.SetPrimitiveTopology();
             // Source des sommets
-            _forwardOpaqueRenderPass.UpdateVertexBuffer(_vertexBuffer, _vertexStride);
-            _forwardOpaqueRenderPass.SetVertexBuffer();
+            _forwardOpaqueRenderPass.UpdateVertexBuffer(_vertexBuffer);
+            _forwardOpaqueRenderPass.BindVertexBuffer();
             // Source des index
-            _forwardOpaqueRenderPass.UpdateIndexBuffer(_indexBuffer, Silk.NET.DXGI.Format.FormatR16Uint);
+            _forwardOpaqueRenderPass.UpdateIndexBuffer(_indexBuffer);
             _forwardOpaqueRenderPass.SetIndexBuffer();
             // input layout des sommets
             _forwardOpaqueRenderPass.SetInputLayout();
@@ -324,10 +323,10 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
             _deferredGeometryRenderPass.UpdatePrimitiveTopology(D3DPrimitiveTopology.D3D11PrimitiveTopologyTrianglelist);
             _deferredGeometryRenderPass.SetPrimitiveTopology();
             // Source des sommets
-            _deferredGeometryRenderPass.UpdateVertexBuffer(_vertexBuffer, _vertexStride);
-            _deferredGeometryRenderPass.SetVertexBuffer();
+            _deferredGeometryRenderPass.UpdateVertexBuffer(_vertexBuffer);
+            _deferredGeometryRenderPass.BindVertexBuffer();
             // Source des index
-            _deferredGeometryRenderPass.UpdateIndexBuffer(_indexBuffer, Silk.NET.DXGI.Format.FormatR16Uint);
+            _deferredGeometryRenderPass.UpdateIndexBuffer(_indexBuffer);
             _deferredGeometryRenderPass.SetIndexBuffer();
             // input layout des sommets
             _deferredGeometryRenderPass.SetInputLayout();
@@ -396,10 +395,10 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
             _deferredLightningRenderPass.UpdatePrimitiveTopology(D3DPrimitiveTopology.D3D11PrimitiveTopologyTrianglelist);
             _deferredLightningRenderPass.SetPrimitiveTopology();
             // Source des sommets
-            _deferredLightningRenderPass.UpdateVertexBuffer(_vertexBuffer, _vertexStride);
-            _deferredLightningRenderPass.SetVertexBuffer();
+            _deferredLightningRenderPass.UpdateVertexBuffer(_vertexBuffer);
+            _deferredLightningRenderPass.BindVertexBuffer();
             // Source des index
-            _deferredLightningRenderPass.UpdateIndexBuffer(_indexBuffer, Silk.NET.DXGI.Format.FormatR16Uint);
+            _deferredLightningRenderPass.UpdateIndexBuffer(_indexBuffer);
             _deferredLightningRenderPass.SetIndexBuffer();
             // input layout des sommets
             _deferredLightningRenderPass.SetInputLayout();
@@ -453,10 +452,10 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
             _shadowMapRenderPass.UpdatePrimitiveTopology(D3DPrimitiveTopology.D3D11PrimitiveTopologyTrianglelist);
             _shadowMapRenderPass.SetPrimitiveTopology();
             // Source des sommets
-            _shadowMapRenderPass.UpdateVertexBuffer(_vertexBufferPosition, _vertexPositionStride);
-            _shadowMapRenderPass.SetVertexBuffer();
+            _shadowMapRenderPass.UpdateVertexBuffer(_vertexBufferPosition);
+            _shadowMapRenderPass.BindVertexBuffer();
             // Source des index
-            _shadowMapRenderPass.UpdateIndexBuffer(_indexBuffer, Silk.NET.DXGI.Format.FormatR16Uint);
+            _shadowMapRenderPass.UpdateIndexBuffer(_indexBuffer);
             _shadowMapRenderPass.SetIndexBuffer();
             // input layout des sommets
             _shadowMapRenderPass.SetInputLayout();

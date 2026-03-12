@@ -8,13 +8,13 @@ namespace PetitMoteur3D.Graphics;
 internal sealed class D3D11GraphicDevice : IDisposable
 {
     public ref readonly ComPtr<ID3D11Device> Device { get { return ref _device; } }
-    public ref readonly ComPtr<ID3D11DeviceContext> DeviceContext { get { return ref _deviceContext; } }
+    public ref readonly ComPtr<ID3D11DeviceContext> ImmediateContext { get { return ref _immediateContext; } }
     public bool DxVk { get; }
 
     public GraphicDeviceRessourceFactory RessourceFactory { get; }
 
     private ComPtr<ID3D11Device> _device;
-    private ComPtr<ID3D11DeviceContext> _deviceContext;
+    private ComPtr<ID3D11DeviceContext> _immediateContext;
     private readonly D3D11 _d3d11Api;
 
     private static readonly D3DFeatureLevel[] FEATURES_LEVELS = {
@@ -73,7 +73,7 @@ internal sealed class D3D11GraphicDevice : IDisposable
                 D3D11.SdkVersion,
                 ref _device,
                 pFeatureLevel: null,
-                ref _deviceContext
+                ref _immediateContext
             )
         );
 
@@ -110,11 +110,11 @@ internal sealed class D3D11GraphicDevice : IDisposable
             // TODO: free unmanaged resources (unmanaged objects) and override finalizer
             // TODO: set large fields to null
 
-            if (_deviceContext.Handle is not null)
+            if (_immediateContext.Handle is not null)
             {
-                _deviceContext.ClearState();
+                _immediateContext.ClearState();
             }
-            _deviceContext.Dispose();
+            _immediateContext.Dispose();
             _device.Dispose();
             _d3d11Api.Dispose(); // we need to keep it because in Release build, it can fail to load DXGI ressources id d3d11 is dispose too soon
             _disposed = true;

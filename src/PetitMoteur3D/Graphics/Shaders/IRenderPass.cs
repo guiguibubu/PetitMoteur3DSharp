@@ -1,4 +1,5 @@
-﻿using Silk.NET.Core.Native;
+﻿using PetitMoteur3D.Graphics.Buffers;
+using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
 
 namespace PetitMoteur3D.Graphics.Shaders;
@@ -16,15 +17,15 @@ internal interface IRenderPass
     #region Update Values
     public void UpdatePrimitiveTopology(D3DPrimitiveTopology topology);
 
-    public void UpdateVertexBuffer(ComPtr<ID3D11Buffer> vertexBuffer, uint vertexStride);
+    public void UpdateVertexBuffer(VertexBuffer vertexBuffer);
 
-    public void UpdateIndexBuffer(ComPtr<ID3D11Buffer> indexBuffer, Silk.NET.DXGI.Format format);
+    public void UpdateIndexBuffer(IndexBuffer indexBuffer);
     #endregion
 
     #region Input Assembler
     public void SetPrimitiveTopology();
 
-    public void SetVertexBuffer(uint offset = 0);
+    public void BindVertexBuffer(uint offset = 0);
 
     public void SetIndexBuffer(uint offset = 0);
 

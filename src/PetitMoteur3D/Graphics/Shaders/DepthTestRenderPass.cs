@@ -4,6 +4,7 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using PetitMoteur3D.Core.Memory;
+using PetitMoteur3D.Graphics.Buffers;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
 
@@ -11,12 +12,8 @@ namespace PetitMoteur3D.Graphics.Shaders;
 
 internal sealed class DepthTestRenderPass : BaseRenderPass, IDisposable
 {
-    public ComPtr<ID3D11Buffer> VertexShaderConstantBuffer => _vertexShaderConstantBuffer;
-    public ComPtr<ID3D11Buffer> PixelShaderConstantBuffer => _pixelShaderConstantBuffer;
-    public ComPtr<ID3D11SamplerState> SampleState => _sampleState;
-
-    private ComPtr<ID3D11Buffer> _vertexShaderConstantBuffer;
-    private ComPtr<ID3D11Buffer> _pixelShaderConstantBuffer;
+    private ConstantBuffer _vertexShaderConstantBuffer;
+    private ConstantBuffer _pixelShaderConstantBuffer;
     private ComPtr<ID3D11SamplerState> _sampleState;
 
     private bool _disposedValue;
@@ -32,26 +29,26 @@ internal sealed class DepthTestRenderPass : BaseRenderPass, IDisposable
     #region Update Values
     public void UpdateVertexShaderConstantBuffer(VertexConstantBufferParams value)
     {
-        GraphicPipeline.RessourceFactory.UpdateSubresource(_vertexShaderConstantBuffer, 0, in Unsafe.NullRef<Box>(), in value, 0, 0);
+        _vertexShaderConstantBuffer.Buffer.UpdateSubresource(GraphicPipeline.DeviceContext, 0, in Unsafe.NullRef<Box>(), in value, 0, 0);
     }
 
     public void UpdatePixelShaderConstantBuffer(PixelConstantBufferParams value)
     {
-        GraphicPipeline.RessourceFactory.UpdateSubresource(_pixelShaderConstantBuffer, 0, in Unsafe.NullRef<Box>(), in value, 0, 0);
+        _pixelShaderConstantBuffer.Buffer.UpdateSubresource(GraphicPipeline.DeviceContext, 0, in Unsafe.NullRef<Box>(), in value, 0, 0);
     }
     #endregion
 
     #region Vertex Shader
     public override void SetVertexShaderConstantBuffers()
     {
-        GraphicPipeline.VertexShaderStage.SetConstantBuffers(0, 1, ref _vertexShaderConstantBuffer);
+        _vertexShaderConstantBuffer.Bind(GraphicPipeline, ShaderType.VertexShader, idSlot: 0);
     }
     #endregion
 
     #region Pixel Shader
     public override void SetPixelShaderConstantBuffers()
     {
-        GraphicPipeline.PixelShaderStage.SetConstantBuffers(0, 1, ref _pixelShaderConstantBuffer);
+        _pixelShaderConstantBuffer.Bind(GraphicPipeline, ShaderType.PixelShader, idSlot: 0);
     }
 
     public override void SetPixelShaderRessources() { }

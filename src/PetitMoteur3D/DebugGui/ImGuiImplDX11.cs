@@ -7,6 +7,7 @@ using System.Runtime.InteropServices;
 using ImGuiNET;
 using PetitMoteur3D.Core.Memory;
 using PetitMoteur3D.Graphics;
+using PetitMoteur3D.Graphics.Buffers;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D.Compilers;
 using Silk.NET.Direct3D11;
@@ -99,7 +100,7 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
         );
         {
             _backendRendererUserData.D3dDevice = graphicDevice.Device;
-            _backendRendererUserData.D3dDeviceContext = graphicDevice.DeviceContext;
+            _backendRendererUserData.D3dDeviceContext = graphicDevice.ImmediateContext;
             _backendRendererUserData.Factory = factory;
         }
         dxgiDevice.Dispose();
@@ -150,15 +151,15 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
             return;
 
         // Create and grow vertex/index buffers if needed
-        if (_backendRendererUserData.VertexBuffer.Handle is null || _backendRendererUserData.VertexBufferSize < drawData.TotalVtxCount)
+        if (_backendRendererUserData.VertexBuffer is null || _backendRendererUserData.VertexBufferSize < drawData.TotalVtxCount)
         {
-            if (_backendRendererUserData.VertexBuffer.Handle is not null) { _backendRendererUserData.VertexBuffer.Dispose(); _backendRendererUserData.VertexBuffer = null; }
+            if (_backendRendererUserData.VertexBuffer is not null) { _backendRendererUserData.VertexBuffer.Dispose(); _backendRendererUserData.VertexBuffer = null; }
             _backendRendererUserData.VertexBufferSize = drawData.TotalVtxCount + 5000;
             _backendRendererUserData.VertexBuffer = _graphicDeviceRessourceFactory.BufferFactory.CreateVertexBuffer<ImDrawVert>((uint)_backendRendererUserData.VertexBufferSize, Usage.Dynamic, CpuAccessFlag.Write, name: "ImGuiVertexBuffer");
         }
-        if (_backendRendererUserData.IndexBuffer.Handle is null || _backendRendererUserData.IndexBufferSize < drawData.TotalIdxCount)
+        if (_backendRendererUserData.IndexBuffer is null || _backendRendererUserData.IndexBufferSize < drawData.TotalIdxCount)
         {
-            if (_backendRendererUserData.IndexBuffer.Handle is not null) { _backendRendererUserData.IndexBuffer.Dispose(); _backendRendererUserData.IndexBuffer = null; }
+            if (_backendRendererUserData.IndexBuffer is not null) { _backendRendererUserData.IndexBuffer.Dispose(); _backendRendererUserData.IndexBuffer = null; }
             _backendRendererUserData.IndexBufferSize = drawData.TotalIdxCount + 10000;
             _backendRendererUserData.IndexBuffer = _graphicDeviceRessourceFactory.BufferFactory.CreateIndexBuffer<ImDrawIdx>((uint)_backendRendererUserData.IndexBufferSize, Usage.Dynamic, CpuAccessFlag.Write, "ImGuiIndexBuffer");
         }
@@ -259,8 +260,8 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
         {
             MappedSubresource vertexResource = default;
             MappedSubresource indexResource = default;
-            _pipelineRessourceFactory.Map(_backendRendererUserData.VertexBuffer, 0, Map.WriteDiscard, 0, ref vertexResource);
-            _pipelineRessourceFactory.Map(_backendRendererUserData.IndexBuffer, 0, Map.WriteDiscard, 0, ref indexResource);
+            _backendRendererUserData.VertexBuffer.Buffer.Map(_backendRendererUserData.D3dDeviceContext, subresource: 0, Map.WriteDiscard, mapFlags: 0, ref vertexResource);
+            _backendRendererUserData.IndexBuffer.Buffer.Map(_backendRendererUserData.D3dDeviceContext, subresource: 0, Map.WriteDiscard, mapFlags: 0, ref indexResource);
             ImDrawVert* vertexDest = (ImDrawVert*)(vertexResource.PData);
             ImDrawIdx* indexDest = (ImDrawIdx*)(indexResource.PData);
             int remainingVertexBufferSpace = _backendRendererUserData.VertexBufferSize;
@@ -282,15 +283,15 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
                 indexDest += cmdIndexBuffer.Size;
             }
 
-            _pipelineRessourceFactory.Unmap(_backendRendererUserData.VertexBuffer, 0);
-            _pipelineRessourceFactory.Unmap(_backendRendererUserData.IndexBuffer, 0);
+            _backendRendererUserData.VertexBuffer.Buffer.Unmap(_backendRendererUserData.D3dDeviceContext, subresource: 0);
+            _backendRendererUserData.IndexBuffer.Buffer.Unmap(_backendRendererUserData.D3dDeviceContext, subresource: 0);
         }
 
         // Setup orthographic projection matrix into our constant buffer
         // Our visible imgui space lies from drawData->DisplayPos (top left) to drawData->DisplayPos+data_data->DisplaySize (bottom right). DisplayPos is (0,0) for single viewport apps.
         {
             MappedSubresource mappedResource = default;
-            _pipelineRessourceFactory.Map(_backendRendererUserData.VertexConstantBuffer, 0, Map.WriteDiscard, 0, ref mappedResource);
+            _backendRendererUserData.VertexConstantBuffer!.Buffer.Map(_backendRendererUserData.D3dDeviceContext, 0, Map.WriteDiscard, 0, ref mappedResource);
             void* constantBufferPtr = mappedResource.PData;
             float left = drawData.DisplayPos.X;
             float right = drawData.DisplayPos.X + drawData.DisplaySize.X;
@@ -301,7 +302,7 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
             Matrix4x4 matriceProjection = CreateOrthographicOffCenterLH(left, right, bottom, top, nearPlane, 3);
             Matrix4x4 mvp = matriceMonde * matriceProjection;
             System.Buffer.MemoryCopy(Unsafe.AsPointer(ref mvp), constantBufferPtr, (uint)sizeof(Matrix4x4), (uint)sizeof(Matrix4x4));
-            _pipelineRessourceFactory.Unmap(_backendRendererUserData.VertexConstantBuffer, 0);
+            _backendRendererUserData.VertexConstantBuffer.Buffer.Unmap(_backendRendererUserData.D3dDeviceContext, 0);
         }
 
         // Saveold DX conf
@@ -618,11 +619,11 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
         // Setup shader and vertex buffers
 
         graphicPipeline.InputAssemblerStage.SetInputLayout(_backendRendererUserData.InputLayout);
-        graphicPipeline.InputAssemblerStage.SetVertexBuffers(0, 1, ref _backendRendererUserData.VertexBuffer, in VertexBufferStride, in VertexBufferOffset);
-        graphicPipeline.InputAssemblerStage.SetIndexBuffer(_backendRendererUserData.IndexBuffer, sizeof(ImDrawIdx) == 2 ? Format.FormatR16Uint : Format.FormatR32Uint, 0);
+        graphicPipeline.InputAssemblerStage.SetVertexBuffers(0, 1, ref _backendRendererUserData.VertexBuffer!.Buffer.DataRef, in VertexBufferStride, in VertexBufferOffset);
+        graphicPipeline.InputAssemblerStage.SetIndexBuffer(_backendRendererUserData.IndexBuffer!.Buffer.DataRef, sizeof(ImDrawIdx) == 2 ? Format.FormatR16Uint : Format.FormatR32Uint, 0);
         graphicPipeline.InputAssemblerStage.SetPrimitiveTopology(D3DPrimitiveTopology.D3D11PrimitiveTopologyTrianglelist);
         graphicPipeline.VertexShaderStage.SetShader(_backendRendererUserData.VertexShader, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
-        graphicPipeline.VertexShaderStage.SetConstantBuffers(0, 1, ref _backendRendererUserData.VertexConstantBuffer);
+        graphicPipeline.VertexShaderStage.SetConstantBuffers(0, 1, ref _backendRendererUserData.VertexConstantBuffer!.Buffer.DataRef);
         graphicPipeline.PixelShaderStage.SetShader(_backendRendererUserData.PixelShader, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
         graphicPipeline.PixelShaderStage.SetSamplers(0, 1, in _backendRendererUserData.FontSampler);
         // graphicPipeline.GeometryShaderStage.SetShader(Unsafe.NullRef<ComPtr<ID3D11GeometryShader>>(), ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
@@ -681,13 +682,13 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
 
         if (_backendRendererUserData.FontSampler.Handle != null) { _backendRendererUserData.FontSampler.Dispose(); _backendRendererUserData.FontSampler = null; }
         if (_backendRendererUserData.FontTextureView.Handle != null) { _backendRendererUserData.FontTextureView.Dispose(); _backendRendererUserData.FontTextureView = null; ImGui.GetIO().Fonts.SetTexID(0); } // We copied data.FontTextureView to io.Fonts.TexID so let's clear that as well.
-        if (_backendRendererUserData.IndexBuffer.Handle != null) { _backendRendererUserData.IndexBuffer.Dispose(); _backendRendererUserData.IndexBuffer = null; }
-        if (_backendRendererUserData.VertexBuffer.Handle != null) { _backendRendererUserData.VertexBuffer.Dispose(); _backendRendererUserData.VertexBuffer = null; }
+        if (_backendRendererUserData.IndexBuffer != null) { _backendRendererUserData.IndexBuffer.Dispose(); _backendRendererUserData.IndexBuffer = null; }
+        if (_backendRendererUserData.VertexBuffer != null) { _backendRendererUserData.VertexBuffer.Dispose(); _backendRendererUserData.VertexBuffer = null; }
         if (_backendRendererUserData.BlendState.Handle != null) { _backendRendererUserData.BlendState.Dispose(); _backendRendererUserData.BlendState = null; }
         if (_backendRendererUserData.DepthStencilState.Handle != null) { _backendRendererUserData.DepthStencilState.Dispose(); _backendRendererUserData.DepthStencilState = null; }
         if (_backendRendererUserData.RasterizerState.Handle != null) { _backendRendererUserData.RasterizerState.Dispose(); _backendRendererUserData.RasterizerState = null; }
         if (_backendRendererUserData.PixelShader.Handle != null) { _backendRendererUserData.PixelShader.Dispose(); _backendRendererUserData.PixelShader = null; }
-        if (_backendRendererUserData.VertexConstantBuffer.Handle != null) { _backendRendererUserData.VertexConstantBuffer.Dispose(); _backendRendererUserData.VertexConstantBuffer = null; }
+        if (_backendRendererUserData.VertexConstantBuffer != null) { _backendRendererUserData.VertexConstantBuffer.Dispose(); _backendRendererUserData.VertexConstantBuffer = null; }
         if (_backendRendererUserData.InputLayout.Handle != null) { _backendRendererUserData.InputLayout.Dispose(); _backendRendererUserData.InputLayout = null; }
         if (_backendRendererUserData.VertexShader.Handle != null) { _backendRendererUserData.VertexShader.Dispose(); _backendRendererUserData.VertexShader = null; }
     }

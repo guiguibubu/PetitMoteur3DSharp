@@ -23,6 +23,12 @@ internal sealed class VertexShaderStage
         _deviceContext.VSSetConstantBuffers(StartSlot, NumBuffers, ref ppConstantBuffers);
     }
 
+    public unsafe void UnbindConstantBuffers(uint StartSlot, uint NumBuffers)
+    {
+        ID3D11Buffer* buffer = (ID3D11Buffer*)null;
+        _deviceContext.VSSetConstantBuffers(StartSlot, NumBuffers, in buffer);
+    }
+
     public void GetShader(ref ComPtr<ID3D11VertexShader> ppVertexShader, ref ComPtr<ID3D11ClassInstance> ppClassInstances, ref uint pNumClassInstances)
     {
         _deviceContext.VSGetShader(ref ppVertexShader, ref ppClassInstances, ref pNumClassInstances);

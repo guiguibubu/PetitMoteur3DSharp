@@ -30,6 +30,7 @@ public class D3D11GraphicPipeline : IDisposable
     public ComPtr<ID3D11ShaderResourceView> GeometryBufferNormalSRV { get { return _normalGeometryBuffer.ShaderRessourceView; } }
 
     internal D3D11GraphicDevice GraphicDevice => _graphicDevice;
+    internal ComPtr<ID3D11DeviceContext> DeviceContext => _deviceContext;
     internal RenderPassFactory ShaderFactory => _shaderFactory;
 
     internal InputAssemblerStage InputAssemblerStage { get; init; }
@@ -58,6 +59,7 @@ public class D3D11GraphicPipeline : IDisposable
     private ComPtr<ID3D11DepthStencilState> _readonlyGreaterDSS;
 
     private readonly D3D11GraphicDevice _graphicDevice;
+    private readonly ComPtr<ID3D11DeviceContext> _deviceContext;
     private readonly GraphicDeviceRessourceFactory _graphicRessourceFactory;
     private readonly RenderPassFactory _shaderFactory;
 
@@ -81,6 +83,7 @@ public class D3D11GraphicPipeline : IDisposable
     internal unsafe D3D11GraphicPipeline(D3D11GraphicDevice graphicDevice, IWindow window)
     {
         _graphicDevice = graphicDevice;
+        _deviceContext = graphicDevice.ImmediateContext;
         _graphicRessourceFactory = graphicDevice.RessourceFactory;
         RessourceFactory = new GraphicPipelineRessourceFactory(graphicDevice);
         _isSwapChainComposition = false;
@@ -90,12 +93,12 @@ public class D3D11GraphicPipeline : IDisposable
         InitSwapChain(window, graphicDevice.DxVk);
 
         // Initialisation des stages
-        InputAssemblerStage = new InputAssemblerStage(_graphicDevice.DeviceContext);
-        VertexShaderStage = new VertexShaderStage(_graphicDevice.DeviceContext);
-        GeometryShaderStage = new GeometryShaderStage(_graphicDevice.DeviceContext);
-        RasterizerStage = new RasterizerStage(_graphicDevice.DeviceContext);
-        PixelShaderStage = new PixelShaderStage(_graphicDevice.DeviceContext);
-        OutputMergerStage = new OutputMergerStage(_graphicDevice.DeviceContext);
+        InputAssemblerStage = new InputAssemblerStage(_deviceContext);
+        VertexShaderStage = new VertexShaderStage(_deviceContext);
+        GeometryShaderStage = new GeometryShaderStage(_deviceContext);
+        RasterizerStage = new RasterizerStage(_deviceContext);
+        PixelShaderStage = new PixelShaderStage(_deviceContext);
+        OutputMergerStage = new OutputMergerStage(_deviceContext);
 
 
         InitView(window);
@@ -200,7 +203,7 @@ public class D3D11GraphicPipeline : IDisposable
         {
             return;
         }
-        _graphicDevice.DeviceContext.ClearState();
+        _deviceContext.ClearState();
 
         _backBufferTexture.Dispose();
         _lightAccumulationGeometryBuffer.Dispose();
@@ -264,7 +267,7 @@ public class D3D11GraphicPipeline : IDisposable
 
     public void DrawIndexed(uint IndexCount, uint StartIndexLocation, int BaseVertexLocation)
     {
-        _graphicDevice.DeviceContext.DrawIndexed(IndexCount, StartIndexLocation, BaseVertexLocation);
+        _deviceContext.DrawIndexed(IndexCount, StartIndexLocation, BaseVertexLocation);
     }
 
     public void SetRenderTarget(RenderTargetType renderTargetType, bool clear = true, bool renderTargetOnly = false)
@@ -561,7 +564,7 @@ public class D3D11GraphicPipeline : IDisposable
         // On efface la surface de rendu
         foreach (ComPtr<ID3D11RenderTargetView> renderTargetView in renderTargetViews)
         {
-            _graphicDevice.DeviceContext.ClearRenderTargetView(renderTargetView, _backgroundColour.AsSpan());
+            _deviceContext.ClearRenderTargetView(renderTargetView, _backgroundColour.AsSpan());
         }
     }
 
@@ -578,14 +581,14 @@ public class D3D11GraphicPipeline : IDisposable
         // On efface la surface de rendu
         foreach (ComPtr<ID3D11RenderTargetView> renderTargetView in renderTargetViews)
         {
-            _graphicDevice.DeviceContext.ClearRenderTargetView(renderTargetView, _backgroundColour.AsSpan());
+            _deviceContext.ClearRenderTargetView(renderTargetView, _backgroundColour.AsSpan());
         }
     }
 
     private unsafe void ClearDepthStencil()
     {
         // On ré-initialise le tampon de profondeur
-        _graphicDevice.DeviceContext.ClearDepthStencilView(_depthTexture.TextureDepthStencilView, (uint)ClearFlag.Depth, 1.0f, 0);
+        _deviceContext.ClearDepthStencilView(_depthTexture.TextureDepthStencilView, (uint)ClearFlag.Depth, 1.0f, 0);
     }
 
     protected virtual void Dispose(bool disposing)

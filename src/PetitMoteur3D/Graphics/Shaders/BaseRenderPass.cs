@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
+using PetitMoteur3D.Graphics.Buffers;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
 
@@ -22,10 +23,8 @@ internal abstract class BaseRenderPass : IRenderPass, IDisposable
     private ComPtr<ID3D11GeometryShader> _geometryShader;
     private ComPtr<ID3D11PixelShader> _pixelShader;
 
-    private ComPtr<ID3D11Buffer> _vertexBuffer;
-    private uint _vertexStride;
-    private ComPtr<ID3D11Buffer> _indexBuffer;
-    private Silk.NET.DXGI.Format _format;
+    private VertexBuffer _vertexBuffer;
+    private IndexBuffer _indexBuffer;
     private D3DPrimitiveTopology _topology;
 
     private readonly D3D11GraphicPipeline _graphicPipeline;
@@ -56,16 +55,14 @@ internal abstract class BaseRenderPass : IRenderPass, IDisposable
         _topology = topology;
     }
 
-    public void UpdateVertexBuffer(ComPtr<ID3D11Buffer> vertexBuffer, uint vertexStride)
+    public void UpdateVertexBuffer(VertexBuffer vertexBuffer)
     {
         _vertexBuffer = vertexBuffer;
-        _vertexStride = vertexStride;
     }
 
-    public void UpdateIndexBuffer(ComPtr<ID3D11Buffer> indexBuffer, Silk.NET.DXGI.Format format)
+    public void UpdateIndexBuffer(IndexBuffer indexBuffer)
     {
         _indexBuffer = indexBuffer;
-        _format = format;
     }
     #endregion
 
@@ -75,14 +72,14 @@ internal abstract class BaseRenderPass : IRenderPass, IDisposable
         _graphicPipeline.InputAssemblerStage.SetPrimitiveTopology(_topology);
     }
 
-    public void SetVertexBuffer(uint offset = 0)
+    public void BindVertexBuffer(uint offset = 0)
     {
-        _graphicPipeline.InputAssemblerStage.SetVertexBuffers(0, 1, ref _vertexBuffer, in _vertexStride, in offset);
+        _vertexBuffer.Bind(_graphicPipeline, idSlot: 0);
     }
 
     public void SetIndexBuffer(uint offset = 0)
     {
-        _graphicPipeline.InputAssemblerStage.SetIndexBuffer(_indexBuffer, _format, offset);
+        _indexBuffer.Bind(_graphicPipeline);
     }
 
     public void SetInputLayout()
