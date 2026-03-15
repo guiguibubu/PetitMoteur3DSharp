@@ -52,7 +52,7 @@ public class Engine
     private bool _isCameraOrthographique;
     private bool _useDebugCamera;
     private SceneRenderingType[] _sceneRenderingTypeValues = Enum.GetValues<SceneRenderingType>();
-    private SceneRenderingType _sceneRenderingType;
+    private SceneRenderingType _sceneRenderingType = SceneRenderingType.DeferredShading;
     private Vector4 _backgroundColour;
 
     private readonly Stopwatch _horlogeEngine;
@@ -559,7 +559,7 @@ public class Engine
         // Set default rasterizer state
         _scene.RasterizerState = _graphicPipeline.SolidCullBackRS;
         // Set default rendering technique
-        _scene.RenderingType = SceneRenderingType.DeferredShading;
+        _scene.RenderingType = _sceneRenderingType;
     }
 
     private static Scene InitDefaultScene(GraphicDeviceRessourceFactory ressourceFactory, RenderPassFactory renderPassFactory, ICamera gameCamera, IWindow window)
