@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace PetitMoteur3D.Graphics.Shaders;
+namespace PetitMoteur3D.Graphics.RenderTechniques;
 
 internal class RenderPassFactory
 {

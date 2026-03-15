@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using PetitMoteur3D.Graphics;
-using PetitMoteur3D.Graphics.Shaders;
+using PetitMoteur3D.Graphics.RenderTechniques;
 
 namespace PetitMoteur3D;
 

@@ -9,7 +9,7 @@ using ImGuiNET;
 using PetitMoteur3D.Camera;
 using PetitMoteur3D.DebugGui;
 using PetitMoteur3D.Graphics;
-using PetitMoteur3D.Graphics.Shaders;
+using PetitMoteur3D.Graphics.RenderTechniques;
 using PetitMoteur3D.Input;
 using PetitMoteur3D.Logging;
 using PetitMoteur3D.Window;

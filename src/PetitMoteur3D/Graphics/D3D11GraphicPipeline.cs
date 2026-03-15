@@ -3,7 +3,7 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.Runtime.CompilerServices;
-using PetitMoteur3D.Graphics.Shaders;
+using PetitMoteur3D.Graphics.RenderTechniques;
 using PetitMoteur3D.Graphics.Stages;
 using PetitMoteur3D.Window;
 using Silk.NET.Core.Native;

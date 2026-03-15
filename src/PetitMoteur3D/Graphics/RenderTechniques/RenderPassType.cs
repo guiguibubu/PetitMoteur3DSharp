@@ -1,4 +1,4 @@
-﻿namespace PetitMoteur3D.Graphics.Shaders;
+﻿namespace PetitMoteur3D.Graphics.RenderTechniques;
 
 internal enum RenderPassType
 {

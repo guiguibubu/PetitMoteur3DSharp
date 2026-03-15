@@ -5,10 +5,12 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using PetitMoteur3D.Core.Memory;
 using PetitMoteur3D.Graphics.Buffers;
+using PetitMoteur3D.Graphics.Shaders;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
+using ShaderType = PetitMoteur3D.Graphics.Shaders.ShaderType;
 
-namespace PetitMoteur3D.Graphics.Shaders;
+namespace PetitMoteur3D.Graphics.RenderTechniques;
 
 internal sealed class DepthTestRenderPass : BaseRenderPass, IDisposable
 {
@@ -74,7 +76,7 @@ internal sealed class DepthTestRenderPass : BaseRenderPass, IDisposable
     }
 
     /// <inheritdoc/>
-    protected override InputElementDesc[] GetInputLayoutDesc()
+    protected override InputLayoutDesc GetInputLayoutDesc()
     {
         return SommetPosition.InputLayoutDesc;
     }
@@ -88,12 +90,12 @@ internal sealed class DepthTestRenderPass : BaseRenderPass, IDisposable
         string entryPoint = "DepthTestVS";
         string target = "vs_5_0";
         // #define D3DCOMPILE_ENABLE_STRICTNESS                    (1 << 11)
-        uint flagStrictness = ((uint)1 << 11);
+        uint flagStrictness = (uint)1 << 11;
         // #define D3DCOMPILE_DEBUG (1 << 0)
         // #define D3DCOMPILE_SKIP_OPTIMIZATION                    (1 << 2)
 #if DEBUG
-        uint flagDebug = ((uint)1 << 0);
-        uint flagSkipOptimization = ((uint)(1 << 2));
+        uint flagDebug = (uint)1 << 0;
+        uint flagSkipOptimization = 1 << 2;
 #else
         uint flagDebug = 0;
         uint flagSkipOptimization = 0;
@@ -117,12 +119,12 @@ internal sealed class DepthTestRenderPass : BaseRenderPass, IDisposable
         string entryPoint = "DepthTestPS";
         string target = "ps_5_0";
         // #define D3DCOMPILE_ENABLE_STRICTNESS                    (1 << 11)
-        uint flagStrictness = ((uint)1 << 11);
+        uint flagStrictness = (uint)1 << 11;
         // #define D3DCOMPILE_DEBUG (1 << 0)
         // #define D3DCOMPILE_SKIP_OPTIMIZATION                    (1 << 2)
 #if DEBUG
-        uint flagDebug = ((uint)1 << 0);
-        uint flagSkipOptimization = ((uint)(1 << 2));
+        uint flagDebug = (uint)1 << 0;
+        uint flagSkipOptimization = 1 << 2;
 #else
         uint flagDebug = 0;
         uint flagSkipOptimization = 0;

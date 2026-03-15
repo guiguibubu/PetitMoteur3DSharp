@@ -1,4 +1,4 @@
-﻿using PetitMoteur3D.Graphics.Shaders;
+﻿using PetitMoteur3D.Graphics.RenderTechniques;
 
 namespace PetitMoteur3D;
 

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using PetitMoteur3D.Graphics.Shaders;
 using PetitMoteur3D.Logging;
 
 namespace PetitMoteur3D.Graphics.Buffers;

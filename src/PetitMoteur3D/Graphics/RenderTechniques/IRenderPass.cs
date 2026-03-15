@@ -1,17 +1,17 @@
 ﻿using PetitMoteur3D.Graphics.Buffers;
+using PetitMoteur3D.Graphics.Shaders;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
 
-namespace PetitMoteur3D.Graphics.Shaders;
+namespace PetitMoteur3D.Graphics.RenderTechniques;
 
 internal interface IRenderPass
 {
     public string Name { get; }
 
-    public ComPtr<ID3D11InputLayout> VertexLayout { get; }
-    public ComPtr<ID3D11VertexShader> VertexShader { get; }
+    public VertexShader VertexShader { get; }
     public ComPtr<ID3D11GeometryShader> GeometryShader { get; }
-    public ComPtr<ID3D11PixelShader> PixelShader { get; }
+    public PixelShader? PixelShader { get; }
 
     #region Public methods
     #region Update Values

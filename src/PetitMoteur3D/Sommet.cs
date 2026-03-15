@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Numerics;
 using System.Runtime.InteropServices;
+using PetitMoteur3D.Graphics.Shaders;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
 
@@ -20,35 +21,20 @@ internal struct Sommet
     /// <summary>
     /// Defini l’organisation de notre sommet
     /// </summary>
-    public static InputElementDesc[] InputLayoutDesc => s_inputElements;
+    public static InputLayoutDesc InputLayoutDesc => _inputLayoutDesc;
 
-    private static readonly GlobalMemory s_semanticNamePosition;
-    private static readonly GlobalMemory s_semanticNameNormal;
-    private static readonly GlobalMemory s_semanticNameTexCoord;
-    private static readonly GlobalMemory s_semanticNameTangent;
-    private static readonly InputElementDesc[] s_inputElements;
+    private static InputLayoutDesc _inputLayoutDesc;
+
     static unsafe Sommet()
     {
-        s_semanticNamePosition = SilkMarshal.StringToMemory("POSITION", NativeStringEncoding.Ansi);
-        s_semanticNameNormal = SilkMarshal.StringToMemory("NORMAL", NativeStringEncoding.Ansi);
-        s_semanticNameTangent = SilkMarshal.StringToMemory("TANGENT", NativeStringEncoding.Ansi);
-        s_semanticNameTexCoord = SilkMarshal.StringToMemory("TEXCOORD", NativeStringEncoding.Ansi);
+        InputLayoutDescBuilder builder = new();
 
-        s_inputElements = new[]
-        {
-            new InputElementDesc(
-                s_semanticNamePosition.AsPtr<byte>(), 0, Silk.NET.DXGI.Format.FormatR32G32B32Float, 0, Convert.ToUInt32(Marshal.OffsetOf<Sommet>(nameof(_position))), InputClassification.PerVertexData, 0
-            ),
-            new InputElementDesc(
-                s_semanticNameNormal.AsPtr<byte>(), 0, Silk.NET.DXGI.Format.FormatR32G32B32Float, 0, Convert.ToUInt32(Marshal.OffsetOf<Sommet>(nameof(_normale))), InputClassification.PerVertexData, 0
-            ),
-            new InputElementDesc(
-                s_semanticNameTangent.AsPtr<byte>(), 0, Silk.NET.DXGI.Format.FormatR32G32Float, 0, Convert.ToUInt32(Marshal.OffsetOf<Sommet>(nameof(_tangente))), InputClassification.PerVertexData, 0
-            ),
-            new InputElementDesc(
-                s_semanticNameTexCoord.AsPtr<byte>(), 0, Silk.NET.DXGI.Format.FormatR32G32Float, 0, Convert.ToUInt32(Marshal.OffsetOf<Sommet>(nameof(_coordTex))), InputClassification.PerVertexData, 0
-            ),
-        };
+        builder.Add(D3D11Semantics.Position, Silk.NET.DXGI.Format.FormatR32G32B32Float, inputSlot: 0, alignedByteOffset: Convert.ToUInt32(Marshal.OffsetOf<Sommet>(nameof(_position))));
+        builder.Add(D3D11Semantics.Normal, Silk.NET.DXGI.Format.FormatR32G32B32Float, inputSlot: 0, alignedByteOffset: Convert.ToUInt32(Marshal.OffsetOf<Sommet>(nameof(_normale))));
+        builder.Add(D3D11Semantics.Tangent, Silk.NET.DXGI.Format.FormatR32G32Float, inputSlot: 0, alignedByteOffset: Convert.ToUInt32(Marshal.OffsetOf<Sommet>(nameof(_tangente))));
+        builder.Add(D3D11Semantics.TexCoord, Silk.NET.DXGI.Format.FormatR32G32Float, inputSlot: 0, alignedByteOffset: Convert.ToUInt32(Marshal.OffsetOf<Sommet>(nameof(_coordTex))));
+
+        _inputLayoutDesc = builder.Build();
     }
 
     /// <summary>

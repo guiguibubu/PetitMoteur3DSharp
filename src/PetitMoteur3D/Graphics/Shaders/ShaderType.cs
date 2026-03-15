@@ -1,4 +1,4 @@
-﻿namespace PetitMoteur3D.Graphics;
+﻿namespace PetitMoteur3D.Graphics.Shaders;
 
 internal enum ShaderType
 {

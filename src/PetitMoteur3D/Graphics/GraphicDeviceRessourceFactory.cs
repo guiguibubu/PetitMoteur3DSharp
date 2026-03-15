@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
 using PetitMoteur3D.Graphics.Buffers;
+using PetitMoteur3D.Graphics.Shaders;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
 using Silk.NET.DXGI;
@@ -10,24 +11,24 @@ namespace PetitMoteur3D.Graphics;
 internal sealed class GraphicDeviceRessourceFactory : IDisposable
 {
     public GraphicBufferFactory BufferFactory => _bufferFactory;
-    public ShaderManager ShaderManager => _shaderManager;
+    public ShaderFactory ShaderFactory => _shaderFactory;
     public TextureManager TextureManager => _textureManager;
 
     private readonly GraphicBufferFactory _bufferFactory;
-    private readonly ShaderManager _shaderManager;
+    private readonly ShaderFactory _shaderFactory;
     private readonly TextureManager _textureManager;
     private readonly ComPtr<ID3D11Device> _device;
     private readonly bool _dxVk;
     private bool _disposed;
 
     public GraphicDeviceRessourceFactory(D3D11GraphicDevice graphicDevice)
-        : this(graphicDevice, new GraphicBufferFactory(graphicDevice), new ShaderManager(graphicDevice.Device), new TextureManager(graphicDevice.Device))
+        : this(graphicDevice, new GraphicBufferFactory(graphicDevice), new ShaderFactory(new ShaderManager(graphicDevice.Device)), new TextureManager(graphicDevice.Device))
     { }
 
-    public GraphicDeviceRessourceFactory(D3D11GraphicDevice graphicDevice, GraphicBufferFactory bufferFactory, ShaderManager shaderManager, TextureManager textureManager)
+    public GraphicDeviceRessourceFactory(D3D11GraphicDevice graphicDevice, GraphicBufferFactory bufferFactory, ShaderFactory shaderFactory, TextureManager textureManager)
     {
         _bufferFactory = bufferFactory;
-        _shaderManager = shaderManager;
+        _shaderFactory = shaderFactory;
         _textureManager = textureManager;
         _device = graphicDevice.Device;
         _dxVk = graphicDevice.DxVk;
@@ -95,7 +96,7 @@ internal sealed class GraphicDeviceRessourceFactory : IDisposable
             if (disposing)
             {
                 // TODO: dispose managed state (managed objects)
-                _shaderManager.Dispose();
+                _shaderFactory.Dispose();
                 _textureManager.Dispose();
             }
 

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 
-namespace PetitMoteur3D.Graphics;
+namespace PetitMoteur3D.Graphics.Shaders;
 
 internal sealed class ShaderCodeFile : IShaderFile
 {

@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using PetitMoteur3D.Graphics.Buffers;
+using PetitMoteur3D.Graphics.Shaders;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
 using Silk.NET.DXGI;
@@ -19,10 +20,9 @@ internal struct ImGuiImplDX11Data : IComVtbl<ImGuiImplDX11Data>
     public ComPtr<IDXGIFactory> Factory = null;
     public VertexBuffer? VertexBuffer = null;
     public IndexBuffer? IndexBuffer = null;
-    public ComPtr<ID3D11VertexShader> VertexShader = null;
-    public ComPtr<ID3D11InputLayout> InputLayout = null;
+    public VertexShader? VertexShader = null;
     public ConstantBuffer? VertexConstantBuffer = null;
-    public ComPtr<ID3D11PixelShader> PixelShader = null;
+    public PixelShader? PixelShader = null;
     public ComPtr<ID3D11SamplerState> FontSampler = null;
     public ComPtr<ID3D11ShaderResourceView> FontTextureView = null;
     public ComPtr<ID3D11RasterizerState> RasterizerState = null;

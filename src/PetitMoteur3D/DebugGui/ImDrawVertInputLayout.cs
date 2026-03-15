@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using ImGuiNET;
-using Silk.NET.Core.Native;
-using Silk.NET.Direct3D11;
+using PetitMoteur3D.Graphics.Shaders;
 
 namespace PetitMoteur3D.DebugGui;
 
@@ -11,30 +10,18 @@ internal static class ImDrawVertInputLayout
     /// <summary>
     /// Defini l’organisation de notre sommet
     /// </summary>
-    public static InputElementDesc[] InputLayoutDesc => s_inputElements;
+    public static InputLayoutDesc InputLayoutDesc => _inputLayoutDesc;
 
-    private static readonly GlobalMemory s_semanticNamePosition;
-    private static readonly GlobalMemory s_semanticNameTexCoord;
-    private static readonly GlobalMemory s_semanticNameColor;
-    private static readonly InputElementDesc[] s_inputElements;
+    private static InputLayoutDesc _inputLayoutDesc;
 
     static unsafe ImDrawVertInputLayout()
     {
-        s_semanticNamePosition = SilkMarshal.StringToMemory("POSITION", NativeStringEncoding.Ansi);
-        s_semanticNameTexCoord = SilkMarshal.StringToMemory("TEXCOORD", NativeStringEncoding.Ansi);
-        s_semanticNameColor = SilkMarshal.StringToMemory("COLOR", NativeStringEncoding.Ansi);
+        InputLayoutDescBuilder builder = new();
 
-        s_inputElements = new[]
-        {
-            new InputElementDesc(
-                s_semanticNamePosition.AsPtr<byte>(), 0, Silk.NET.DXGI.Format.FormatR32G32Float, 0, Convert.ToUInt32(Marshal.OffsetOf<ImDrawVert>(nameof(ImDrawVert.pos))), InputClassification.PerVertexData, 0
-            ),
-            new InputElementDesc(
-                s_semanticNameTexCoord.AsPtr<byte>(), 0, Silk.NET.DXGI.Format.FormatR32G32Float, 0, Convert.ToUInt32(Marshal.OffsetOf<ImDrawVert>(nameof(ImDrawVert.uv))), InputClassification.PerVertexData, 0
-            ),
-            new InputElementDesc(
-                s_semanticNameColor.AsPtr<byte>(), 0, Silk.NET.DXGI.Format.FormatR8G8B8A8Unorm, 0, Convert.ToUInt32(Marshal.OffsetOf<ImDrawVert>(nameof(ImDrawVert.col))), InputClassification.PerVertexData, 0
-            ),
-        };
+        builder.Add(D3D11Semantics.Position, Silk.NET.DXGI.Format.FormatR32G32Float, inputSlot: 0, alignedByteOffset: Convert.ToUInt32(Marshal.OffsetOf<ImDrawVert>(nameof(ImDrawVert.pos))));
+        builder.Add(D3D11Semantics.TexCoord, Silk.NET.DXGI.Format.FormatR32G32Float, inputSlot: 0, alignedByteOffset: Convert.ToUInt32(Marshal.OffsetOf<ImDrawVert>(nameof(ImDrawVert.uv))));
+        builder.Add(D3D11Semantics.Color, Silk.NET.DXGI.Format.FormatR8G8B8A8Unorm, inputSlot: 0, alignedByteOffset: Convert.ToUInt32(Marshal.OffsetOf<ImDrawVert>(nameof(ImDrawVert.col))));
+
+        _inputLayoutDesc = builder.Build();
     }
 }

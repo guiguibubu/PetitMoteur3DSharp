@@ -4,7 +4,7 @@ using System.Numerics;
 using PetitMoteur3D.Core.Math;
 using PetitMoteur3D.Graphics;
 using PetitMoteur3D.Graphics.Buffers;
-using PetitMoteur3D.Graphics.Shaders;
+using PetitMoteur3D.Graphics.RenderTechniques;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
 

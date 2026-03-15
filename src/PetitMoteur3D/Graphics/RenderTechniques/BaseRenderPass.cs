@@ -2,26 +2,25 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using PetitMoteur3D.Graphics.Buffers;
+using PetitMoteur3D.Graphics.Shaders;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
 
-namespace PetitMoteur3D.Graphics.Shaders;
+namespace PetitMoteur3D.Graphics.RenderTechniques;
 
 internal abstract class BaseRenderPass : IRenderPass, IDisposable
 {
     public string Name { get; init; }
 
-    public ComPtr<ID3D11InputLayout> VertexLayout => _vertexLayout;
-    public ComPtr<ID3D11VertexShader> VertexShader => _vertexShader;
+    public VertexShader VertexShader => _vertexShader;
     public ComPtr<ID3D11GeometryShader> GeometryShader => _geometryShader;
-    public ComPtr<ID3D11PixelShader> PixelShader => _pixelShader;
+    public PixelShader? PixelShader => _pixelShader;
 
     protected D3D11GraphicPipeline GraphicPipeline => _graphicPipeline;
 
-    private ComPtr<ID3D11InputLayout> _vertexLayout;
-    private ComPtr<ID3D11VertexShader> _vertexShader;
+    private VertexShader _vertexShader;
     private ComPtr<ID3D11GeometryShader> _geometryShader;
-    private ComPtr<ID3D11PixelShader> _pixelShader;
+    private PixelShader? _pixelShader;
 
     private VertexBuffer _vertexBuffer;
     private IndexBuffer _indexBuffer;
@@ -35,7 +34,7 @@ internal abstract class BaseRenderPass : IRenderPass, IDisposable
     {
         if (string.IsNullOrEmpty(name))
         {
-            Name = this.GetType().Name + "_" + Guid.NewGuid().ToString();
+            Name = GetType().Name + "_" + Guid.NewGuid().ToString();
         }
         else
         {
@@ -84,14 +83,14 @@ internal abstract class BaseRenderPass : IRenderPass, IDisposable
 
     public void SetInputLayout()
     {
-        _graphicPipeline.InputAssemblerStage.SetInputLayout(_vertexLayout);
+        _vertexShader.BindLayout(_graphicPipeline);
     }
     #endregion
 
     #region Vertex Shader
     public void SetVertexShader()
     {
-        _graphicPipeline.VertexShaderStage.SetShader(_vertexShader, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
+        _vertexShader.Bind(_graphicPipeline);
     }
 
     public abstract void SetVertexShaderConstantBuffers();
@@ -107,7 +106,7 @@ internal abstract class BaseRenderPass : IRenderPass, IDisposable
     #region Pixel Shader
     public void SetPixelShader()
     {
-        _graphicPipeline.PixelShaderStage.SetShader(_pixelShader, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
+        _pixelShader?.Bind(_graphicPipeline);
     }
 
     public abstract void SetPixelShaderConstantBuffers();
@@ -136,7 +135,7 @@ internal abstract class BaseRenderPass : IRenderPass, IDisposable
     /// Get vertex input layout description
     /// </summary>
     /// <returns></returns>
-    protected abstract InputElementDesc[] GetInputLayoutDesc();
+    protected abstract InputLayoutDesc GetInputLayoutDesc();
 
     /// <summary>
     /// VertexShader file
@@ -160,15 +159,15 @@ internal abstract class BaseRenderPass : IRenderPass, IDisposable
     private void Initialisation(GraphicDeviceRessourceFactory graphicDeviceRessourceFactory)
     {
         InitBuffers(graphicDeviceRessourceFactory.BufferFactory);
-        InitShaders(graphicDeviceRessourceFactory.ShaderManager);
+        InitShaders(graphicDeviceRessourceFactory.ShaderFactory);
         InitialisationImpl(graphicDeviceRessourceFactory);
     }
 
-    private unsafe void InitShaders(ShaderManager shaderManager)
+    private unsafe void InitShaders(ShaderFactory shaderFactory)
     {
-        InitVertexShader(shaderManager);
-        InitGeometryShader(shaderManager);
-        InitPixelShader(shaderManager);
+        InitVertexShader(shaderFactory);
+        InitGeometryShader(shaderFactory);
+        InitPixelShader(shaderFactory);
     }
 
     /// <summary>
@@ -176,10 +175,10 @@ internal abstract class BaseRenderPass : IRenderPass, IDisposable
     /// </summary>
     /// <param name="device"></param>
     /// <param name="compiler"></param>
-    private unsafe void InitVertexShader(ShaderManager shaderManager)
+    private unsafe void InitVertexShader(ShaderFactory shaderFactory)
     {
         ShaderCodeFile shaderFile = InitVertexShaderCodeFile();
-        shaderManager.GetOrLoadVertexShaderAndLayout(shaderFile, GetInputLayoutDesc(), ref _vertexShader, ref _vertexLayout);
+        _vertexShader = shaderFactory.CreateVertexShader(shaderFile, GetInputLayoutDesc());
     }
 
     /// <summary>
@@ -187,7 +186,7 @@ internal abstract class BaseRenderPass : IRenderPass, IDisposable
     /// </summary>
     /// <param name="device"></param>
     /// <param name="compiler"></param>
-    private unsafe void InitGeometryShader(ShaderManager shaderManager)
+    private unsafe void InitGeometryShader(ShaderFactory shaderFactory)
     {
         _geometryShader = (ComPtr<ID3D11GeometryShader>)null;
     }
@@ -197,16 +196,16 @@ internal abstract class BaseRenderPass : IRenderPass, IDisposable
     /// </summary>
     /// <param name="device"></param>
     /// <param name="compiler"></param>
-    private unsafe void InitPixelShader(ShaderManager shaderManager)
+    private unsafe void InitPixelShader(ShaderFactory shaderFactory)
     {
         ShaderCodeFile? shaderFile = InitPixelShaderCodeFile();
         if (shaderFile is null)
         {
-            _pixelShader = (ComPtr<ID3D11PixelShader>)null;
+            _pixelShader = null;
         }
         else
         {
-            _pixelShader = shaderManager.GetOrLoadPixelShader(shaderFile);
+            _pixelShader = shaderFactory.CreatePixelShader(shaderFile);
         }
     }
 
@@ -224,8 +223,7 @@ internal abstract class BaseRenderPass : IRenderPass, IDisposable
             // TODO: free unmanaged resources (unmanaged objects) and override finalizer
             // TODO: set large fields to null
             _vertexShader.Dispose();
-            _vertexLayout.Dispose();
-            _pixelShader.Dispose();
+            _pixelShader?.Dispose();
 
             _disposedValue = true;
         }

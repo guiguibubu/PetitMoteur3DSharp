@@ -8,6 +8,7 @@ using ImGuiNET;
 using PetitMoteur3D.Core.Memory;
 using PetitMoteur3D.Graphics;
 using PetitMoteur3D.Graphics.Buffers;
+using PetitMoteur3D.Graphics.Shaders;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D.Compilers;
 using Silk.NET.Direct3D11;
@@ -400,13 +401,13 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
             InvalidateDeviceObjects();
 
         // Create the vertex shader
-        if (!InitVertexShader(graphicDeviceRessourceFactory.ShaderManager, graphicDeviceRessourceFactory.BufferFactory))
+        if (!InitVertexShader(graphicDeviceRessourceFactory.ShaderFactory, graphicDeviceRessourceFactory.BufferFactory))
         {
             return false;
         }
 
         // Create the pixel shader
-        if (!InitPixelShader(graphicDeviceRessourceFactory.ShaderManager))
+        if (!InitPixelShader(graphicDeviceRessourceFactory.ShaderFactory))
         {
             return false;
         }
@@ -467,8 +468,8 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
     /// <summary>
     /// Compilation et chargement du vertex shader
     /// </summary>
-    /// <param name="shaderManager"></param>
-    private bool InitVertexShader(ShaderManager shaderManager, GraphicBufferFactory bufferFactory)
+    /// <param name="shaderFactory"></param>
+    private bool InitVertexShader(ShaderFactory shaderFactory, GraphicBufferFactory bufferFactory)
     {
         // Compilation et chargement du vertex shader
         string filePath = "shaders\\vs_imgui.hlsl";
@@ -495,7 +496,7 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
             compilationFlags,
             name: "ImGuiVertexShader"
         );
-        shaderManager.GetOrLoadVertexShaderAndLayout(shaderFile, ImDrawVertInputLayout.InputLayoutDesc, ref _backendRendererUserData.VertexShader, ref _backendRendererUserData.InputLayout);
+        _backendRendererUserData.VertexShader = shaderFactory.CreateVertexShader(shaderFile, ImDrawVertInputLayout.InputLayoutDesc);
 
         _backendRendererUserData.VertexConstantBuffer = bufferFactory.CreateConstantBuffer<Matrix4x4>(Usage.Dynamic, CpuAccessFlag.Write, name: "ImGuiVertexConstantBuffer");
         return true;
@@ -504,8 +505,8 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
     /// <summary>
     /// Compilation et chargement du pixel shader
     /// </summary>
-    /// <param name="shaderManager"></param>
-    private bool InitPixelShader(ShaderManager shaderManager)
+    /// <param name="shaderFactory"></param>
+    private bool InitPixelShader(ShaderFactory shaderFactory)
     {
         string filePath = "shaders\\ps_imgui.hlsl";
         string entryPoint = "main";
@@ -530,7 +531,7 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
             compilationFlags,
             name: "ImGuiPixelShader"
         );
-        _backendRendererUserData.PixelShader = shaderManager.GetOrLoadPixelShader(shaderFile);
+        _backendRendererUserData.PixelShader = shaderFactory.CreatePixelShader(shaderFile);
         return true;
     }
 
@@ -618,13 +619,13 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
 
         // Setup shader and vertex buffers
 
-        graphicPipeline.InputAssemblerStage.SetInputLayout(_backendRendererUserData.InputLayout);
+        graphicPipeline.InputAssemblerStage.SetInputLayout(_backendRendererUserData.VertexShader!.InputLayout.InputLayoutRef);
         graphicPipeline.InputAssemblerStage.SetVertexBuffers(0, 1, ref _backendRendererUserData.VertexBuffer!.Buffer.DataRef, in VertexBufferStride, in VertexBufferOffset);
         graphicPipeline.InputAssemblerStage.SetIndexBuffer(_backendRendererUserData.IndexBuffer!.Buffer.DataRef, sizeof(ImDrawIdx) == 2 ? Format.FormatR16Uint : Format.FormatR32Uint, 0);
         graphicPipeline.InputAssemblerStage.SetPrimitiveTopology(D3DPrimitiveTopology.D3D11PrimitiveTopologyTrianglelist);
-        graphicPipeline.VertexShaderStage.SetShader(_backendRendererUserData.VertexShader, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
+        graphicPipeline.VertexShaderStage.SetShader(_backendRendererUserData.VertexShader!.ShaderInterface, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
         graphicPipeline.VertexShaderStage.SetConstantBuffers(0, 1, ref _backendRendererUserData.VertexConstantBuffer!.Buffer.DataRef);
-        graphicPipeline.PixelShaderStage.SetShader(_backendRendererUserData.PixelShader, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
+        graphicPipeline.PixelShaderStage.SetShader(_backendRendererUserData.PixelShader!.ShaderInterface, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
         graphicPipeline.PixelShaderStage.SetSamplers(0, 1, in _backendRendererUserData.FontSampler);
         // graphicPipeline.GeometryShaderStage.SetShader(Unsafe.NullRef<ComPtr<ID3D11GeometryShader>>(), ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
         // deviceContext.HSSetShader(Unsafe.NullRef<ComPtr<ID3D11HullShader>>(), ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0); // In theory we should backup and restore this as well.. very infrequently used..
@@ -687,10 +688,9 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
         if (_backendRendererUserData.BlendState.Handle != null) { _backendRendererUserData.BlendState.Dispose(); _backendRendererUserData.BlendState = null; }
         if (_backendRendererUserData.DepthStencilState.Handle != null) { _backendRendererUserData.DepthStencilState.Dispose(); _backendRendererUserData.DepthStencilState = null; }
         if (_backendRendererUserData.RasterizerState.Handle != null) { _backendRendererUserData.RasterizerState.Dispose(); _backendRendererUserData.RasterizerState = null; }
-        if (_backendRendererUserData.PixelShader.Handle != null) { _backendRendererUserData.PixelShader.Dispose(); _backendRendererUserData.PixelShader = null; }
+        if (_backendRendererUserData.PixelShader != null) { _backendRendererUserData.PixelShader.Dispose(); _backendRendererUserData.PixelShader = null; }
         if (_backendRendererUserData.VertexConstantBuffer != null) { _backendRendererUserData.VertexConstantBuffer.Dispose(); _backendRendererUserData.VertexConstantBuffer = null; }
-        if (_backendRendererUserData.InputLayout.Handle != null) { _backendRendererUserData.InputLayout.Dispose(); _backendRendererUserData.InputLayout = null; }
-        if (_backendRendererUserData.VertexShader.Handle != null) { _backendRendererUserData.VertexShader.Dispose(); _backendRendererUserData.VertexShader = null; }
+        if (_backendRendererUserData.VertexShader != null) { _backendRendererUserData.VertexShader.Dispose(); _backendRendererUserData.VertexShader = null; }
     }
 
     public static Matrix4x4 CreateOrthographicOffCenterLH(float left, float right, float bottom, float top, float zNearPlane, float zFarPlane)

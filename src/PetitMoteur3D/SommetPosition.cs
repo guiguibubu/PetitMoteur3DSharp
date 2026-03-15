@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Numerics;
 using System.Runtime.InteropServices;
-using Silk.NET.Core.Native;
-using Silk.NET.Direct3D11;
+using PetitMoteur3D.Graphics.Shaders;
 
 namespace PetitMoteur3D;
 
@@ -14,20 +13,17 @@ internal struct SommetPosition
     /// <summary>
     /// Defini l’organisation de notre sommet
     /// </summary>
-    public static InputElementDesc[] InputLayoutDesc => s_inputElements;
+    public static InputLayoutDesc InputLayoutDesc => _inputLayoutDesc;
 
-    private static readonly GlobalMemory s_semanticNamePosition;
-    private static readonly InputElementDesc[] s_inputElements;
+    private static InputLayoutDesc _inputLayoutDesc;
+
     static unsafe SommetPosition()
     {
-        s_semanticNamePosition = SilkMarshal.StringToMemory("POSITION", NativeStringEncoding.Ansi);
+        InputLayoutDescBuilder builder = new();
 
-        s_inputElements = new[]
-        {
-            new InputElementDesc(
-                s_semanticNamePosition.AsPtr<byte>(), 0, Silk.NET.DXGI.Format.FormatR32G32B32Float, 0, Convert.ToUInt32(Marshal.OffsetOf<Sommet>(nameof(_position))), InputClassification.PerVertexData, 0
-            )
-        };
+        builder.Add(D3D11Semantics.Position, Silk.NET.DXGI.Format.FormatR32G32B32Float, inputSlot: 0, alignedByteOffset: Convert.ToUInt32(Marshal.OffsetOf<SommetPosition>(nameof(_position))));
+
+        _inputLayoutDesc = builder.Build();
     }
 
     /// <summary>

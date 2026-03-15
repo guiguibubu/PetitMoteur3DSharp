@@ -7,7 +7,7 @@ using Silk.NET.Core.Native;
 using Silk.NET.Direct3D.Compilers;
 using Silk.NET.Direct3D11;
 
-namespace PetitMoteur3D.Graphics;
+namespace PetitMoteur3D.Graphics.Shaders;
 
 internal sealed class ShaderManager : IDisposable
 {
@@ -26,7 +26,7 @@ internal sealed class ShaderManager : IDisposable
     }
 
     #region Public Methods
-    public unsafe void GetOrLoadVertexShaderAndLayout(IShaderFile shaderFile, InputElementDesc[] inputLayoutDesc, ref ComPtr<ID3D11VertexShader> vertexShader, ref ComPtr<ID3D11InputLayout> vertexLayout)
+    public unsafe VertexShader GetOrLoadVertexShaderAndLayout(IShaderFile shaderFile, InputLayoutDesc inputLayoutDesc)
     {
         string shaderId = GetShaderId(shaderFile);
         bool vertexShaderFound = _vertexShadersCache.TryGetValue(shaderId, out ComPtr<ID3D11VertexShader> vertexShaderTmp);
@@ -49,7 +49,7 @@ internal sealed class ShaderManager : IDisposable
                     // Créer l’organisation des sommets
                     if (!vertexLayoutFound)
                     {
-                        vertexLayoutTmp = CreateInputLayout(compilationBlob, inputLayoutDesc, shaderId);
+                        vertexLayoutTmp = CreateInputLayout(compilationBlob, inputLayoutDesc.Data, shaderId);
                         _vertexLayoutsCache.Add(shaderId, vertexLayoutTmp);
                     }
                 }
@@ -66,13 +66,16 @@ internal sealed class ShaderManager : IDisposable
                 // Créer l’organisation des sommets
                 if (!vertexLayoutFound)
                 {
-                    vertexLayoutTmp = CreateInputLayout(shaderByteCodeFile.Data, inputLayoutDesc, shaderId);
+                    vertexLayoutTmp = CreateInputLayout(shaderByteCodeFile.Data, inputLayoutDesc.Data, shaderId);
                     _vertexLayoutsCache.Add(shaderId, vertexLayoutTmp);
                 }
             }
         }
-        vertexShader = vertexShaderTmp;
-        vertexLayout = vertexLayoutTmp;
+
+        return new VertexShader(
+            vertexShaderTmp,
+            new InputLayout(inputLayoutDesc, vertexLayoutTmp)
+        );
     }
 
     public unsafe ComPtr<ID3D11VertexShader> GetOrLoadVertexShader(IShaderFile shaderFile)
@@ -108,7 +111,7 @@ internal sealed class ShaderManager : IDisposable
         return vertexShader;
     }
 
-    public unsafe ComPtr<ID3D11PixelShader> GetOrLoadPixelShader(IShaderFile shaderFile)
+    public unsafe PixelShader GetOrLoadPixelShader(IShaderFile shaderFile)
     {
         string shaderId = GetShaderId(shaderFile);
         bool pixelShaderFound = _pixelShadersCache.TryGetValue(shaderId, out ComPtr<ID3D11PixelShader> pixelShader);
@@ -132,7 +135,10 @@ internal sealed class ShaderManager : IDisposable
                 _pixelShadersCache.Add(shaderId, pixelShader);
             }
         }
-        return pixelShader;
+        return new PixelShader()
+        {
+            ShaderInterface = pixelShader
+        };
     }
     #endregion
 
@@ -327,11 +333,6 @@ internal sealed class ShaderManager : IDisposable
         }
     }
 
-    ~ShaderManager()
-    {
-        Dispose(disposing: false);
-    }
-
     private void Dispose(bool disposing)
     {
         if (!_disposed)
@@ -367,12 +368,12 @@ internal sealed class ShaderManager : IDisposable
         }
     }
 
-    // // TODO: override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
-    // ~ShaderManager()
-    // {
-    //     // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-    //     Dispose(disposing: false);
-    // }
+    // TODO: override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
+    ~ShaderManager()
+    {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: false);
+    }
 
     public void Dispose()
     {
