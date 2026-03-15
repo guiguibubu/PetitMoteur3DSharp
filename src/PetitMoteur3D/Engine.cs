@@ -268,7 +268,7 @@ public class Engine
                         ImGuiIOPtr io = ImGui.GetIO();
 
                         float f = 0.0f;
-                        ImGui.Begin("Title : PetitMoteur3D (DebugTools)!");
+                        ImGui.Begin("Title : PetitMoteur3D (DebugTools)!", ref _showDebugTool);
                         ImGui.Text("Window : " + _window.GetType().Name);
                         ImGui.Text(string.Format("Application average {0} ms/frame ({1} FPS)", (1000.0f / io.Framerate).ToString("F3", System.Globalization.CultureInfo.InvariantCulture), io.Framerate.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)));
                         ImGui.Text(string.Format("Application memory usage {0} kB", _currentProcess.WorkingSet64 / 1000));
@@ -295,14 +295,14 @@ public class Engine
                             ImGui.ShowDemoWindow(ref _imGuiShowDemo);
 
                         if (_imGuiShowDebugLogs)
-                            ImGui.ShowDebugLogWindow();
+                            ImGui.ShowDebugLogWindow(ref _imGuiShowDebugLogs);
 
                         if (_imGuiShowMetrics)
-                            ImGui.ShowMetricsWindow();
+                            ImGui.ShowMetricsWindow(ref _imGuiShowMetrics);
 
                         if (_imGuiShowSceneEditor)
                         {
-                            ImGui.Begin("PetitMoteur3D Scene Editor");
+                            ImGui.Begin("PetitMoteur3D Scene Editor", ref _imGuiShowSceneEditor);
                             foreach (IObjet3D objet3D in _scene.Content)
                             {
                                 if (ImGui.TreeNode(objet3D.Name))
@@ -344,7 +344,7 @@ public class Engine
 
                         if (_imGuiShowDebugCameraOptions)
                         {
-                            ImGui.Begin("PetitMoteur3D Debug Camera");
+                            ImGui.Begin("PetitMoteur3D Debug Camera", ref _imGuiShowDebugCameraOptions);
                             ImGui.Checkbox("Use debug camera", ref _useDebugCamera);     // Edit bool
                             Vector3 position = _debugCamera.Position;
                             ImGui.SliderFloat("X", ref position.X, -100f, 100f);
@@ -362,7 +362,7 @@ public class Engine
 
                         if (_imGuiShowGameCameraOptions)
                         {
-                            ImGui.Begin("PetitMoteur3D Game Camera");
+                            ImGui.Begin("PetitMoteur3D Game Camera", ref _imGuiShowGameCameraOptions);
                             ImGui.Checkbox("Orthographique", ref _isCameraOrthographique);     // Edit bool
                             FrustrumView gameFrustrumView = _gameCamera.FrustrumView;
                             gameFrustrumView.IsOrthographique = _isCameraOrthographique;
@@ -386,7 +386,7 @@ public class Engine
 
                         if (_imGuiShowGraphicOptions)
                         {
-                            ImGui.Begin("PetitMoteur3D Graphics");
+                            ImGui.Begin("PetitMoteur3D Graphics", ref _imGuiShowGraphicOptions);
                             if (ImGui.BeginCombo("SceneRenderType", _sceneRenderingType.ToString()))
                             {
                                 bool renderingTypeChanged = false;
@@ -415,7 +415,7 @@ public class Engine
 
                         if (_imGuiShowEngineLogs)
                         {
-                            ImGui.Begin("PetitMoteur3D Logs");
+                            ImGui.Begin("PetitMoteur3D Logs", ref _imGuiShowEngineLogs);
                             ImGui.TextUnformatted("Bonjour !");
                             ImGui.End();
                         }
