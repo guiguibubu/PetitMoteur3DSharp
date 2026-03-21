@@ -2,8 +2,6 @@
 using System.Numerics;
 using System.Runtime.InteropServices;
 using PetitMoteur3D.Graphics.Shaders;
-using Silk.NET.Core.Native;
-using Silk.NET.Direct3D11;
 
 namespace PetitMoteur3D;
 

@@ -25,9 +25,9 @@ internal interface IRenderPass
     #region Input Assembler
     public void SetPrimitiveTopology();
 
-    public void BindVertexBuffer(uint offset = 0);
+    public void BindVertexBuffer();
 
-    public void SetIndexBuffer(uint offset = 0);
+    public void SetIndexBuffer();
 
     public void SetInputLayout();
     #endregion

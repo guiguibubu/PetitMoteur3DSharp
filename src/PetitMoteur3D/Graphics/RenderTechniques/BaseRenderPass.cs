@@ -71,12 +71,12 @@ internal abstract class BaseRenderPass : IRenderPass, IDisposable
         _graphicPipeline.InputAssemblerStage.SetPrimitiveTopology(_topology);
     }
 
-    public void BindVertexBuffer(uint offset = 0)
+    public void BindVertexBuffer()
     {
         _vertexBuffer.Bind(_graphicPipeline, idSlot: 0);
     }
 
-    public void SetIndexBuffer(uint offset = 0)
+    public void SetIndexBuffer()
     {
         _indexBuffer.Bind(_graphicPipeline);
     }
@@ -117,6 +117,21 @@ internal abstract class BaseRenderPass : IRenderPass, IDisposable
 
     public abstract void ClearPixelShaderResources();
     #endregion
+
+    public void Bind()
+    {
+        SetPrimitiveTopology();
+        BindVertexBuffer();
+        SetIndexBuffer();
+        SetInputLayout();
+        SetVertexShader();
+        SetVertexShaderConstantBuffers();
+        SetGeometryShader();
+        SetPixelShader();
+        SetPixelShaderConstantBuffers();
+        SetPixelShaderRessources();
+        SetSamplers();
+    }
 
     public void DrawIndexed(uint indexCount, uint startIndexLocation, int baseVertexLocation)
     {
