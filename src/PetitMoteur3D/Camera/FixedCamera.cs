@@ -1,6 +1,7 @@
 using System;
 using System.Numerics;
 using PetitMoteur3D.Core.Math;
+using PetitMoteur3D.Graphics;
 using PetitMoteur3D.Input;
 
 namespace PetitMoteur3D.Camera;
@@ -207,5 +208,10 @@ internal sealed class FixedCamera : ICamera
         ref readonly Vector3 cameraUpVector = ref _orientation.Up;
         Vector3 cameraPosition = _position;
         viewMatrix = Matrix4x4Helper.CreateLookAtLeftHanded(in cameraPosition, in cameraTarget, in cameraUpVector);
+    }
+
+    public void Accept(IVisitor visitor)
+    {
+        throw new NotImplementedException();
     }
 }

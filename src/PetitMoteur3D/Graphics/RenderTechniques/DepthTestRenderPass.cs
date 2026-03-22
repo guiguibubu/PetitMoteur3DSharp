@@ -20,8 +20,8 @@ internal sealed class DepthTestRenderPass : BaseRenderPass, IDisposable
 
     private bool _disposedValue;
 
-    public DepthTestRenderPass(D3D11GraphicPipeline graphicPipeline, string name = "")
-        : base(graphicPipeline, name)
+    public DepthTestRenderPass(D3D11GraphicPipeline graphicPipeline, RenderTarget renderTarget, string name = "")
+        : base(graphicPipeline, renderTarget, name)
     {
         _disposedValue = false;
     }
@@ -41,21 +41,21 @@ internal sealed class DepthTestRenderPass : BaseRenderPass, IDisposable
     #endregion
 
     #region Vertex Shader
-    public override void SetVertexShaderConstantBuffers()
+    public override void BindVertexShaderConstantBuffers()
     {
         _vertexShaderConstantBuffer.Bind(GraphicPipeline, ShaderType.VertexShader, idSlot: 0);
     }
     #endregion
 
     #region Pixel Shader
-    public override void SetPixelShaderConstantBuffers()
+    public override void BindPixelShaderConstantBuffers()
     {
         _pixelShaderConstantBuffer.Bind(GraphicPipeline, ShaderType.PixelShader, idSlot: 0);
     }
 
-    public override void SetPixelShaderRessources() { }
+    public override void BindPixelShaderRessources() { }
 
-    public override void SetSamplers()
+    public override void BindSamplers()
     {
         GraphicPipeline.PixelShaderStage.SetSamplers(0, 1, in _sampleState);
     }
@@ -75,10 +75,44 @@ internal sealed class DepthTestRenderPass : BaseRenderPass, IDisposable
         _pixelShaderConstantBuffer = bufferFactory.CreateConstantBuffer<PixelConstantBufferParams>(Usage.Default, CpuAccessFlag.None, $"{Name}_PixelConstantBuffer");
     }
 
+    protected override void UpdateVertexBuffer(BaseObjet3D baseObjet3D)
+    {
+        UpdateVertexBuffer(baseObjet3D.VertexBuffer);
+    }
+
+    protected override void UpdatePerMeshRessourcesBuffers(SubObjet3D subObjet3D)
+    {
+        SceneViewContext sceneContext = RenderArgs.SceneContext;
+        Matrix4x4 matViewProj = sceneContext.MatViewProj;
+        Matrix4x4 matWorld = RenderArgs.ObjectContext.MatWorld;
+        UpdateVertexShaderConstantBuffer(new DepthTestRenderPass.VertexConstantBufferParams()
+        {
+            matWorldViewProj = Matrix4x4.Transpose(subObjet3D.Transformation * matWorld * matViewProj)
+        });
+
+        UpdatePixelShaderConstantBuffer(new DepthTestRenderPass.PixelConstantBufferParams()
+        {
+            successColor = new Vector4(0, 255, 0, 1),
+            failColor = new Vector4(255, 0, 0, 1)
+        });
+    }
+
     /// <inheritdoc/>
     protected override InputLayoutDesc GetInputLayoutDesc()
     {
         return SommetPosition.InputLayoutDesc;
+    }
+
+    /// <inheritdoc/>
+    protected override ComPtr<ID3D11RasterizerState> GetRasterizerState()
+    {
+        return GraphicPipeline.SolidCullBackRS;
+    }
+
+    /// <inheritdoc/>
+    protected override ComPtr<ID3D11DepthStencilState> GetDepthStencilState()
+    {
+        return GraphicPipeline.DefaultDSS;
     }
 
     /// <inheritdoc/>

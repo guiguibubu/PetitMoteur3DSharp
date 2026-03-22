@@ -20,8 +20,8 @@ internal sealed class Plane : BaseObjet3D
 
     protected override bool SupportShadow => true;
 
-    public Plane(float dx, float dy, GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, RenderPassFactory shaderFactory)
-        : base(graphicDeviceRessourceFactory, shaderFactory)
+    public Plane(float dx, float dy, GraphicDeviceRessourceFactory graphicDeviceRessourceFactory)
+        : base(graphicDeviceRessourceFactory)
     {
         _vertices = new Vector3[]
         {

@@ -1,9 +1,11 @@
-﻿namespace PetitMoteur3D;
+﻿using PetitMoteur3D.Graphics;
+
+namespace PetitMoteur3D;
 
 /// <summary>
 /// Interface for scene object
 /// </summary>
-internal interface ISceneObjet : IUpdatableObjet
+internal interface ISceneObjet : IUpdatableObjet, IVisitable
 {
     /// <summary>
     /// Position

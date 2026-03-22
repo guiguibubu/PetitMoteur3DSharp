@@ -18,11 +18,25 @@ internal sealed class DeferredLightningRenderPass : BaseRenderPass, IDisposable
     private ConstantBuffer _pixelObjectConstantBuffer;
     private ConstantBuffer _vertexObjectConstantBuffer;
 
+    private Texture _geometryBufferLightAccumulation;
+    private Texture _geometryBufferDiffuse;
+    private Texture _geometryBufferSpecular;
+    private Texture _geometryBufferNormal;
+
+    private ScreenQuad _fullScreenQuad;
+
     private bool _disposedValue;
 
-    public DeferredLightningRenderPass(D3D11GraphicPipeline graphicPipeline, string name = "")
-        : base(graphicPipeline, name)
+    public DeferredLightningRenderPass(D3D11GraphicPipeline graphicPipeline, RenderTarget renderTarget, Texture geometryBufferLightAccumulation, Texture geometryBufferDiffuse, Texture geometryBufferSpecular, Texture geometryBufferNormal, string name = "")
+        : base(graphicPipeline, renderTarget, name)
     {
+        _geometryBufferLightAccumulation = geometryBufferLightAccumulation;
+        _geometryBufferDiffuse = geometryBufferDiffuse;
+        _geometryBufferSpecular = geometryBufferSpecular;
+        _geometryBufferNormal = geometryBufferNormal;
+
+        _fullScreenQuad = new ScreenQuad(-1, 1, -1, 1, 1, graphicPipeline.GraphicDevice.RessourceFactory, "DeferredLightning_ScreenQuad");
+
         _disposedValue = false;
     }
 
@@ -40,54 +54,64 @@ internal sealed class DeferredLightningRenderPass : BaseRenderPass, IDisposable
     #endregion
 
     #region Vertex Shader
-    public override void SetVertexShaderConstantBuffers()
+    public override void BindVertexShaderConstantBuffers()
     {
         _vertexObjectConstantBuffer.Bind(GraphicPipeline, ShaderType.VertexShader, idSlot: 0);
     }
     #endregion
 
     #region Pixel Shader
-    public override void SetPixelShaderConstantBuffers()
+    public override void BindPixelShaderConstantBuffers()
     {
         _sceneConstantBuffer.Bind(GraphicPipeline, ShaderType.PixelShader, idSlot: 0);
     }
 
-    public override unsafe void SetPixelShaderRessources()
+    public override unsafe void BindPixelShaderRessources()
     {
-        ComPtr<ID3D11ShaderResourceView> textureDiffuse = GraphicPipeline.GeometryBufferDiffuseSRV;
-        ComPtr<ID3D11ShaderResourceView> textureSpecular = GraphicPipeline.GeometryBufferSpecularSRV;
-        ComPtr<ID3D11ShaderResourceView> textureNormal = GraphicPipeline.GeometryBufferNormalSRV;
+        ComPtr<ID3D11ShaderResourceView> textureLightAccumulation = _geometryBufferLightAccumulation.ShaderRessourceView;
+        ComPtr<ID3D11ShaderResourceView> textureDiffuse = _geometryBufferDiffuse.ShaderRessourceView;
+        ComPtr<ID3D11ShaderResourceView> textureSpecular = _geometryBufferSpecular.ShaderRessourceView;
+        ComPtr<ID3D11ShaderResourceView> textureNormal = _geometryBufferNormal.ShaderRessourceView;
 
         // Activation de la texture
-        if (textureDiffuse.Handle is not null)
+        if (textureLightAccumulation.Handle is not null)
         {
-            GraphicPipeline.PixelShaderStage.SetShaderResources(0, 1, ref textureDiffuse);
+            GraphicPipeline.PixelShaderStage.SetShaderResources(0, 1, ref textureLightAccumulation);
         }
         else
         {
             GraphicPipeline.PixelShaderStage.ClearShaderResources(0);
         }
 
-        if (textureSpecular.Handle is not null)
+        if (textureDiffuse.Handle is not null)
         {
-            GraphicPipeline.PixelShaderStage.SetShaderResources(1, 1, ref textureSpecular);
+            GraphicPipeline.PixelShaderStage.SetShaderResources(1, 1, ref textureDiffuse);
         }
         else
         {
             GraphicPipeline.PixelShaderStage.ClearShaderResources(1);
         }
 
-        if (textureNormal.Handle is not null)
+        if (textureSpecular.Handle is not null)
         {
-            GraphicPipeline.PixelShaderStage.SetShaderResources(2, 1, ref textureNormal);
+            GraphicPipeline.PixelShaderStage.SetShaderResources(2, 1, ref textureSpecular);
         }
         else
         {
             GraphicPipeline.PixelShaderStage.ClearShaderResources(2);
         }
+
+        if (textureNormal.Handle is not null)
+        {
+            GraphicPipeline.PixelShaderStage.SetShaderResources(3, 1, ref textureNormal);
+        }
+        else
+        {
+            GraphicPipeline.PixelShaderStage.ClearShaderResources(3);
+        }
     }
 
-    public override void SetSamplers()
+    public override void BindSamplers()
     {
     }
 
@@ -96,6 +120,7 @@ internal sealed class DeferredLightningRenderPass : BaseRenderPass, IDisposable
         GraphicPipeline.PixelShaderStage.ClearShaderResources(0);
         GraphicPipeline.PixelShaderStage.ClearShaderResources(1);
         GraphicPipeline.PixelShaderStage.ClearShaderResources(2);
+        GraphicPipeline.PixelShaderStage.ClearShaderResources(3);
     }
     #endregion
     #endregion
@@ -111,10 +136,54 @@ internal sealed class DeferredLightningRenderPass : BaseRenderPass, IDisposable
         _vertexObjectConstantBuffer = bufferFactory.CreateConstantBuffer<VertexObjectConstantBufferParams>(Usage.Default, CpuAccessFlag.None, $"{Name}_VertexObjectConstantBuffer");
     }
 
+    protected override void UpdateVertexBuffer(BaseObjet3D baseObjet3D)
+    {
+        UpdateVertexBuffer(baseObjet3D.VertexBuffer);
+    }
+
+    protected override void UpdatePerMeshRessourcesBuffers(SubObjet3D subObjet3D)
+    {
+        SceneViewContext sceneContext = RenderArgs.SceneContext;
+        Matrix4x4 matViewProj = sceneContext.MatViewProj;
+        Matrix4x4 matWorld = RenderArgs.ObjectContext.MatWorld;
+        // Initialiser et sélectionner les « constantes » des shaders
+        UpdateSceneConstantBuffer(new DeferredLightningRenderPass.SceneConstantBufferParams()
+        {
+            LightParams = new DeferredLightningRenderPass.LightParams()
+            {
+                Position = sceneContext.Light.Position,
+                Direction = sceneContext.Light.Direction,
+                AmbiantColor = sceneContext.Light.AmbiantColor,
+                DiffuseColor = sceneContext.Light.DiffuseColor,
+                Enable = Convert.ToInt32(true),
+            },
+            CameraPos = sceneContext.GameCameraPos
+        });
+
+        Matrix4x4 matrixWorld = subObjet3D.Transformation * matWorld;
+        UpdateVertexObjectConstantBuffer(new DeferredLightningRenderPass.VertexObjectConstantBufferParams()
+        {
+            matWorldViewProj = Matrix4x4.Transpose(matrixWorld * matViewProj),
+            matWorld = Matrix4x4.Transpose(matrixWorld),
+        });
+    }
+
     /// <inheritdoc/>
     protected sealed override InputLayoutDesc GetInputLayoutDesc()
     {
         return Sommet.InputLayoutDesc;
+    }
+
+    /// <inheritdoc/>
+    protected override ComPtr<ID3D11RasterizerState> GetRasterizerState()
+    {
+        return GraphicPipeline.SolidCullBackRS;
+    }
+
+    /// <inheritdoc/>
+    protected override ComPtr<ID3D11DepthStencilState> GetDepthStencilState()
+    {
+        return GraphicPipeline.ReadonlyGreaterDSS;
     }
 
     /// <inheritdoc/>
@@ -179,6 +248,19 @@ internal sealed class DeferredLightningRenderPass : BaseRenderPass, IDisposable
     /// <inheritdoc/>
     protected sealed override void InitialisationImpl(GraphicDeviceRessourceFactory graphicDeviceRessourceFactory)
     {
+    }
+
+    /// <inheritdoc/>
+    protected sealed override void UpdateSceneContext(SceneViewContext sceneContext)
+    {
+        sceneContext.MatViewProj = sceneContext.MatViewProj = Matrix4x4.CreateOrthographicOffCenterLeftHanded(-1, 1, -1, 1, 0, 1);
+        base.UpdateSceneContext(sceneContext);
+    }
+
+    protected sealed override void RenderCoreImpl(Scene scene)
+    {
+        Render(_fullScreenQuad);
+        Render(_fullScreenQuad.SubObjects[0]);
     }
     #endregion
 

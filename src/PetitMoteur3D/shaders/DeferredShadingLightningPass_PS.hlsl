@@ -23,12 +23,14 @@ cbuffer frameBuffer
 
 SamplerState SampleState; // l'état de sampling
 
+// Ambient + emissive color from the view space texture.
+Texture2D textureLightAccumultation : register(t0);
 // The diffuse color from the view space texture.
-Texture2D textureDiffuse : register(t0);
+Texture2D textureDiffuse : register(t1);
 // The specular color from the screen space texture.
-Texture2D textureSpecular : register(t1);
+Texture2D textureSpecular : register(t2);
 // The normal from the screen space texture.
-Texture2D textureNormal : register(t2);
+Texture2D textureNormal : register(t3);
 
 struct PS_OUT
 {
@@ -38,6 +40,7 @@ struct PS_OUT
 PS_OUT DeferredShadingLightningPassPSImpl(DeferredShadingLightningPass_VertexParams vertex)
 {
     int2 texCoord = vertex.Pos.xy;
+    float3 lightAccumultation = textureLightAccumultation.Load(int3(texCoord, 0)).rgb;
     float3 diffuse = textureDiffuse.Load(int3(texCoord, 0)).rgb;
     float4 specular = textureSpecular.Load(int3(texCoord, 0));
     float3 normal = textureNormal.Load(int3(texCoord, 0)).xyz;
@@ -54,7 +57,8 @@ PS_OUT DeferredShadingLightningPassPSImpl(DeferredShadingLightningPass_VertexPar
     light.Specular = vLumiere.vDEcl.rgb;
     LightingResult lit = DoDirectionalLight(light, specularPower, V, normal);
     
-    float3 couleur = diffuse * lit.Diffuse + specular.rgb * lit.Specular;
+    //float3 couleur = 0.4f * lightAccumultation * vLumiere.vAEcl.rgb + (diffuse * lit.Diffuse + specular.rgb * lit.Specular);
+    float3 couleur = (diffuse * lit.Diffuse) + (specular.rgb * lit.Specular);
     
     PS_OUT result = (PS_OUT) 0;
     result.color = float4(couleur, 1.0f);

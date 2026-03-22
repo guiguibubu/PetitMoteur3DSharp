@@ -4,7 +4,7 @@ using PetitMoteur3D.Graphics;
 
 namespace PetitMoteur3D;
 
-internal class SubObjet3D
+internal class SubObjet3D : IVisitable
 {
     public ushort[] Indices { get; init; }
     public Matrix4x4 Transformation { get; init; }
@@ -20,5 +20,10 @@ internal class SubObjet3D
     {
         ArgumentNullException.ThrowIfNull(material);
         this.Material = material;
+    }
+
+    public void Accept(IVisitor visitor)
+    {
+        visitor.Visit(this);
     }
 }

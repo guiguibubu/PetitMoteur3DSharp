@@ -12,7 +12,7 @@ using ShaderType = PetitMoteur3D.Graphics.Shaders.ShaderType;
 
 namespace PetitMoteur3D.Graphics.RenderTechniques;
 
-internal sealed class ForwardOpaqueRenderPass : BaseRenderPass, IDisposable
+internal class ForwardOpaqueRenderPass : BaseRenderPass, IDisposable
 {
     private ConstantBuffer _sceneConstantBuffer;
     private ConstantBuffer _pixelObjectConstantBuffer;
@@ -21,15 +21,17 @@ internal sealed class ForwardOpaqueRenderPass : BaseRenderPass, IDisposable
     private ComPtr<ID3D11SamplerState> _sampleState;
     private ComPtr<ID3D11SamplerState> _shadowMapSampleState;
 
-    private ComPtr<ID3D11ShaderResourceView> _textureD3D;
-    private ComPtr<ID3D11ShaderResourceView> _normalMap;
-    private ComPtr<ID3D11ShaderResourceView> _shadowMap;
+    private Texture? _textureD3D;
+    private Texture? _normalMap;
+    private Texture? _shadowMap;
 
     private bool _disposedValue;
 
-    public ForwardOpaqueRenderPass(D3D11GraphicPipeline graphicPipeline, string name = "")
-        : base(graphicPipeline, name)
+    public ForwardOpaqueRenderPass(D3D11GraphicPipeline graphicPipeline, RenderTarget renderTarget, Texture? shadowMap, string name = "")
+        : base(graphicPipeline, renderTarget, name)
     {
+        _shadowMap = shadowMap;
+        
         _disposedValue = false;
     }
 
@@ -49,25 +51,10 @@ internal sealed class ForwardOpaqueRenderPass : BaseRenderPass, IDisposable
     {
         _pixelObjectConstantBuffer.Buffer.UpdateSubresource(GraphicPipeline.DeviceContext, 0, in Unsafe.NullRef<Box>(), in value, 0, 0);
     }
-
-    public void UpdateTexture(ComPtr<ID3D11ShaderResourceView> texture)
-    {
-        _textureD3D = texture;
-    }
-
-    public void UpdateNormalMap(ComPtr<ID3D11ShaderResourceView> normalMap)
-    {
-        _normalMap = normalMap;
-    }
-
-    public void UpdateShadowMap(ComPtr<ID3D11ShaderResourceView> shadowMap)
-    {
-        _shadowMap = shadowMap;
-    }
     #endregion
 
     #region Vertex Shader
-    public override void SetVertexShaderConstantBuffers()
+    public override void BindVertexShaderConstantBuffers()
     {
         _sceneConstantBuffer.Bind(GraphicPipeline, ShaderType.VertexShader, idSlot: 0);
         _vertexObjectConstantBuffer.Bind(GraphicPipeline, ShaderType.VertexShader, idSlot: 1);
@@ -75,34 +62,38 @@ internal sealed class ForwardOpaqueRenderPass : BaseRenderPass, IDisposable
     #endregion
 
     #region Pixel Shader
-    public override void SetPixelShaderConstantBuffers()
+    public override void BindPixelShaderConstantBuffers()
     {
         _sceneConstantBuffer.Bind(GraphicPipeline, ShaderType.PixelShader, idSlot: 0);
         _pixelObjectConstantBuffer.Bind(GraphicPipeline, ShaderType.PixelShader, idSlot: 1);
     }
 
-    public override unsafe void SetPixelShaderRessources()
+    public override unsafe void BindPixelShaderRessources()
     {
+        ComPtr<ID3D11ShaderResourceView> texture3D = _textureD3D?.ShaderRessourceView ?? new();
+        ComPtr<ID3D11ShaderResourceView> normalMap = _normalMap?.ShaderRessourceView ?? new();
+        ComPtr<ID3D11ShaderResourceView> shadowMap = _shadowMap?.ShaderRessourceView ?? new();
+
         // Activation de la texture
-        if (_textureD3D.Handle is not null)
+        if (texture3D.Handle is not null)
         {
-            GraphicPipeline.PixelShaderStage.SetShaderResources(0, 1, ref _textureD3D);
+            GraphicPipeline.PixelShaderStage.SetShaderResources(0, 1, ref texture3D);
         }
         else
         {
             GraphicPipeline.PixelShaderStage.ClearShaderResources(0);
         }
-        if (_normalMap.Handle is not null)
+        if (normalMap.Handle is not null)
         {
-            GraphicPipeline.PixelShaderStage.SetShaderResources(1, 1, ref _normalMap);
+            GraphicPipeline.PixelShaderStage.SetShaderResources(1, 1, ref normalMap);
         }
         else
         {
             GraphicPipeline.PixelShaderStage.ClearShaderResources(1);
         }
-        if (_shadowMap.Handle is not null)
+        if (shadowMap.Handle is not null)
         {
-            GraphicPipeline.PixelShaderStage.SetShaderResources(2, 1, ref _shadowMap);
+            GraphicPipeline.PixelShaderStage.SetShaderResources(2, 1, ref shadowMap);
         }
         else
         {
@@ -110,7 +101,7 @@ internal sealed class ForwardOpaqueRenderPass : BaseRenderPass, IDisposable
         }
     }
 
-    public override void SetSamplers()
+    public override void BindSamplers()
     {
         GraphicPipeline.PixelShaderStage.SetSamplers(0, 1, in _sampleState);
         GraphicPipeline.PixelShaderStage.SetSamplers(1, 1, in _shadowMapSampleState);
@@ -137,10 +128,74 @@ internal sealed class ForwardOpaqueRenderPass : BaseRenderPass, IDisposable
         _vertexObjectConstantBuffer = bufferFactory.CreateConstantBuffer<VertexObjectConstantBufferParams>(Usage.Default, CpuAccessFlag.None, $"{Name}_VertexObjectConstantBuffer");
     }
 
+    protected override void UpdateVertexBuffer(BaseObjet3D baseObjet3D)
+    {
+        UpdateVertexBuffer(baseObjet3D.VertexBuffer);
+    }
+
+    protected override void UpdatePerMeshRessourcesBuffers(SubObjet3D subObjet3D)
+    {
+        SceneViewContext sceneContext = RenderArgs.SceneContext;
+        Matrix4x4 matViewProj = sceneContext.MatViewProj;
+        Matrix4x4 matViewProjLight = sceneContext.MatViewProjLight;
+        Matrix4x4 matWorld = RenderArgs.ObjectContext.MatWorld;
+        // Initialiser et sélectionner les « constantes » des shaders
+        UpdateSceneConstantBuffer(new ForwardOpaqueRenderPass.SceneConstantBufferParams()
+        {
+            LightParams = new ForwardOpaqueRenderPass.LightParams()
+            {
+                Position = sceneContext.Light.Position,
+                Direction = sceneContext.Light.Direction,
+                AmbiantColor = sceneContext.Light.AmbiantColor,
+                DiffuseColor = sceneContext.Light.DiffuseColor,
+                Enable = Convert.ToInt32(true),
+                EnableShadow = Convert.ToInt32(_shadowMap is not null),
+            },
+            CameraPos = sceneContext.GameCameraPos
+        });
+
+        Matrix4x4 matrixWorld = subObjet3D.Transformation * matWorld;
+        UpdateVertexObjectConstantBuffer(new ForwardOpaqueRenderPass.VertexObjectConstantBufferParams()
+        {
+            matWorldViewProj = Matrix4x4.Transpose(matrixWorld * matViewProj),
+            matWorld = Matrix4x4.Transpose(matrixWorld),
+            matWorldViewProjLight = Matrix4x4.Transpose(matrixWorld * matViewProjLight),
+        });
+
+        UpdatePixelObjectConstantBuffer(new ForwardOpaqueRenderPass.PixelObjectConstantBufferParams()
+        {
+            Material = new ForwardOpaqueRenderPass.MaterialParams()
+            {
+                AmbiantColor = subObjet3D.Material.Ambient,
+                DiffuseColor = subObjet3D.Material.Diffuse,
+                SpecularColor = subObjet3D.Material.Specular,
+                SpecularPower = subObjet3D.Material.SpecularPower,
+                HasDiffuseTexture = Convert.ToInt32(subObjet3D.Material.DiffuseTexture is not null),
+                HasNormalTexture = Convert.ToInt32(subObjet3D.Material.NormalTexture is not null),
+            }
+        });
+
+        // Activation de la texture
+        _textureD3D = subObjet3D.Material.DiffuseTexture;
+        _normalMap = subObjet3D.Material.NormalTexture;
+    }
+
     /// <inheritdoc/>
     protected sealed override InputLayoutDesc GetInputLayoutDesc()
     {
         return Sommet.InputLayoutDesc;
+    }
+
+    /// <inheritdoc/>
+    protected override ComPtr<ID3D11RasterizerState> GetRasterizerState()
+    {
+        return GraphicPipeline.SolidCullBackRS;
+    }
+
+    /// <inheritdoc/>
+    protected override ComPtr<ID3D11DepthStencilState> GetDepthStencilState()
+    {
+        return GraphicPipeline.DefaultDSS;
     }
 
     /// <inheritdoc/>

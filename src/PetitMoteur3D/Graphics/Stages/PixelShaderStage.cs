@@ -13,6 +13,13 @@ internal sealed class PixelShaderStage
         _deviceContext.PSSetShader(pVertexShader, ref ppClassInstances, 0);
     }
 
+    public unsafe void SetNoShader()
+    {
+        ID3D11PixelShader* vertexShader = (ID3D11PixelShader*)null;
+        ID3D11ClassInstance** classInstance = (ID3D11ClassInstance**)null;
+        _deviceContext.PSSetShader(vertexShader, classInstance, 0);
+    }
+
     public void SetConstantBuffers(uint StartSlot, uint NumBuffers, ref ComPtr<ID3D11Buffer> ppConstantBuffers)
     {
         _deviceContext.PSSetConstantBuffers(StartSlot, NumBuffers, ref ppConstantBuffers);

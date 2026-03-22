@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Numerics;
 using System.Runtime.InteropServices;
-using BepuPhysics.Constraints.Contact;
 using ImGuiNET;
 using PetitMoteur3D.Camera;
 using PetitMoteur3D.DebugGui;
@@ -15,12 +13,13 @@ using PetitMoteur3D.Logging;
 using PetitMoteur3D.Window;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
+using Silk.NET.DXGI;
 
 namespace PetitMoteur3D;
 
 public class Engine
 {
-    public D3D11GraphicPipeline GraphicPipeline => _graphicPipeline;
+    public unsafe nint SwapchainPtr => (nint)_graphicPipeline.SwapChain.NativeHandle.Handle;
 
     private readonly IWindow _window;
     private readonly IInputContext? _inputContext;
@@ -44,15 +43,13 @@ public class Engine
     private bool _imGuiShowSceneEditor;
     private bool _debugToolKeyPressed;
     private bool _showDebugTool;
-    private bool _showWireFrame;
     private bool _showScene;
     private bool _showShadow;
-    private bool _showDepthTest;
     private bool _isShadowOrthographique;
     private bool _isCameraOrthographique;
     private bool _useDebugCamera;
     private SceneRenderingType[] _sceneRenderingTypeValues = Enum.GetValues<SceneRenderingType>();
-    private SceneRenderingType _sceneRenderingType = SceneRenderingType.DeferredShading;
+    private SceneRenderingType _sceneRenderingType = SceneRenderingType.Forward;
     private Vector4 _backgroundColour;
 
     private readonly Stopwatch _horlogeEngine;
@@ -78,6 +75,28 @@ public class Engine
 
     public ulong CurrentFrameCount;
 
+    #region Render Techniques
+    private WireframeOpaqueRenderPass _wireFrameRenderPass;
+    private ForwardOpaqueRenderPass _forwardOpaqueRenderPass;
+    private DeferredGeometryRenderPass _deferredGeometryRenderPass;
+    private DeferredLightningRenderPass _deferredLightningRenderPass;
+    private ClearRenderTargetPass _shadowMapClearRenderTargetPass;
+    private ShadowMapRenderPass _shadowMapRenderPass;
+    private DepthTestRenderPass _depthTestRenderPass;
+    private RenderTechnique _wireFrameTechnique;
+    private RenderTechnique _forwardRenderingTechnique;
+    private RenderTechnique _deferredRenderingTechnique;
+    private RenderTechnique _depthTestTechnique;
+
+    private Texture _defaultDepthTexture;
+    private ShadowMap _shadowMapTexture;
+
+    private Texture _lightAccumulationGeometryBuffer;
+    private Texture _diffuseGeometryBuffer;
+    private Texture _specularGeometryBuffer;
+    private Texture _normalGeometryBuffer;
+    #endregion
+
     public Engine(EngineConfiguration conf)
     {
         _memoryAtStartUp = _currentProcess.WorkingSet64;
@@ -88,6 +107,18 @@ public class Engine
         _imGuiController = default!;
         _graphicDevice = default!;
         _graphicPipeline = default!;
+        _wireFrameRenderPass = default!;
+        _forwardOpaqueRenderPass = default!;
+        _deferredGeometryRenderPass = default!;
+        _deferredLightningRenderPass = default!;
+        _shadowMapClearRenderTargetPass = default!;
+        _shadowMapRenderPass = default!;
+        _depthTestRenderPass = default!;
+        _wireFrameTechnique = default!;
+        _forwardRenderingTechnique = default!;
+        _deferredRenderingTechnique = default!;
+        _depthTestTechnique = default!;
+        _shadowMapTexture = default!;
 
         _backgroundColour = default;
 
@@ -105,7 +136,6 @@ public class Engine
         _imGuiShowSceneEditor = false;
         _debugToolKeyPressed = false;
         _showDebugTool = false;
-        _showWireFrame = false;
         _showScene = true;
         _showShadow = true;
         _isShadowOrthographique = true;
@@ -275,14 +305,12 @@ public class Engine
                         ImGui.Text(string.Format("Application (managed) heap usage {0} kB", GC.GetTotalMemory(false) / 1000));
                         bool runGc = ImGui.Button("Run GC");
                         bool backGroundColorChanged = ImGui.ColorEdit4("Background Color", ref _backgroundColour);     // Edit 4 floats representing a color
-                        bool wireFrameChanged = ImGui.Checkbox("WireFrame", ref _showWireFrame);     // Edit bool
                         ImGui.Checkbox("Show Demo", ref _imGuiShowDemo);     // Edit bool
                         ImGui.Checkbox("Show Debug Logs", ref _imGuiShowDebugLogs);     // Edit bool
                         ImGui.Checkbox("Show Metrics", ref _imGuiShowMetrics);     // Edit bool
                         ImGui.Checkbox("Show SceneEditor", ref _imGuiShowSceneEditor);     // Edit bool
                         ImGui.Checkbox("Show Scene", ref _showScene);     // Edit bool
                         ImGui.Checkbox("Show Shadow", ref _showShadow);     // Edit bool
-                        bool showDeptTestChanged = ImGui.Checkbox("Show DepthTest", ref _showDepthTest);     // Edit bool
                         ImGui.Checkbox("Show Shadow Orthographique", ref _isShadowOrthographique);     // Edit bool
                         ImGui.Checkbox("Show Debug Camera Options", ref _imGuiShowDebugCameraOptions);     // Edit bool
                         ImGui.Checkbox("Show Game Camera Options", ref _imGuiShowGameCameraOptions);     // Edit bool
@@ -389,13 +417,11 @@ public class Engine
                             ImGui.Begin("PetitMoteur3D Graphics", ref _imGuiShowGraphicOptions);
                             if (ImGui.BeginCombo("SceneRenderType", _sceneRenderingType.ToString()))
                             {
-                                bool renderingTypeChanged = false;
                                 foreach (SceneRenderingType option in _sceneRenderingTypeValues)
                                 {
                                     bool isSelected = _sceneRenderingType == option; // You can store your selection however you want, outside or inside your objects
                                     if (ImGui.Selectable(option.ToString(), isSelected))
                                     {
-                                        renderingTypeChanged = true;
                                         _sceneRenderingType = option;
                                     }
                                     if (isSelected)
@@ -404,11 +430,6 @@ public class Engine
                                     }
                                 }
                                 ImGui.EndCombo();
-
-                                if (renderingTypeChanged)
-                                {
-                                    _scene.RenderingType = _sceneRenderingType;
-                                }
                             }
                             ImGui.End();
                         }
@@ -424,39 +445,6 @@ public class Engine
                         if (backGroundColorChanged)
                         {
                             _graphicPipeline.SetBackgroundColour(_backgroundColour.X / _backgroundColour.W, _backgroundColour.Y / _backgroundColour.W, _backgroundColour.Z / _backgroundColour.W, _backgroundColour.W);
-                        }
-
-                        if (wireFrameChanged)
-                        {
-                            ComPtr<ID3D11RasterizerState> rasterizerState = _scene.RasterizerState;
-                            if (_showWireFrame)
-                            {
-                                if (rasterizerState.Handle != _graphicPipeline.WireFrameCullBackRS.Handle)
-                                {
-                                    _scene.RasterizerState = _graphicPipeline.WireFrameCullBackRS;
-                                    _scene.RenderingType = SceneRenderingType.Forward;
-                                }
-                            }
-                            else
-                            {
-                                if (rasterizerState.Handle != _graphicPipeline.SolidCullBackRS.Handle)
-                                {
-                                    _scene.RasterizerState = _graphicPipeline.SolidCullBackRS;
-                                }
-                            }
-                        }
-
-                        if (showDeptTestChanged)
-                        {
-                            if (_showDepthTest)
-                            {
-                                _scene.ShowDepthTest = true;
-                                _scene.RenderingType = SceneRenderingType.Forward;
-                            }
-                            else
-                            {
-                                _scene.ShowDepthTest = false;
-                            }
                         }
 
                         if (runGc)
@@ -505,12 +493,13 @@ public class Engine
             debugFrustrumView.NearPlaneDistance,
             debugFrustrumView.FarPlaneDistance);
 
-        _scene.OnScreenResize(newSize);
+        _shadowMapTexture.Resize(newSize);
+        //_scene.OnScreenResize(newSize);
     }
 
     private void BeginRender()
     {
-        _graphicPipeline.BeforePresent();
+        //_graphicPipeline.BeforePresent();
     }
 
     private void InitRendering()
@@ -519,6 +508,141 @@ public class Engine
         _graphicPipeline = new D3D11GraphicPipeline(_graphicDevice, _window);
         _graphicPipeline.GetBackgroundColour(out Vector4 backgroundColor);
         _backgroundColour = backgroundColor;
+
+        InitRenderTargets(_graphicDevice.RessourceFactory.TextureManager, (uint)_window.Size.Width, (uint)_window.Size.Height);
+
+        Texture backBufferTexture = _graphicPipeline.SwapChain.BackBuffer;
+        Texture[]? forwardBuffer = [backBufferTexture];
+        RenderTarget wireframeRenderTarget = new(forwardBuffer, _defaultDepthTexture);
+        ClearRenderTargetPass wireFrameClearRenderTargetPass = new(_graphicPipeline, wireframeRenderTarget, ClearRenderTargetPass.ClearOption.RenderTargetAndDepthStencil, "WireframeClearRenderTargetPass");
+        _wireFrameRenderPass = new WireframeOpaqueRenderPass(_graphicPipeline, wireframeRenderTarget, "WireFrameRenderPass");
+        _wireFrameTechnique = new RenderTechnique(wireFrameClearRenderTargetPass, _wireFrameRenderPass);
+
+        RenderTarget forwardRenderTarget = new(forwardBuffer, _defaultDepthTexture);
+        RenderTarget shadowMapRenderTarget = new(Array.Empty<Texture?>(), _shadowMapTexture.DepthTexture);
+        ClearRenderTargetPass forwardClearRenderTargetPass = new ClearRenderTargetPass(_graphicPipeline, forwardRenderTarget, ClearRenderTargetPass.ClearOption.RenderTargetAndDepthStencil,"ForwardClearRenderTargetPass");
+        _shadowMapClearRenderTargetPass = new ClearRenderTargetPass(_graphicPipeline, shadowMapRenderTarget, ClearRenderTargetPass.ClearOption.DepthStencil,"ShadowMapClearRenderTargetPass");
+        _forwardOpaqueRenderPass = new ForwardOpaqueRenderPass(_graphicPipeline, forwardRenderTarget, _shadowMapTexture.DepthTexture, "ForwardOpaqueRenderPass");
+        _shadowMapRenderPass = new ShadowMapRenderPass(_graphicPipeline, shadowMapRenderTarget, "ShadowMapRenderPass");
+        _forwardRenderingTechnique = new RenderTechnique(_shadowMapClearRenderTargetPass, _shadowMapRenderPass, forwardClearRenderTargetPass, _forwardOpaqueRenderPass);
+
+        Texture[]? geometryBuffersRenderTargets = [_lightAccumulationGeometryBuffer, _diffuseGeometryBuffer, _specularGeometryBuffer, _normalGeometryBuffer];
+        RenderTarget deferredGeometryRenderTarget = new(geometryBuffersRenderTargets, _defaultDepthTexture);
+        RenderTarget deferredlightningRenderTarget = new(forwardBuffer, _defaultDepthTexture);
+        ClearRenderTargetPass deferredGeometryClearRenderTargetPass = new ClearRenderTargetPass(_graphicPipeline, deferredGeometryRenderTarget, ClearRenderTargetPass.ClearOption.RenderTargetAndDepthStencil, "DeferredGeometryClearRenderTargetPass");
+        ClearRenderTargetPass deferredLightningClearRenderTargetPass = new ClearRenderTargetPass(_graphicPipeline, deferredlightningRenderTarget, ClearRenderTargetPass.ClearOption.RenderTarget, "DeferredLightningClearRenderTargetPass");
+        _deferredGeometryRenderPass = new DeferredGeometryRenderPass(_graphicPipeline, deferredGeometryRenderTarget, "DeferredGeometryRenderPass");
+        _deferredLightningRenderPass = new DeferredLightningRenderPass(_graphicPipeline, deferredlightningRenderTarget, _lightAccumulationGeometryBuffer, _diffuseGeometryBuffer, _specularGeometryBuffer, _normalGeometryBuffer, "DeferredLightningRenderPass");
+        _deferredRenderingTechnique = new RenderTechnique(deferredGeometryClearRenderTargetPass, _deferredGeometryRenderPass, deferredLightningClearRenderTargetPass, _deferredLightningRenderPass);
+
+        RenderTarget depthTestRenderTarget = new(forwardBuffer, _defaultDepthTexture);
+        ClearRenderTargetPass depthTestClearRenderTargetPass = new ClearRenderTargetPass(_graphicPipeline, depthTestRenderTarget, ClearRenderTargetPass.ClearOption.RenderTargetAndDepthStencil, "DepthTestClearRenderTargetPass");
+        _depthTestRenderPass = new DepthTestRenderPass(_graphicPipeline, depthTestRenderTarget, "DepthTestRenderPass");
+        _depthTestTechnique = new RenderTechnique(depthTestClearRenderTargetPass, _depthTestRenderPass);
+    }
+
+    private void InitRenderTargets(TextureManager textureManager, uint width, uint height)
+    {
+        Texture2DDesc colorTextureDesc = new()
+        {
+            Width = width,
+            Height = height,
+            MipLevels = 1,
+            ArraySize = 1,
+            Format = Silk.NET.DXGI.Format.FormatR8G8B8A8Unorm,
+            SampleDesc = new Silk.NET.DXGI.SampleDesc(1, 0),
+            Usage = Usage.Default,
+            BindFlags = (uint)(BindFlag.RenderTarget | BindFlag.ShaderResource),
+            CPUAccessFlags = 0,
+            MiscFlags = 0
+        };
+
+        ShaderResourceViewDesc colorTextureShaderResourceViewDesc = new()
+        {
+            Format = Silk.NET.DXGI.Format.FormatR8G8B8A8Unorm,
+            ViewDimension = D3DSrvDimension.D3DSrvDimensionTexture2D,
+            Anonymous = new ShaderResourceViewDescUnion
+            {
+                Texture2D =
+                {
+                    MostDetailedMip = 0,
+                    MipLevels = 1
+                }
+            }
+        };
+
+        _lightAccumulationGeometryBuffer = textureManager.GetOrCreateTexture("Engine_LightAccumulationGeometryBuffer", colorTextureDesc,
+            (TextureBuilder builder) => builder
+            .WithShaderRessourceView(colorTextureShaderResourceViewDesc)
+            .WithRenderTargetView());
+        _diffuseGeometryBuffer = textureManager.GetOrCreateTexture("Engine_DiffuseGeometryBuffer", colorTextureDesc,
+            (TextureBuilder builder) => builder
+            .WithShaderRessourceView(colorTextureShaderResourceViewDesc)
+            .WithRenderTargetView());
+        _specularGeometryBuffer = textureManager.GetOrCreateTexture("Engine_SpecularGeometryBuffer", colorTextureDesc,
+            (TextureBuilder builder) => builder
+            .WithShaderRessourceView(colorTextureShaderResourceViewDesc)
+            .WithRenderTargetView());
+
+        _shadowMapTexture = new ShadowMap(textureManager, width, height, "Engine_ShadowMap");
+
+        Texture2DDesc normalTextureDesc = new()
+        {
+            Width = width,
+            Height = height,
+            MipLevels = 1,
+            ArraySize = 1,
+            Format = Silk.NET.DXGI.Format.FormatR32G32B32A32Float,
+            SampleDesc = new Silk.NET.DXGI.SampleDesc(1, 0),
+            Usage = Usage.Default,
+            BindFlags = (uint)(BindFlag.RenderTarget | BindFlag.ShaderResource),
+            CPUAccessFlags = 0,
+            MiscFlags = 0
+        };
+
+        ShaderResourceViewDesc normalTextureShaderResourceViewDesc = new()
+        {
+            Format = Silk.NET.DXGI.Format.FormatR32G32B32A32Float,
+            ViewDimension = D3DSrvDimension.D3DSrvDimensionTexture2D,
+            Anonymous = new ShaderResourceViewDescUnion
+            {
+                Texture2D =
+                {
+                    MostDetailedMip = 0,
+                    MipLevels = 1
+                }
+            }
+        };
+
+        _normalGeometryBuffer = textureManager.GetOrCreateTexture($"Engine_NormalGeometryBuffer", normalTextureDesc,
+            (TextureBuilder builder) => builder
+            .WithShaderRessourceView(normalTextureShaderResourceViewDesc)
+            .WithRenderTargetView());
+
+        Texture2DDesc depthTextureDesc = new()
+        {
+            Width = width,
+            Height = height,
+            MipLevels = 1,
+            ArraySize = 1,
+            Format = Format.FormatR24G8Typeless,
+            SampleDesc = new SampleDesc(1, 0),
+            Usage = Usage.Default,
+            BindFlags = (uint)(BindFlag.DepthStencil | BindFlag.ShaderResource),
+            CPUAccessFlags = 0,
+            MiscFlags = 0
+        };
+
+        DepthStencilViewDesc descDSView = new()
+        {
+            Format = Format.FormatD24UnormS8Uint,
+            ViewDimension = DsvDimension.Texture2D,
+            Texture2D = new Tex2DDsv() { MipSlice = 0 }
+        };
+
+        _defaultDepthTexture = textureManager.GetOrCreateTexture("GraphicPipeline_DepthTexture", depthTextureDesc,
+            builder => builder
+            .WithDepthStencilView(descDSView));
     }
 
     private void InitScene()
@@ -554,36 +678,32 @@ public class Engine
         };
         _gameCamera.Move(0f, 2f, -10f);
 
-        _scene = InitDefaultScene(_graphicDevice.RessourceFactory, _graphicPipeline.ShaderFactory, _gameCamera, _window);
+        _scene = InitDefaultScene(_graphicDevice.RessourceFactory, _gameCamera, _window);
         _scene.SetDebugCamera(_debugCamera);
-        // Set default rasterizer state
-        _scene.RasterizerState = _graphicPipeline.SolidCullBackRS;
-        // Set default rendering technique
-        _scene.RenderingType = _sceneRenderingType;
     }
 
-    private static Scene InitDefaultScene(GraphicDeviceRessourceFactory ressourceFactory, RenderPassFactory renderPassFactory, ICamera gameCamera, IWindow window)
+    private static Scene InitDefaultScene(GraphicDeviceRessourceFactory ressourceFactory, ICamera gameCamera, IWindow window)
     {
-        Scene scene = new(ressourceFactory, renderPassFactory, gameCamera, window.Size);
-        Bloc bloc1 = new(4.0f, 4.0f, 4.0f, ressourceFactory, renderPassFactory);
+        Scene scene = new(gameCamera, window.Size);
+        Bloc bloc1 = new(4.0f, 4.0f, 4.0f, ressourceFactory);
         bloc1.Material.Specular = Vector4.Zero;
         bloc1.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\herringbone_brick_diff.jpg");
         bloc1.Material.NormalTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\herringbone_brick_norm.jpg");
         bloc1.Move(-4f, 2f, 0f);
 
-        Bloc bloc2 = new(4.0f, 4.0f, 4.0f, ressourceFactory, renderPassFactory);
+        Bloc bloc2 = new(4.0f, 4.0f, 4.0f, ressourceFactory);
         bloc2.Material.Specular = Vector4.Zero;
         bloc2.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\brickwall.jpg");
         bloc2.Material.NormalTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\brickwall_normal.jpg");
         bloc2.Move(4f, 2f, 0f);
 
-        Bloc bloc3 = new(4.0f, 4.0f, 4.0f, ressourceFactory, renderPassFactory);
+        Bloc bloc3 = new(4.0f, 4.0f, 4.0f, ressourceFactory);
         bloc3.Material.Specular = Vector4.Zero;
         bloc3.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\brickwall.jpg");
         bloc3.Material.NormalTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\brickwall_normal.jpg");
         bloc3.Move(-4f, 2f, 4f);
 
-        Bloc bloc4 = new(4.0f, 4.0f, 4.0f, ressourceFactory, renderPassFactory);
+        Bloc bloc4 = new(4.0f, 4.0f, 4.0f, ressourceFactory);
         bloc4.Material.Specular = Vector4.Zero;
         bloc4.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\brickwall.jpg");
         bloc4.Material.NormalTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\brickwall_normal.jpg");
@@ -601,11 +721,11 @@ public class Engine
         float dimY = boundingBox.Max.Y - boundingBox.Min.Y;
         float dimZ = boundingBox.Max.Z - boundingBox.Min.Z;
 
-        ObjetMesh objetMesh = new(rootMesh, ressourceFactory, renderPassFactory);
+        ObjetMesh objetMesh = new(rootMesh, ressourceFactory);
         objetMesh.Move(0f, 2f, 0f);
         objetMesh.SetScale(4f / float.Max(float.Max(dimX, dimY), dimZ));
 
-        Plane ground = new(10f, 10f, ressourceFactory, renderPassFactory);
+        Plane ground = new(10f, 10f, ressourceFactory);
         ground.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\silk.png");
         ground.Rotate(Vector3.UnitX, (float)(Math.PI / 2f));
 
@@ -671,9 +791,21 @@ public class Engine
         BeginRender();
         if (_initAnimationFinished)
         {
-            _scene.ShowShadow = _showShadow;
+            _shadowMapRenderPass.IsEnabled = _showShadow;
+
             _scene.UseDebugCam = _useDebugCamera;
-            _scene.Draw(_graphicPipeline);
+            switch (_sceneRenderingType)
+            {
+                case SceneRenderingType.DepthTest:
+                    _depthTestTechnique.Render(_scene); break;
+                case SceneRenderingType.Wireframe:
+                    _wireFrameTechnique.Render(_scene); break;
+                case SceneRenderingType.DeferredShading:
+                    _deferredRenderingTechnique.Render(_scene); break;
+                case SceneRenderingType.Forward:
+                    _forwardRenderingTechnique.Render(_scene); break;
+                default: break;
+            }
         }
     }
 }

@@ -13,8 +13,8 @@ internal sealed class ObjetMesh : BaseObjet3D
 
     protected override bool SupportShadow => false;
 
-    public ObjetMesh(SceneMesh sceneMesh, GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, RenderPassFactory shaderFactory)
-        : base(graphicDeviceRessourceFactory, shaderFactory)
+    public ObjetMesh(SceneMesh sceneMesh, GraphicDeviceRessourceFactory graphicDeviceRessourceFactory)
+        : base(graphicDeviceRessourceFactory)
     {
         _sceneMesh = sceneMesh;
 

@@ -2,7 +2,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using PetitMoteur3D.Graphics;
-using PetitMoteur3D.Graphics.Shaders;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
 
@@ -11,25 +10,19 @@ namespace PetitMoteur3D;
 internal sealed class ShadowMap
 {
     #region Public properties
-    public ref readonly VertexShader VertexShader { get { return ref _vertexShader; } }
     public ref readonly ComPtr<ID3D11SamplerState> SampleState { get { return ref _sampleState; } }
-    public ref readonly Size Dimension { get { return ref _dimension; } }
     public Texture DepthTexture { get { return _depthTexture; } }
     #endregion
 
     private Texture _depthTexture; // texture de profondeur 
 
-    private VertexShader _vertexShader;
     private ComPtr<ID3D11SamplerState> _sampleState;
 
-    private readonly ShaderFactory _shaderFactory;
     private readonly TextureManager _textureManager;
-    private readonly GraphicDeviceRessourceFactory _graphicRessourceFactory;
 
     private readonly string _name;
-    private Size _dimension;
 
-    public ShadowMap(GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, Size size, string name = "")
+    public ShadowMap(TextureManager textureManager, uint width, uint height, string name = "")
     {
         if (string.IsNullOrEmpty(name))
         {
@@ -40,25 +33,16 @@ internal sealed class ShadowMap
             _name = name;
         }
 
-        _graphicRessourceFactory = graphicDeviceRessourceFactory;
-        _shaderFactory = graphicDeviceRessourceFactory.ShaderFactory;
-        _textureManager = graphicDeviceRessourceFactory.TextureManager;
+        _textureManager = textureManager;
 
-        _dimension = size;
-        Initialisation();
+        Initialisation(width, height);
     }
 
     [MemberNotNull(nameof(_depthTexture))]
-    private void Initialisation()
+    private void Initialisation(uint width, uint height)
     {
-        InitShaders(_shaderFactory);
         InitTexture(_textureManager);
-        InitDepthBuffer(_dimension.Width, _dimension.Height);
-    }
-
-    private unsafe void InitShaders(ShaderFactory shaderFactory)
-    {
-        InitVertexShader(shaderFactory);
+        InitDepthBuffer(width, height);
     }
 
     private unsafe void InitTexture(TextureManager textureManager)
@@ -84,12 +68,12 @@ internal sealed class ShadowMap
     }
 
     [MemberNotNull(nameof(_depthTexture))]
-    private unsafe void InitDepthBuffer(int width, int height)
+    private unsafe void InitDepthBuffer(uint width, uint height)
     {
         Texture2DDesc depthTextureDesc = new()
         {
-            Width = (uint)width,
-            Height = (uint)height,
+            Width = width,
+            Height = height,
             MipLevels = 1,
             ArraySize = 1,
             Format = Silk.NET.DXGI.Format.FormatR24G8Typeless,
@@ -129,39 +113,6 @@ internal sealed class ShadowMap
 
     public void Resize(Size newSize)
     {
-        _dimension = newSize;
-        InitDepthBuffer(_dimension.Width, _dimension.Height);
-    }
-
-    /// <summary>
-    /// Compilation et chargement du vertex shader
-    /// </summary>
-    private unsafe void InitVertexShader(ShaderFactory shaderFactory)
-    {
-        // Compilation et chargement du vertex shader
-        string filePath = "shaders\\ShadowMap.hlsl";
-        string entryPoint = "ShadowMapVS";
-        string target = "vs_5_0";
-        // #define D3DCOMPILE_ENABLE_STRICTNESS                    (1 << 11)
-        uint flagStrictness = ((uint)1 << 11);
-        // #define D3DCOMPILE_DEBUG (1 << 0)
-        // #define D3DCOMPILE_SKIP_OPTIMIZATION                    (1 << 2)
-#if DEBUG
-        uint flagDebug = ((uint)1 << 0);
-        uint flagSkipOptimization = ((uint)(1 << 2));
-#else
-        uint flagDebug = 0;
-        uint flagSkipOptimization = 0;
-#endif
-        uint compilationFlags = flagStrictness | flagDebug | flagSkipOptimization;
-        ShaderCodeFile shaderFile = new
-        (
-            filePath,
-            entryPoint,
-            target,
-            compilationFlags,
-            name: "ShadowMap_VertexShader"
-        );
-        _vertexShader = shaderFactory.CreateVertexShader(shaderFile, SommetPosition.InputLayoutDesc);
+        InitDepthBuffer((uint)newSize.Width, (uint)newSize.Height);
     }
 }

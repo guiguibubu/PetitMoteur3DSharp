@@ -80,9 +80,14 @@ internal sealed class TextureFactory
         return new TextureBuilder(this, textureDesc);
     }
 
-    public TextureBuilder CreateBuilder(Texture2DDesc textureDesc, ComPtr<ID3D11Texture2D> texture)
+    public TextureBuilder CreateBuilder(ComPtr<ID3D11Texture2D> texture)
     {
-        return new TextureBuilder(this, textureDesc, texture);
+        return new TextureBuilder(this, texture);
+    }
+
+    public TextureBuilder CreateBuilder(ComPtr<ID3D11Texture2D> textureRessource, Texture texture)
+    {
+        return new TextureBuilder(this, textureRessource, texture);
     }
 
     public unsafe Texture CreateEmpty(string name, int width, int height)
@@ -174,7 +179,7 @@ internal sealed class TextureFactory
         Log.Information("[TextureFactory] CreateSampler with desc : {0}", string.Join("; ", descProperties));
         _samplerCache.Add(desc, sampler);
 
-        string name = desc.Filter.ToString() + desc.ComparisonFunc.ToString() + desc.AddressU.ToString()+ "_SamplerState";
+        string name = desc.Filter.ToString() + desc.ComparisonFunc.ToString() + desc.AddressU.ToString() + "_SamplerState";
         if (!string.IsNullOrEmpty(name))
         {
             // Set Debug Name

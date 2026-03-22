@@ -12,10 +12,10 @@ using Silk.NET.DXGI;
 
 namespace PetitMoteur3D.Graphics;
 
-public class D3D11GraphicPipeline : IDisposable
+internal class D3D11GraphicPipeline : IDisposable
 {
-    public ComPtr<IDXGISwapChain1> Swapchain { get { return _swapchain; } }
-    
+    public D3D11SwapChain SwapChain { get { return _swapchain; } }
+
     public ComPtr<ID3D11RasterizerState> SolidCullFrontRS { get { return _solidCullFrontRS; } }
     public ComPtr<ID3D11RasterizerState> SolidCullBackRS { get { return _solidCullBackRS; } }
     public ComPtr<ID3D11RasterizerState> WireFrameCullBackRS { get { return _wireFrameCullBackRS; } }
@@ -24,15 +24,8 @@ public class D3D11GraphicPipeline : IDisposable
     public ComPtr<ID3D11DepthStencilState> ReadonlyDSS { get { return _readonlyDSS; } }
     public ComPtr<ID3D11DepthStencilState> ReadonlyGreaterDSS { get { return _readonlyGreaterDSS; } }
 
-    public RenderTargetType RenderTargetType { get { return _renderTargetType; } }
-    public ComPtr<ID3D11ShaderResourceView> GeometryBufferDiffuseSRV { get { return _diffuseGeometryBuffer.ShaderRessourceView; } }
-    public ComPtr<ID3D11ShaderResourceView> GeometryBufferSpecularSRV { get { return _specularGeometryBuffer.ShaderRessourceView; } }
-    public ComPtr<ID3D11ShaderResourceView> GeometryBufferNormalSRV { get { return _normalGeometryBuffer.ShaderRessourceView; } }
-
     internal D3D11GraphicDevice GraphicDevice => _graphicDevice;
     internal ComPtr<ID3D11DeviceContext> DeviceContext => _deviceContext;
-    internal RenderPassFactory ShaderFactory => _shaderFactory;
-
     internal InputAssemblerStage InputAssemblerStage { get; init; }
     internal VertexShaderStage VertexShaderStage { get; init; }
     internal GeometryShaderStage GeometryShaderStage { get; init; }
@@ -41,15 +34,6 @@ public class D3D11GraphicPipeline : IDisposable
     internal OutputMergerStage OutputMergerStage { get; init; }
 
     internal GraphicPipelineRessourceFactory RessourceFactory { get; }
-
-    private ComPtr<IDXGISwapChain1> _swapchain;
-    private Texture _backBufferTexture;
-    private Texture _depthTexture;
-    private Texture _lightAccumulationGeometryBuffer;
-    private Texture _diffuseGeometryBuffer;
-    private Texture _specularGeometryBuffer;
-    private Texture _normalGeometryBuffer;
-    private ComPtr<ID3D11RenderTargetView>[] _geometryBuffersRenderTargets;
 
     private ComPtr<ID3D11RasterizerState> _solidCullFrontRS;
     private ComPtr<ID3D11RasterizerState> _solidCullBackRS;
@@ -61,15 +45,14 @@ public class D3D11GraphicPipeline : IDisposable
     private readonly D3D11GraphicDevice _graphicDevice;
     private readonly ComPtr<ID3D11DeviceContext> _deviceContext;
     private readonly GraphicDeviceRessourceFactory _graphicRessourceFactory;
-    private readonly RenderPassFactory _shaderFactory;
 
-    private SwapChainDesc1 _swapchainDescription;
+    private D3D11SwapChain _swapchain;
 
     private Size _currentSize;
     private readonly float[] _backgroundColour = new[] { 0.0f, 0.5f, 0.0f, 1.0f };
 
     private bool _isSwapChainComposition;
-    private RenderTargetType _renderTargetType;
+
     private bool _disposed;
 #if USE_RENDERDOC
     private readonly Evergine.Bindings.RenderDoc.RenderDoc _renderDoc;
@@ -87,7 +70,6 @@ public class D3D11GraphicPipeline : IDisposable
         _graphicRessourceFactory = graphicDevice.RessourceFactory;
         RessourceFactory = new GraphicPipelineRessourceFactory(graphicDevice);
         _isSwapChainComposition = false;
-        _renderTargetType = RenderTargetType.NoRenderTarget;
 
         // Initialisation de la swapchain
         InitSwapChain(window, graphicDevice.DxVk);
@@ -99,7 +81,6 @@ public class D3D11GraphicPipeline : IDisposable
         RasterizerStage = new RasterizerStage(_deviceContext);
         PixelShaderStage = new PixelShaderStage(_deviceContext);
         OutputMergerStage = new OutputMergerStage(_deviceContext);
-
 
         InitView(window);
 
@@ -160,8 +141,6 @@ public class D3D11GraphicPipeline : IDisposable
 
         RasterizerStage.SetState(_solidCullBackRS);
 
-        _shaderFactory = new RenderPassFactory(this);
-
         _disposed = false;
 #if USE_RENDERDOC
         Evergine.Bindings.RenderDoc.RenderDoc.Load(out _renderDoc);
@@ -177,24 +156,10 @@ public class D3D11GraphicPipeline : IDisposable
         Dispose(disposing: false);
     }
 
-    public unsafe void BeforePresent()
-    {
-        if (_swapchainDescription.SwapEffect == SwapEffect.FlipSequential)
-        {
-            //TODO: valdiate if WinUi still works 
-            //SetRenderTarget(RenderTargetType.BackBuffer, clear: false);
-        }
-        ClearRenderTargets();
-        ClearDepthStencil();
-        SetRenderTarget(RenderTargetType.BackBuffer, clear: false);
-    }
-
     public void Present()
     {
-        uint syncInterval = _swapchainDescription.SwapEffect == SwapEffect.FlipSequential ? 1u : 0u;
-        SilkMarshal.ThrowHResult(
-            _swapchain.Present(syncInterval, 0)
-        );
+        uint syncInterval = _swapchain.SwapEffect == SwapEffect.FlipSequential ? 1u : 0u;
+        _swapchain.Present(syncInterval, flags: 0);
     }
 
     public unsafe void Resize(ref readonly Size size)
@@ -205,25 +170,13 @@ public class D3D11GraphicPipeline : IDisposable
         }
         _deviceContext.ClearState();
 
-        _backBufferTexture.Dispose();
-        _lightAccumulationGeometryBuffer.Dispose();
-        _diffuseGeometryBuffer.Dispose();
-        _specularGeometryBuffer.Dispose();
-        _normalGeometryBuffer.Dispose();
-        _geometryBuffersRenderTargets = [];
-        _depthTexture.Dispose();
-
         if (_isSwapChainComposition)
         {
-            SilkMarshal.ThrowHResult(
-                _swapchain.ResizeBuffers(_swapchainDescription.BufferCount, (uint)size.Width, (uint)size.Height, Format.FormatB8G8R8A8Unorm, (uint)SwapChainFlag.AllowModeSwitch)
-            );
+            _swapchain.ResizeBuffers((uint)size.Width, (uint)size.Height);
         }
         else
         {
-            SilkMarshal.ThrowHResult(
-                _swapchain.ResizeBuffers(_swapchainDescription.BufferCount, 0, 0, Format.FormatB8G8R8A8Unorm, (uint)SwapChainFlag.AllowModeSwitch)
-            );
+            _swapchain.ResizeBuffers(0, 0);
         }
 
         InitView(size.Width, size.Height);
@@ -270,52 +223,6 @@ public class D3D11GraphicPipeline : IDisposable
         _deviceContext.DrawIndexed(IndexCount, StartIndexLocation, BaseVertexLocation);
     }
 
-    public void SetRenderTarget(RenderTargetType renderTargetType, bool clear = true, bool renderTargetOnly = false)
-    {
-        if (_renderTargetType != renderTargetType)
-        {
-            // Tell the output merger about our render target view.
-            ComPtr<ID3D11RenderTargetView>[] renderTargetViews;
-            _renderTargetType = renderTargetType;
-            // Unbind current Render Targets and DepthStencil
-            OutputMergerStage.UnbindRenderTargets();
-
-            if (_renderTargetType == RenderTargetType.NoRenderTarget)
-            {
-                return;
-            }
-
-            switch (renderTargetType)
-            {
-                case RenderTargetType.BackBuffer:
-                    renderTargetViews = [_backBufferTexture.RenderTargetViewRef];
-                    break;
-                case RenderTargetType.GeometryBuffers:
-                    renderTargetViews = _geometryBuffersRenderTargets;
-                    break;
-                default:
-                    throw new NotSupportedException($"Only support BackBuffer and GeometryBuffers");
-            }
-            if (renderTargetOnly)
-            {
-                OutputMergerStage.SetRenderTarget(in renderTargetViews);
-            }
-            else
-            {
-                OutputMergerStage.SetRenderTarget(in renderTargetViews, _depthTexture.TextureDepthStencilView);
-            }
-        }
-
-        if (clear)
-        {
-            ClearRenderTarget(_renderTargetType);
-            if (!renderTargetOnly)
-            {
-                ClearDepthStencil();
-            }
-        }
-    }
-
     public void ResetViewport()
     {
         SetViewport(_currentSize.Width, _currentSize.Height);
@@ -336,8 +243,6 @@ public class D3D11GraphicPipeline : IDisposable
         {
             InitSwapChain((uint)window.Size.Width, (uint)window.Size.Height, window.NativeHandle!.Value, forceDxvk);
         }
-        _swapchainDescription = new();
-        _swapchain.GetDesc1(ref _swapchainDescription);
     }
 
     private unsafe void InitSwapChain(uint width, uint heigth, nint windowPtr, bool forceDxvk)
@@ -361,7 +266,7 @@ public class D3D11GraphicPipeline : IDisposable
             {
                 Windowed = true
             };
-            _swapchain = _graphicRessourceFactory.CreateSwapChainForHwnd(windowPtr, in swapChainDesc, in swapChainFullscreenDesc, ref Unsafe.NullRef<IDXGIOutput>());
+            _swapchain = _graphicRessourceFactory.SwapChainFactory.CreateSwapChainForHwnd(windowPtr, in swapChainDesc, in swapChainFullscreenDesc, ref Unsafe.NullRef<IDXGIOutput>());
         }
         else
         {
@@ -375,31 +280,19 @@ public class D3D11GraphicPipeline : IDisposable
             swapChainDesc.BufferCount = 2;
             //swapChainDesc.Flags = 0;
             //swapChainDesc.AlphaMode = AlphaMode.Premultiplied;
-            _swapchain = _graphicRessourceFactory.CreateSwapChainForComposition(in swapChainDesc, ref Unsafe.NullRef<IDXGIOutput>());
+            _swapchain = _graphicRessourceFactory.SwapChainFactory.CreateSwapChainForComposition(in swapChainDesc, ref Unsafe.NullRef<IDXGIOutput>());
         }
     }
 
-    [MemberNotNull(nameof(_depthTexture))]
     [MemberNotNull(nameof(_currentSize))]
     private unsafe void InitView(IWindow window)
     {
         InitView(window.Size.Width, window.Size.Height);
     }
 
-    [MemberNotNull(nameof(_depthTexture))]
     [MemberNotNull(nameof(_currentSize))]
     private void InitView(float width, float height)
     {
-        // Create « render target view » 
-        // Obtain the framebuffer for the swapchain's backbuffer.
-        InitRenderTargetView();
-        InitGeometryBuffers((int)width, (int)height);
-
-        // Create de depth stenci view
-        InitDepthBuffer((uint)width, (uint)height);
-
-        SetRenderTarget(_renderTargetType);
-
         SetViewport((int)width, (int)height);
 
         _currentSize = new Size(width: (int)width, height: (int)height);
@@ -410,185 +303,6 @@ public class D3D11GraphicPipeline : IDisposable
         // Set the rasterizer state with the current viewport.
         Viewport viewport = new(0, 0, width, height, 0, 1);
         RasterizerStage.SetViewports(1, in viewport);
-    }
-
-    private unsafe void InitRenderTargetView()
-    {
-        using (ComPtr<ID3D11Texture2D> framebuffer = _swapchain.GetBuffer<ID3D11Texture2D>(0))
-        {
-            Texture2DDesc desc = new();
-            framebuffer.GetDesc(ref desc);
-            _backBufferTexture = _graphicRessourceFactory.TextureManager.Factory
-                .CreateBuilder(desc, framebuffer)
-                .WithRenderTargetView()
-                .WithName("GraphicPipeline_BackBuffer")
-                .Build();
-        }
-    }
-
-    [MemberNotNull(nameof(_lightAccumulationGeometryBuffer))]
-    [MemberNotNull(nameof(_diffuseGeometryBuffer))]
-    [MemberNotNull(nameof(_specularGeometryBuffer))]
-    [MemberNotNull(nameof(_normalGeometryBuffer))]
-    [MemberNotNull(nameof(_geometryBuffersRenderTargets))]
-    private unsafe void InitGeometryBuffers(int width, int height)
-    {
-        Texture2DDesc colorTextureDesc = new()
-        {
-            Width = (uint)width,
-            Height = (uint)height,
-            MipLevels = 1,
-            ArraySize = 1,
-            Format = Silk.NET.DXGI.Format.FormatR8G8B8A8Unorm,
-            SampleDesc = new Silk.NET.DXGI.SampleDesc(1, 0),
-            Usage = Usage.Default,
-            BindFlags = (uint)(BindFlag.RenderTarget | BindFlag.ShaderResource),
-            CPUAccessFlags = 0,
-            MiscFlags = 0
-        };
-
-        ShaderResourceViewDesc colorTextureShaderResourceViewDesc = new()
-        {
-            Format = Silk.NET.DXGI.Format.FormatR8G8B8A8Unorm,
-            ViewDimension = D3DSrvDimension.D3DSrvDimensionTexture2D,
-            Anonymous = new ShaderResourceViewDescUnion
-            {
-                Texture2D =
-                {
-                    MostDetailedMip = 0,
-                    MipLevels = 1
-                }
-            }
-        };
-
-
-        TextureManager textureManager = _graphicRessourceFactory.TextureManager;
-
-        _lightAccumulationGeometryBuffer = textureManager.GetOrCreateTexture($"GraphicPipeline_LightAccumulationGeometryBuffer", colorTextureDesc,
-            (TextureBuilder builder) => builder
-            .WithShaderRessourceView(colorTextureShaderResourceViewDesc)
-            .WithRenderTargetView());
-        _diffuseGeometryBuffer = textureManager.GetOrCreateTexture($"GraphicPipeline_DiffuseGeometryBuffer", colorTextureDesc,
-            (TextureBuilder builder) => builder
-            .WithShaderRessourceView(colorTextureShaderResourceViewDesc)
-            .WithRenderTargetView());
-        _specularGeometryBuffer = textureManager.GetOrCreateTexture($"GraphicPipeline_SpecularGeometryBuffer", colorTextureDesc,
-            (TextureBuilder builder) => builder
-            .WithShaderRessourceView(colorTextureShaderResourceViewDesc)
-            .WithRenderTargetView());
-
-        Texture2DDesc normalTextureDesc = new()
-        {
-            Width = (uint)width,
-            Height = (uint)height,
-            MipLevels = 1,
-            ArraySize = 1,
-            Format = Silk.NET.DXGI.Format.FormatR32G32B32A32Float,
-            SampleDesc = new Silk.NET.DXGI.SampleDesc(1, 0),
-            Usage = Usage.Default,
-            BindFlags = (uint)(BindFlag.RenderTarget | BindFlag.ShaderResource),
-            CPUAccessFlags = 0,
-            MiscFlags = 0
-        };
-
-        ShaderResourceViewDesc normalTextureShaderResourceViewDesc = new()
-        {
-            Format = Silk.NET.DXGI.Format.FormatR32G32B32A32Float,
-            ViewDimension = D3DSrvDimension.D3DSrvDimensionTexture2D,
-            Anonymous = new ShaderResourceViewDescUnion
-            {
-                Texture2D =
-                {
-                    MostDetailedMip = 0,
-                    MipLevels = 1
-                }
-            }
-        };
-
-        _normalGeometryBuffer = textureManager.GetOrCreateTexture($"GraphicPipeline_NormalGeometryBuffer", normalTextureDesc,
-            (TextureBuilder builder) => builder
-            .WithShaderRessourceView(normalTextureShaderResourceViewDesc)
-            .WithRenderTargetView());
-
-        _geometryBuffersRenderTargets = new ComPtr<ID3D11RenderTargetView>[] { _lightAccumulationGeometryBuffer.RenderTargetView, _diffuseGeometryBuffer.RenderTargetView, _specularGeometryBuffer.RenderTargetView, _normalGeometryBuffer.RenderTargetView };
-    }
-
-    [MemberNotNull(nameof(_depthTexture))]
-    private void InitDepthBuffer(uint width, uint height)
-    {
-        Texture2DDesc depthTextureDesc = new()
-        {
-            Width = width,
-            Height = height,
-            MipLevels = 1,
-            ArraySize = 1,
-            Format = Format.FormatR24G8Typeless,
-            SampleDesc = new SampleDesc(1, 0),
-            Usage = Usage.Default,
-            BindFlags = (uint)(BindFlag.DepthStencil | BindFlag.ShaderResource),
-            CPUAccessFlags = 0,
-            MiscFlags = 0
-        };
-
-        DepthStencilViewDesc descDSView = new()
-        {
-            Format = Format.FormatD24UnormS8Uint,
-            ViewDimension = DsvDimension.Texture2D,
-            Texture2D = new Tex2DDsv() { MipSlice = 0 }
-        };
-
-        _depthTexture = _graphicRessourceFactory.TextureManager.GetOrCreateTexture("GraphicPipeline_DepthTexture", depthTextureDesc,
-            builder => builder
-            .WithDepthStencilView(descDSView)
-            .WithName("GraphicPipeline_DepthTexture"));
-    }
-
-    private unsafe void ClearRenderTarget(RenderTargetType renderTargetType)
-    {
-        if (renderTargetType == RenderTargetType.NoRenderTarget)
-        {
-            return;
-        }
-
-        ComPtr<ID3D11RenderTargetView>[] renderTargetViews;
-        switch (renderTargetType)
-        {
-            case RenderTargetType.BackBuffer:
-                renderTargetViews = [_backBufferTexture.RenderTargetView]; break;
-            case RenderTargetType.GeometryBuffers:
-                renderTargetViews = _geometryBuffersRenderTargets; break;
-            default:
-                throw new NotSupportedException($"Only support BackBuffer and GeometryBuffers");
-        }
-
-        // On efface la surface de rendu
-        foreach (ComPtr<ID3D11RenderTargetView> renderTargetView in renderTargetViews)
-        {
-            _deviceContext.ClearRenderTargetView(renderTargetView, _backgroundColour.AsSpan());
-        }
-    }
-
-    private unsafe void ClearRenderTargets()
-    {
-        ComPtr<ID3D11RenderTargetView>[] renderTargetViews = [
-            _backBufferTexture.RenderTargetView,
-            _lightAccumulationGeometryBuffer.RenderTargetView,
-            _diffuseGeometryBuffer.RenderTargetView,
-            _specularGeometryBuffer.RenderTargetView,
-            _normalGeometryBuffer.RenderTargetView
-            ];
-
-        // On efface la surface de rendu
-        foreach (ComPtr<ID3D11RenderTargetView> renderTargetView in renderTargetViews)
-        {
-            _deviceContext.ClearRenderTargetView(renderTargetView, _backgroundColour.AsSpan());
-        }
-    }
-
-    private unsafe void ClearDepthStencil()
-    {
-        // On ré-initialise le tampon de profondeur
-        _deviceContext.ClearDepthStencilView(_depthTexture.TextureDepthStencilView, (uint)ClearFlag.Depth, 1.0f, 0);
     }
 
     protected virtual void Dispose(bool disposing)
@@ -603,17 +317,7 @@ public class D3D11GraphicPipeline : IDisposable
             // TODO: free unmanaged resources (unmanaged objects) and override finalizer
             // TODO: set large fields to null
 
-            // passer en mode fenêtré
-            _swapchain.SetFullscreenState(false, ref Unsafe.NullRef<IDXGIOutput>());
-
             _swapchain.Dispose();
-            _backBufferTexture.Dispose();
-            _depthTexture.Dispose();
-            _lightAccumulationGeometryBuffer.Dispose();
-            _diffuseGeometryBuffer.Dispose();
-            _specularGeometryBuffer.Dispose();
-            _normalGeometryBuffer.Dispose();
-            _geometryBuffersRenderTargets = [];
             _solidCullFrontRS.Dispose();
             _solidCullBackRS.Dispose();
             _defaultDSS.Dispose();

@@ -2,41 +2,27 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Numerics;
-using System.Runtime.CompilerServices;
 using PetitMoteur3D.Camera;
 using PetitMoteur3D.Graphics;
-using PetitMoteur3D.Graphics.RenderTechniques;
-using Silk.NET.Core.Native;
-using Silk.NET.Direct3D11;
 
 namespace PetitMoteur3D;
 
-internal sealed class Scene : IDisposable
+internal sealed class Scene : IVisitable, IDisposable
 {
     public bool ShowDepthTest { get; set; }
-    public bool ShowShadow { get; set; }
     public bool UseDebugCam { get; set; }
-    public SceneRenderingType RenderingType { get; set; }
     public ICamera GameCamera => _gameCamera;
     public LightShadersParams Light => _light;
-    public ComPtr<ID3D11RasterizerState> RasterizerState { get { return _rasterizerState; } set { _rasterizerState = value; } }
     public IObjet3D[] Content => _allObjects.ToArray();
 
     private readonly List<IObjet3D> _allObjects;
     private readonly List<IUpdatableObjet> _objectsUpdatable;
-    private readonly Dictionary<RenderPassType, List<IDrawableObjet>> _objectsDrawablePerRenderPass;
     private ICamera _gameCamera;
     private ICamera _debugCamera;
 
-    private ComPtr<ID3D11RasterizerState> _rasterizerState;
-
     private LightShadersParams _light;
 
-    private readonly ShadowMap _shadowMap;
-    private readonly ShadowMap _debugDepthMap;
     private readonly FreeCamera _cameraLigth;
-
-    private readonly ScreenQuad _fullScreenQuad;
 
     private const int DistanceLight = 50;
     private bool _disposed;
@@ -44,14 +30,13 @@ internal sealed class Scene : IDisposable
     /// <summary>
     /// Constructeur par défaut
     /// </summary>
-    public Scene(GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, RenderPassFactory renderPassFactory, Size windowSize) : this(graphicDeviceRessourceFactory, renderPassFactory, new FixedCamera(Vector3.Zero), windowSize)
+    public Scene(Size windowSize) : this(new FixedCamera(Vector3.Zero), windowSize)
     { }
 
-    public Scene(GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, RenderPassFactory renderPassFactory, ICamera camera, Size windowSize)
+    public Scene(ICamera camera, Size windowSize)
     {
         _allObjects = new List<IObjet3D>();
         _objectsUpdatable = new List<IUpdatableObjet>();
-        _objectsDrawablePerRenderPass = new Dictionary<RenderPassType, List<IDrawableObjet>>();
         _gameCamera = camera;
 
         _light = new LightShadersParams()
@@ -61,13 +46,6 @@ internal sealed class Scene : IDisposable
             AmbiantColor = new Vector4(0.2f, 0.2f, 0.2f, 1.0f),
             DiffuseColor = new Vector4(1.0f, 1.0f, 1.0f, 1.0f),
         };
-
-        _shadowMap = new ShadowMap(graphicDeviceRessourceFactory, windowSize, name: "SceneShadowMap");
-        _debugDepthMap = new ShadowMap(graphicDeviceRessourceFactory, windowSize, name: "SceneDebugDepthMap");
-
-        _fullScreenQuad = new ScreenQuad(-1, 1, -1, 1, 1, graphicDeviceRessourceFactory, renderPassFactory);
-        _fullScreenQuad.SupportedRenderPasses = [RenderPassType.DeferredShadingLightning];
-        AddObjet(_fullScreenQuad);
 
         float windowWidth = windowSize.Width;
         float windowHeight = windowSize.Height;
@@ -87,19 +65,6 @@ internal sealed class Scene : IDisposable
 
     public void AddObjet(IObjet3D obj)
     {
-        // Render
-        foreach (RenderPassType renderPass in obj.SupportedRenderPasses)
-        {
-            if (_objectsDrawablePerRenderPass.TryGetValue(renderPass, out List<IDrawableObjet>? drawableObjects))
-            {
-                drawableObjects.Add(obj);
-            }
-            else
-            {
-                _objectsDrawablePerRenderPass.Add(renderPass, new List<IDrawableObjet>() { obj });
-            }
-        }
-
         // Update
         if (obj is IUpdatableObjet updatableObjet)
         {
@@ -122,10 +87,16 @@ internal sealed class Scene : IDisposable
         _debugCamera = camera;
     }
 
-    public unsafe void Draw(D3D11GraphicPipeline graphicPipeline)
+    public void Accept(IVisitor visitor)
     {
-        graphicPipeline.RasterizerStage.SetState(_rasterizerState);
+        foreach (IObjet3D obj in _allObjects)
+        {
+            obj.Accept(visitor);
+        }
+    }
 
+    public SceneViewContext GetSceneViewContext()
+    {
         Matrix4x4 matViewProj;
         if (UseDebugCam)
         {
@@ -145,64 +116,13 @@ internal sealed class Scene : IDisposable
         ref readonly Matrix4x4 matProjLight = ref _cameraLigth.FrustrumView.MatProj;
         Matrix4x4 matViewProjLight = matViewLight * matProjLight;
 
-        SceneViewContext sceneContext = new()
+        return new SceneViewContext()
         {
             MatViewProj = matViewProj,
             MatViewProjLight = matViewProjLight,
             Light = _light,
             GameCameraPos = new Vector4(_gameCamera.Position, 1.0f),
-            ShowShadow = ShowShadow,
-            ShadowMap = _shadowMap,
         };
-
-        if (ShowDepthTest)
-        {
-            Draw(RenderPassType.DepthTest, sceneContext);
-        }
-
-        if (RenderingType == SceneRenderingType.Forward)
-        {
-            if (ShowShadow)
-            {
-                //Utiliser la surface de la texture comme surface de rendu
-                graphicPipeline.SetRenderTarget(RenderTargetType.NoRenderTarget);
-                graphicPipeline.OutputMergerStage.SetRenderTarget(0, in Unsafe.NullRef<ComPtr<ID3D11RenderTargetView>>(), _shadowMap.DepthTexture.TextureDepthStencilView);
-                // Effacer le shadow map
-                graphicPipeline.GraphicDevice.ImmediateContext.ClearDepthStencilView(_shadowMap.DepthTexture.TextureDepthStencilView, (uint)(ClearFlag.Depth | ClearFlag.Stencil), 1.0f, 0);
-                // Rasterizer
-                graphicPipeline.RasterizerStage.SetState(graphicPipeline.SolidCullFrontRS);
-
-                Draw(RenderPassType.ShadowMap, sceneContext);
-
-                graphicPipeline.RasterizerStage.SetState(_rasterizerState);
-            }
-            graphicPipeline.SetRenderTarget(RenderTargetType.BackBuffer, clear: true);
-            Draw(RenderPassType.ForwardOpac, sceneContext);
-        }
-        else if (RenderingType == SceneRenderingType.DeferredShading)
-        {
-            graphicPipeline.SetRenderTarget(RenderTargetType.GeometryBuffers, clear: false);
-            Draw(RenderPassType.DeferredShadingGeometry, sceneContext);
-            graphicPipeline.SetRenderTarget(RenderTargetType.BackBuffer, clear: false);
-            graphicPipeline.OutputMergerStage.SetDepthStencilState(graphicPipeline.ReadonlyGreaterDSS);
-            sceneContext.MatViewProj = Matrix4x4.CreateOrthographicOffCenterLeftHanded(-1, 1, -1, 1, 0, 1);
-            Draw(RenderPassType.DeferredShadingLightning, sceneContext);
-            graphicPipeline.OutputMergerStage.SetDefaultDepthStencilState();
-        }
-    }
-
-    private void Draw(RenderPassType renderPassType, SceneViewContext sceneContext)
-    {
-        foreach (IDrawableObjet obj in _objectsDrawablePerRenderPass[renderPassType])
-        {
-            obj.Draw(renderPassType, sceneContext);
-        }
-    }
-
-    public void OnScreenResize(Size newSize)
-    {
-        _shadowMap.Resize(newSize);
-        _debugDepthMap.Resize(newSize);
     }
 
     ~Scene()
@@ -218,7 +138,6 @@ internal sealed class Scene : IDisposable
             {
                 // TODO: dispose managed state (managed objects)
                 _objectsUpdatable.Clear();
-                _objectsDrawablePerRenderPass.Clear();
             }
 
             // TODO: free unmanaged resources (unmanaged objects) and override finalizer

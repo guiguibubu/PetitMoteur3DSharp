@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Diagnostics.CodeAnalysis;
-using System.Runtime.CompilerServices;
 using PetitMoteur3D.Graphics.Buffers;
 using PetitMoteur3D.Graphics.Shaders;
 using Silk.NET.Core.Native;
@@ -8,29 +7,27 @@ using Silk.NET.Direct3D11;
 
 namespace PetitMoteur3D.Graphics.RenderTechniques;
 
-internal abstract class BaseRenderPass : IRenderPass, IDisposable
+internal abstract class BaseRenderPass : IRenderPass, IVisitor
 {
+    public bool IsEnabled { get; set; } = true;
     public string Name { get; init; }
 
-    public VertexShader VertexShader => _vertexShader;
-    public ComPtr<ID3D11GeometryShader> GeometryShader => _geometryShader;
-    public PixelShader? PixelShader => _pixelShader;
-
     protected D3D11GraphicPipeline GraphicPipeline => _graphicPipeline;
-
-    private VertexShader _vertexShader;
-    private ComPtr<ID3D11GeometryShader> _geometryShader;
-    private PixelShader? _pixelShader;
+    protected D3D11GraphicPipelineState GraphicPipelineState => _graphicPipelineState;
 
     private VertexBuffer _vertexBuffer;
     private IndexBuffer _indexBuffer;
     private D3DPrimitiveTopology _topology;
 
     private readonly D3D11GraphicPipeline _graphicPipeline;
+    private readonly D3D11GraphicPipelineState _graphicPipelineState;
+
+    protected RenderArgs RenderArgs  => _renderArgs;
+    private RenderArgs _renderArgs;
 
     private bool _disposedValue;
 
-    public BaseRenderPass(D3D11GraphicPipeline graphicPipeline, string name = "")
+    public BaseRenderPass(D3D11GraphicPipeline graphicPipeline, RenderTarget renderTarget, string name = "")
     {
         if (string.IsNullOrEmpty(name))
         {
@@ -42,7 +39,12 @@ internal abstract class BaseRenderPass : IRenderPass, IDisposable
         }
 
         _graphicPipeline = graphicPipeline;
-        Initialisation(graphicPipeline.GraphicDevice.RessourceFactory);
+        _graphicPipelineState = new D3D11GraphicPipelineState(graphicPipeline, renderTarget);
+        GraphicDeviceRessourceFactory graphicDeviceRessourceFactory = graphicPipeline.GraphicDevice.RessourceFactory;
+        InitPipelineState(_graphicPipelineState, graphicDeviceRessourceFactory.ShaderFactory);
+        Initialisation(graphicDeviceRessourceFactory);
+
+        _renderArgs = new RenderArgs();
 
         _disposedValue = false;
     }
@@ -66,7 +68,7 @@ internal abstract class BaseRenderPass : IRenderPass, IDisposable
     #endregion
 
     #region Input Assembler
-    public void SetPrimitiveTopology()
+    public void BindPrimitiveTopology()
     {
         _graphicPipeline.InputAssemblerStage.SetPrimitiveTopology(_topology);
     }
@@ -76,67 +78,87 @@ internal abstract class BaseRenderPass : IRenderPass, IDisposable
         _vertexBuffer.Bind(_graphicPipeline, idSlot: 0);
     }
 
-    public void SetIndexBuffer()
+    public void BindIndexBuffer()
     {
         _indexBuffer.Bind(_graphicPipeline);
-    }
-
-    public void SetInputLayout()
-    {
-        _vertexShader.BindLayout(_graphicPipeline);
     }
     #endregion
 
     #region Vertex Shader
-    public void SetVertexShader()
-    {
-        _vertexShader.Bind(_graphicPipeline);
-    }
-
-    public abstract void SetVertexShaderConstantBuffers();
+    public abstract void BindVertexShaderConstantBuffers();
     #endregion
 
     #region Geometry Shader
-    public void SetGeometryShader()
-    {
-        _graphicPipeline.GeometryShaderStage.SetShader((ComPtr<ID3D11GeometryShader>)null, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
-    }
     #endregion
 
     #region Pixel Shader
-    public void SetPixelShader()
-    {
-        _pixelShader?.Bind(_graphicPipeline);
-    }
+    public abstract void BindPixelShaderConstantBuffers();
 
-    public abstract void SetPixelShaderConstantBuffers();
+    public abstract void BindPixelShaderRessources();
 
-    public abstract void SetPixelShaderRessources();
-
-    public abstract void SetSamplers();
+    public abstract void BindSamplers();
 
     public abstract void ClearPixelShaderResources();
     #endregion
 
     public void Bind()
     {
-        SetPrimitiveTopology();
+        BindPrimitiveTopology();
         BindVertexBuffer();
-        SetIndexBuffer();
-        SetInputLayout();
-        SetVertexShader();
-        SetVertexShaderConstantBuffers();
-        SetGeometryShader();
-        SetPixelShader();
-        SetPixelShaderConstantBuffers();
-        SetPixelShaderRessources();
-        SetSamplers();
+        BindIndexBuffer();
+        BindVertexShaderConstantBuffers();
+        BindPixelShaderConstantBuffers();
+        BindPixelShaderRessources();
+        BindSamplers();
+
+        _graphicPipelineState.RasterizerState = GetRasterizerState();
+        _graphicPipelineState.DepthStencilState = GetDepthStencilState();
+        _graphicPipelineState.Bind();
     }
 
-    public void DrawIndexed(uint indexCount, uint startIndexLocation, int baseVertexLocation)
+    protected void DrawIndexed(uint indexCount, uint startIndexLocation, int baseVertexLocation)
     {
         _graphicPipeline.DrawIndexed(indexCount, startIndexLocation, baseVertexLocation);
     }
+
+    public void Visit(Scene scene)
+    {
+        Render(scene);
+    }
+
+    public void Visit(BaseObjet3D baseObjet3D)
+    {
+        Render(baseObjet3D);
+    }
+
+    public void Visit(SubObjet3D subObjet3D)
+    {
+        Render(subObjet3D);
+    }
+
+    public void Render(Scene scene)
+    {
+        UpdateSceneContext(scene.GetSceneViewContext());
+        RenderCoreImpl(scene);
+    }
+
+    public void Render(BaseObjet3D baseObjet3D)
+    {
+        UpdatePrimitiveTopology(baseObjet3D.Topology);
+        UpdateVertexBuffer(baseObjet3D);
+        UpdateIndexBuffer(baseObjet3D.IndexBuffer);
+        UpdateObjectContext(baseObjet3D.GetViewContext());
+    }
+
+    public void Render(SubObjet3D subObjet3D)
+    {
+        UpdatePerMeshRessourcesBuffers(subObjet3D);
+        Bind();
+        DrawIndexed(_indexBuffer.Buffer.NbElements, 0, 0);
+        ClearPixelShaderResources();
+        _graphicPipeline.OutputMergerStage.UnbindRenderTargets();
+    }
+
     #endregion
 
     #region Protected methods
@@ -147,10 +169,34 @@ internal abstract class BaseRenderPass : IRenderPass, IDisposable
     protected abstract void InitBuffers(GraphicBufferFactory bufferFactory);
 
     /// <summary>
+    /// Update Vertex Buffer from Mesh
+    /// </summary>
+    /// <param name="baseObjet3D"></param>
+    protected abstract void UpdateVertexBuffer(BaseObjet3D baseObjet3D);
+
+    /// <summary>
+    /// Update constant buffers from Mesh
+    /// </summary>
+    /// <param name="subObjet3D"></param>
+    protected abstract void UpdatePerMeshRessourcesBuffers(SubObjet3D subObjet3D);
+
+    /// <summary>
     /// Get vertex input layout description
     /// </summary>
     /// <returns></returns>
     protected abstract InputLayoutDesc GetInputLayoutDesc();
+
+    /// <summary>
+    /// Get rasterizer state
+    /// </summary>
+    /// <returns></returns>
+    protected abstract ComPtr<ID3D11RasterizerState> GetRasterizerState();
+
+    /// <summary>
+    /// Get depth stencil state
+    /// </summary>
+    /// <returns></returns>
+    protected abstract ComPtr<ID3D11DepthStencilState> GetDepthStencilState();
 
     /// <summary>
     /// VertexShader file
@@ -167,6 +213,34 @@ internal abstract class BaseRenderPass : IRenderPass, IDisposable
     /// Init Impl
     /// </summary>
     protected abstract void InitialisationImpl(GraphicDeviceRessourceFactory graphicDeviceRessourceFactory);
+
+    /// <summary>
+    /// Update scene view context
+    /// </summary>
+    /// <param name="sceneContext"></param>
+    protected virtual void UpdateSceneContext(SceneViewContext sceneContext)
+    {
+        _renderArgs.SceneContext = sceneContext;
+    }
+
+    /// <summary>
+    /// Update object view context
+    /// </summary>
+    /// <param name="objectContext"></param>
+    protected virtual void UpdateObjectContext(ObjectViewContext objectContext)
+    {
+        _renderArgs.ObjectContext = objectContext;
+    }
+
+    /// <summary>
+    /// Render scene core impl
+    /// </summary>
+    /// <remarks>Called after <see cref="UpdateSceneContext(SceneViewContext)"/></remarks>
+    /// <param name="scene"></param>
+    protected virtual void RenderCoreImpl(Scene scene)
+    {
+        scene.Accept(this);
+    }
     #endregion
 
     #region Private methods
@@ -174,36 +248,33 @@ internal abstract class BaseRenderPass : IRenderPass, IDisposable
     private void Initialisation(GraphicDeviceRessourceFactory graphicDeviceRessourceFactory)
     {
         InitBuffers(graphicDeviceRessourceFactory.BufferFactory);
-        InitShaders(graphicDeviceRessourceFactory.ShaderFactory);
         InitialisationImpl(graphicDeviceRessourceFactory);
     }
 
-    private unsafe void InitShaders(ShaderFactory shaderFactory)
+    private unsafe void InitPipelineState([DisallowNull] D3D11GraphicPipelineState graphicPipeline, ShaderFactory shaderFactory)
     {
-        InitVertexShader(shaderFactory);
-        InitGeometryShader(shaderFactory);
-        InitPixelShader(shaderFactory);
+        _graphicPipelineState.VertexShader = InitVertexShader(shaderFactory);
+        _graphicPipelineState.GeometryShader = InitGeometryShader(shaderFactory);
+        _graphicPipelineState.PixelShader = InitPixelShader(shaderFactory);
     }
 
     /// <summary>
     /// Compilation et chargement du vertex shader
     /// </summary>
-    /// <param name="device"></param>
-    /// <param name="compiler"></param>
-    private unsafe void InitVertexShader(ShaderFactory shaderFactory)
+    /// <param name="shaderFactory"></param>
+    private VertexShader InitVertexShader(ShaderFactory shaderFactory)
     {
         ShaderCodeFile shaderFile = InitVertexShaderCodeFile();
-        _vertexShader = shaderFactory.CreateVertexShader(shaderFile, GetInputLayoutDesc());
+        return shaderFactory.CreateVertexShader(shaderFile, GetInputLayoutDesc());
     }
 
     /// <summary>
     /// Compilation et chargement du geometry shader
     /// </summary>
-    /// <param name="device"></param>
-    /// <param name="compiler"></param>
-    private unsafe void InitGeometryShader(ShaderFactory shaderFactory)
+    /// <param name="shaderFactory"></param>
+    private ComPtr<ID3D11GeometryShader> InitGeometryShader(ShaderFactory shaderFactory)
     {
-        _geometryShader = (ComPtr<ID3D11GeometryShader>)null;
+        return (ComPtr<ID3D11GeometryShader>)null;
     }
 
     /// <summary>
@@ -211,16 +282,16 @@ internal abstract class BaseRenderPass : IRenderPass, IDisposable
     /// </summary>
     /// <param name="device"></param>
     /// <param name="compiler"></param>
-    private unsafe void InitPixelShader(ShaderFactory shaderFactory)
+    private PixelShader? InitPixelShader(ShaderFactory shaderFactory)
     {
         ShaderCodeFile? shaderFile = InitPixelShaderCodeFile();
         if (shaderFile is null)
         {
-            _pixelShader = null;
+            return null;
         }
         else
         {
-            _pixelShader = shaderFactory.CreatePixelShader(shaderFile);
+            return shaderFactory.CreatePixelShader(shaderFile);
         }
     }
 
@@ -237,8 +308,6 @@ internal abstract class BaseRenderPass : IRenderPass, IDisposable
 
             // TODO: free unmanaged resources (unmanaged objects) and override finalizer
             // TODO: set large fields to null
-            _vertexShader.Dispose();
-            _pixelShader?.Dispose();
 
             _disposedValue = true;
         }

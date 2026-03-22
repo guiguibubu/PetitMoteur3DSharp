@@ -12,13 +12,13 @@ internal sealed class GraphicDeviceRessourceFactory : IDisposable
 {
     public GraphicBufferFactory BufferFactory => _bufferFactory;
     public ShaderFactory ShaderFactory => _shaderFactory;
+    public D3D11SwapChainFactory SwapChainFactory => _swapChainFactory;
     public TextureManager TextureManager => _textureManager;
 
     private readonly GraphicBufferFactory _bufferFactory;
     private readonly ShaderFactory _shaderFactory;
+    private readonly D3D11SwapChainFactory _swapChainFactory;
     private readonly TextureManager _textureManager;
-    private readonly ComPtr<ID3D11Device> _device;
-    private readonly bool _dxVk;
     private bool _disposed;
 
     public GraphicDeviceRessourceFactory(D3D11GraphicDevice graphicDevice)
@@ -29,59 +29,9 @@ internal sealed class GraphicDeviceRessourceFactory : IDisposable
     {
         _bufferFactory = bufferFactory;
         _shaderFactory = shaderFactory;
+        _swapChainFactory = new D3D11SwapChainFactory(graphicDevice, textureManager);
         _textureManager = textureManager;
-        _device = graphicDevice.Device;
-        _dxVk = graphicDevice.DxVk;
         _disposed = false;
-    }
-
-    public ComPtr<IDXGISwapChain1> CreateSwapChainForHwnd(IntPtr windowPtr, in SwapChainDesc1 swapChainDesc, in SwapChainFullscreenDesc swapChainFullscreenDesc, ref IDXGIOutput pRestrictToOutput)
-    {
-        // Create our DXGI factory to allow us to create a swapchain. 
-#pragma warning disable CS0618 // Type or member is obsolete
-        using DXGI dxgi = DXGI.GetApi(DXSwapchainProvider.Win32, _dxVk);
-#pragma warning restore CS0618 // Type or member is obsolete
-        using ComPtr<IDXGIFactory2> factory = dxgi.CreateDXGIFactory<IDXGIFactory2>();
-
-        ComPtr<IDXGISwapChain1> swapChain = default;
-        SilkMarshal.ThrowHResult
-        (
-            factory.CreateSwapChainForHwnd
-            (
-                _device,
-                windowPtr,
-                in swapChainDesc,
-                in swapChainFullscreenDesc,
-                ref pRestrictToOutput,
-                ref swapChain
-            )
-        );
-
-        return swapChain;
-    }
-
-    public ComPtr<IDXGISwapChain1> CreateSwapChainForComposition(in SwapChainDesc1 swapChainDesc, ref IDXGIOutput pRestrictToOutputs)
-    {
-        // Create our DXGI factory to allow us to create a swapchain. 
-#pragma warning disable CS0618 // Type or member is obsolete
-        using DXGI dxgi = DXGI.GetApi(DXSwapchainProvider.Win32, _dxVk);
-#pragma warning restore CS0618 // Type or member is obsolete
-        using ComPtr<IDXGIFactory2> factory = dxgi.CreateDXGIFactory<IDXGIFactory2>();
-
-        ComPtr<IDXGISwapChain1> swapChain = default;
-
-        SilkMarshal.ThrowHResult
-        (
-            factory.CreateSwapChainForComposition
-            (
-                _device,
-                in swapChainDesc,
-                ref Unsafe.NullRef<IDXGIOutput>(),
-                ref swapChain
-            )
-        );
-
-        return swapChain;
     }
 
     public TextureBuilder CreateBuilder(Texture2DDesc textureDesc)

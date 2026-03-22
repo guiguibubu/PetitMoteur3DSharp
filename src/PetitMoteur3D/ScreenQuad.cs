@@ -25,8 +25,8 @@ internal sealed class ScreenQuad : BaseObjet3D
 
     protected override bool SupportShadow => false;
 
-    public ScreenQuad(float left, float right, float bottom, float top, float z,  GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, RenderPassFactory shaderFactory)
-        : base(graphicDeviceRessourceFactory, shaderFactory)
+    public ScreenQuad(float left, float right, float bottom, float top, float z, GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, string name = "")
+        : base(graphicDeviceRessourceFactory, name)
     {
         _vertices = new Vector3[]
         {

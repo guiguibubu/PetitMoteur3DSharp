@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using PetitMoteur3D.Core.Memory;
 using PetitMoteur3D.Graphics.Buffers;
 using PetitMoteur3D.Graphics.Shaders;
+using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
 using ShaderType = PetitMoteur3D.Graphics.Shaders.ShaderType;
 
@@ -17,8 +18,8 @@ internal sealed class ShadowMapRenderPass : BaseRenderPass, IDisposable
 
     private bool _disposedValue;
 
-    public ShadowMapRenderPass(D3D11GraphicPipeline graphicPipeline, string name = "")
-        : base(graphicPipeline, name)
+    public ShadowMapRenderPass(D3D11GraphicPipeline graphicPipeline, RenderTarget renderTarget, string name = "")
+        : base(graphicPipeline, renderTarget, name)
     {
         _disposedValue = false;
     }
@@ -32,20 +33,20 @@ internal sealed class ShadowMapRenderPass : BaseRenderPass, IDisposable
     #endregion
 
     #region Vertex Shader
-    public override void SetVertexShaderConstantBuffers()
+    public override void BindVertexShaderConstantBuffers()
     {
         _vertexShaderConstantBuffer.Bind(GraphicPipeline, ShaderType.VertexShader, idSlot: 0);
     }
     #endregion
 
     #region Pixel Shader
-    public override void SetPixelShaderConstantBuffers()
+    public override void BindPixelShaderConstantBuffers()
     {
         _vertexShaderConstantBuffer.Bind(GraphicPipeline, ShaderType.VertexShader, idSlot: 0);
     }
-    public override void SetPixelShaderRessources() { }
+    public override void BindPixelShaderRessources() { }
 
-    public override void SetSamplers() { }
+    public override void BindSamplers() { }
 
     public override void ClearPixelShaderResources() { }
     #endregion
@@ -59,10 +60,40 @@ internal sealed class ShadowMapRenderPass : BaseRenderPass, IDisposable
         _vertexShaderConstantBuffer = bufferFactory.CreateConstantBuffer<VertexShaderConstantBufferParams>(Usage.Default, CpuAccessFlag.None, $"{Name}_VextexShaderConstantBuffer");
     }
 
+    protected override void UpdateVertexBuffer(BaseObjet3D baseObjet3D)
+    {
+        UpdateVertexBuffer(baseObjet3D.VertexBuffer);
+    }
+
+    protected override void UpdatePerMeshRessourcesBuffers(SubObjet3D subObjet3D)
+    {
+        SceneViewContext sceneContext = RenderArgs.SceneContext;
+        Matrix4x4 matViewProj = sceneContext.MatViewProj;
+        Matrix4x4 matViewProjLight = sceneContext.MatViewProjLight;
+        Matrix4x4 matWorld = RenderArgs.ObjectContext.MatWorld;
+        // Initialiser et sélectionner les « constantes » des shaders
+        UpdateVertexShaderConstantBuffer(new ShadowMapRenderPass.VertexShaderConstantBufferParams()
+        {
+            matWorldViewProj = Matrix4x4.Transpose(subObjet3D.Transformation * matWorld * matViewProjLight)
+        });
+    }
+
     /// <inheritdoc/>
     protected override InputLayoutDesc GetInputLayoutDesc()
     {
         return SommetPosition.InputLayoutDesc;
+    }
+
+    /// <inheritdoc/>
+    protected override ComPtr<ID3D11RasterizerState> GetRasterizerState()
+    {
+        return GraphicPipeline.SolidCullFrontRS;
+    }
+
+    /// <inheritdoc/>
+    protected override ComPtr<ID3D11DepthStencilState> GetDepthStencilState()
+    {
+        return GraphicPipeline.DefaultDSS;
     }
 
     /// <inheritdoc/>
