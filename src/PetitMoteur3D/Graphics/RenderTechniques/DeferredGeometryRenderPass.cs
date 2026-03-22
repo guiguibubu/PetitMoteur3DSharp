@@ -25,8 +25,8 @@ internal sealed class DeferredGeometryRenderPass : BaseRenderPass, IDisposable
 
     private bool _disposedValue;
 
-    public DeferredGeometryRenderPass(D3D11GraphicPipeline graphicPipeline, string name = "")
-        : base(graphicPipeline, name)
+    public DeferredGeometryRenderPass(D3D11GraphicPipeline graphicPipeline, RenderTarget renderTarget, string name = "")
+        : base(graphicPipeline, renderTarget, name)
     {
         _disposedValue = false;
     }
@@ -60,7 +60,7 @@ internal sealed class DeferredGeometryRenderPass : BaseRenderPass, IDisposable
     #endregion
 
     #region Vertex Shader
-    public override void SetVertexShaderConstantBuffers()
+    public override void BindVertexShaderConstantBuffers()
     {
         _sceneConstantBuffer.Bind(GraphicPipeline, ShaderType.VertexShader, idSlot: 0);
         _vertexObjectConstantBuffer.Bind(GraphicPipeline, ShaderType.VertexShader, idSlot: 1);
@@ -68,12 +68,12 @@ internal sealed class DeferredGeometryRenderPass : BaseRenderPass, IDisposable
     #endregion
 
     #region Pixel Shader
-    public override void SetPixelShaderConstantBuffers()
+    public override void BindPixelShaderConstantBuffers()
     {
         _pixelObjectConstantBuffer.Bind(GraphicPipeline, ShaderType.PixelShader, idSlot: 0);
     }
 
-    public override unsafe void SetPixelShaderRessources()
+    public override unsafe void BindPixelShaderRessources()
     {
         // Activation de la texture
         if (_textureD3D.Handle is not null)
@@ -94,7 +94,7 @@ internal sealed class DeferredGeometryRenderPass : BaseRenderPass, IDisposable
         }
     }
 
-    public override void SetSamplers()
+    public override void BindSamplers()
     {
         GraphicPipeline.PixelShaderStage.SetSamplers(0, 1, in _sampleState);
     }
@@ -119,10 +119,70 @@ internal sealed class DeferredGeometryRenderPass : BaseRenderPass, IDisposable
         _vertexObjectConstantBuffer = bufferFactory.CreateConstantBuffer<VertexObjectConstantBufferParams>(Usage.Default, CpuAccessFlag.None, $"{Name}_VertexObjectConstantBuffer");
     }
 
+    protected override void UpdateVertexBuffer(BaseObjet3D baseObjet3D)
+    {
+        UpdateVertexBuffer(baseObjet3D.VertexBuffer);
+    }
+
+    protected override void UpdatePerMeshRessourcesBuffers(SubObjet3D subObjet3D)
+    {
+        SceneViewContext sceneContext = RenderArgs.SceneContext;
+        Matrix4x4 matViewProj = sceneContext.MatViewProj;
+        Matrix4x4 matWorld = RenderArgs.ObjectContext.MatWorld;
+        UpdateSceneConstantBuffer(new DeferredGeometryRenderPass.SceneConstantBufferParams()
+        {
+            LightParams = new DeferredGeometryRenderPass.LightParams()
+            {
+                Position = sceneContext.Light.Position,
+                Direction = sceneContext.Light.Direction,
+                AmbiantColor = sceneContext.Light.AmbiantColor,
+                DiffuseColor = sceneContext.Light.DiffuseColor,
+                Enable = Convert.ToInt32(sceneContext.ShowShadow),
+            },
+            CameraPos = sceneContext.GameCameraPos
+        });
+
+        Matrix4x4 matrixWorld = subObjet3D.Transformation * matWorld;
+        UpdateVertexObjectConstantBuffer(new DeferredGeometryRenderPass.VertexObjectConstantBufferParams()
+        {
+            matWorldViewProj = Matrix4x4.Transpose(matrixWorld * matViewProj),
+            matWorld = Matrix4x4.Transpose(matrixWorld),
+        });
+
+        UpdatePixelObjectConstantBuffer(new DeferredGeometryRenderPass.PixelObjectConstantBufferParams()
+        {
+            Material = new DeferredGeometryRenderPass.MaterialParams()
+            {
+                AmbiantColor = subObjet3D.Material.Ambient,
+                DiffuseColor = subObjet3D.Material.Diffuse,
+                SpecularColor = subObjet3D.Material.Specular,
+                SpecularPower = subObjet3D.Material.SpecularPower,
+                HasDiffuseTexture = Convert.ToInt32(subObjet3D.Material.DiffuseTexture is not null),
+                HasNormalTexture = Convert.ToInt32(subObjet3D.Material.NormalTexture is not null),
+            }
+        });
+
+        // Activation de la texture
+        UpdateTexture(subObjet3D.Material.DiffuseTexture?.ShaderRessourceView ?? new ComPtr<ID3D11ShaderResourceView>());
+        UpdateNormalMap(subObjet3D.Material.NormalTexture?.ShaderRessourceView ?? new ComPtr<ID3D11ShaderResourceView>());
+    }
+
     /// <inheritdoc/>
     protected sealed override InputLayoutDesc GetInputLayoutDesc()
     {
         return Sommet.InputLayoutDesc;
+    }
+
+    /// <inheritdoc/>
+    protected override ComPtr<ID3D11RasterizerState> GetRasterizerState()
+    {
+        return GraphicPipeline.SolidCullBackRS;
+    }
+
+    /// <inheritdoc/>
+    protected override ComPtr<ID3D11DepthStencilState> GetDepthStencilState()
+    {
+        return GraphicPipeline.DefaultDSS;
     }
 
     /// <inheritdoc/>

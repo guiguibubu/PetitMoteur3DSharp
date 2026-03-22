@@ -11,7 +11,7 @@ using Silk.NET.Direct3D11;
 
 namespace PetitMoteur3D;
 
-internal sealed class Scene : IDisposable
+internal sealed class Scene : IVisitable, IDisposable
 {
     public bool ShowDepthTest { get; set; }
     public bool ShowShadow { get; set; }
@@ -44,10 +44,10 @@ internal sealed class Scene : IDisposable
     /// <summary>
     /// Constructeur par défaut
     /// </summary>
-    public Scene(GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, RenderPassFactory renderPassFactory, Size windowSize) : this(graphicDeviceRessourceFactory, renderPassFactory, new FixedCamera(Vector3.Zero), windowSize)
+    public Scene(GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, Size windowSize) : this(graphicDeviceRessourceFactory, new FixedCamera(Vector3.Zero), windowSize)
     { }
 
-    public Scene(GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, RenderPassFactory renderPassFactory, ICamera camera, Size windowSize)
+    public Scene(GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, ICamera camera, Size windowSize)
     {
         _allObjects = new List<IObjet3D>();
         _objectsUpdatable = new List<IUpdatableObjet>();
@@ -65,9 +65,9 @@ internal sealed class Scene : IDisposable
         _shadowMap = new ShadowMap(graphicDeviceRessourceFactory, windowSize, name: "SceneShadowMap");
         _debugDepthMap = new ShadowMap(graphicDeviceRessourceFactory, windowSize, name: "SceneDebugDepthMap");
 
-        _fullScreenQuad = new ScreenQuad(-1, 1, -1, 1, 1, graphicDeviceRessourceFactory, renderPassFactory);
+        _fullScreenQuad = new ScreenQuad(-1, 1, -1, 1, 1, graphicDeviceRessourceFactory);
         _fullScreenQuad.SupportedRenderPasses = [RenderPassType.DeferredShadingLightning];
-        AddObjet(_fullScreenQuad);
+        //AddObjet(_fullScreenQuad);
 
         float windowWidth = windowSize.Width;
         float windowHeight = windowSize.Height;
@@ -122,10 +122,16 @@ internal sealed class Scene : IDisposable
         _debugCamera = camera;
     }
 
-    public unsafe void Draw(D3D11GraphicPipeline graphicPipeline)
+    public void Accept(IVisitor visitor)
     {
-        graphicPipeline.RasterizerStage.SetState(_rasterizerState);
+        foreach (IObjet3D obj in _allObjects)
+        {
+            obj.Accept(visitor);
+        }
+    }
 
+    public SceneViewContext GetSceneViewContext()
+    {
         Matrix4x4 matViewProj;
         if (UseDebugCam)
         {
@@ -145,7 +151,7 @@ internal sealed class Scene : IDisposable
         ref readonly Matrix4x4 matProjLight = ref _cameraLigth.FrustrumView.MatProj;
         Matrix4x4 matViewProjLight = matViewLight * matProjLight;
 
-        SceneViewContext sceneContext = new()
+        return new SceneViewContext()
         {
             MatViewProj = matViewProj,
             MatViewProjLight = matViewProjLight,
@@ -154,50 +160,57 @@ internal sealed class Scene : IDisposable
             ShowShadow = ShowShadow,
             ShadowMap = _shadowMap,
         };
-
-        if (ShowDepthTest)
-        {
-            Draw(RenderPassType.DepthTest, sceneContext);
-        }
-
-        if (RenderingType == SceneRenderingType.Forward)
-        {
-            if (ShowShadow)
-            {
-                //Utiliser la surface de la texture comme surface de rendu
-                graphicPipeline.SetRenderTarget(RenderTargetType.NoRenderTarget);
-                graphicPipeline.OutputMergerStage.SetRenderTarget(0, in Unsafe.NullRef<ComPtr<ID3D11RenderTargetView>>(), _shadowMap.DepthTexture.TextureDepthStencilView);
-                // Effacer le shadow map
-                graphicPipeline.GraphicDevice.ImmediateContext.ClearDepthStencilView(_shadowMap.DepthTexture.TextureDepthStencilView, (uint)(ClearFlag.Depth | ClearFlag.Stencil), 1.0f, 0);
-                // Rasterizer
-                graphicPipeline.RasterizerStage.SetState(graphicPipeline.SolidCullFrontRS);
-
-                Draw(RenderPassType.ShadowMap, sceneContext);
-
-                graphicPipeline.RasterizerStage.SetState(_rasterizerState);
-            }
-            graphicPipeline.SetRenderTarget(RenderTargetType.BackBuffer, clear: true);
-            Draw(RenderPassType.ForwardOpac, sceneContext);
-        }
-        else if (RenderingType == SceneRenderingType.DeferredShading)
-        {
-            graphicPipeline.SetRenderTarget(RenderTargetType.GeometryBuffers, clear: false);
-            Draw(RenderPassType.DeferredShadingGeometry, sceneContext);
-            graphicPipeline.SetRenderTarget(RenderTargetType.BackBuffer, clear: false);
-            graphicPipeline.OutputMergerStage.SetDepthStencilState(graphicPipeline.ReadonlyGreaterDSS);
-            sceneContext.MatViewProj = Matrix4x4.CreateOrthographicOffCenterLeftHanded(-1, 1, -1, 1, 0, 1);
-            Draw(RenderPassType.DeferredShadingLightning, sceneContext);
-            graphicPipeline.OutputMergerStage.SetDefaultDepthStencilState();
-        }
     }
 
-    private void Draw(RenderPassType renderPassType, SceneViewContext sceneContext)
-    {
-        foreach (IDrawableObjet obj in _objectsDrawablePerRenderPass[renderPassType])
-        {
-            obj.Draw(renderPassType, sceneContext);
-        }
-    }
+    //public unsafe void Draw(D3D11GraphicPipeline graphicPipeline)
+    //{
+    //    graphicPipeline.RasterizerStage.SetState(_rasterizerState);
+
+    //    SceneViewContext sceneContext = GetSceneViewContext();
+
+    //    if (ShowDepthTest)
+    //    {
+    //        Draw(RenderPassType.DepthTest, sceneContext);
+    //    }
+
+    //    if (RenderingType == SceneRenderingType.Forward)
+    //    {
+    //        if (ShowShadow)
+    //        {
+    //            //Utiliser la surface de la texture comme surface de rendu
+    //            graphicPipeline.SetRenderTarget(RenderTargetType.NoRenderTarget);
+    //            graphicPipeline.OutputMergerStage.SetRenderTarget(0, in Unsafe.NullRef<ComPtr<ID3D11RenderTargetView>>(), _shadowMap.DepthTexture.DepthStencilView);
+    //            // Effacer le shadow map
+    //            graphicPipeline.GraphicDevice.ImmediateContext.ClearDepthStencilView(_shadowMap.DepthTexture.DepthStencilView, (uint)(ClearFlag.Depth | ClearFlag.Stencil), 1.0f, 0);
+    //            // Rasterizer
+    //            graphicPipeline.RasterizerStage.SetState(graphicPipeline.SolidCullFrontRS);
+
+    //            Draw(RenderPassType.ShadowMap, sceneContext);
+
+    //            graphicPipeline.RasterizerStage.SetState(_rasterizerState);
+    //        }
+    //        graphicPipeline.SetRenderTarget(RenderTargetType.BackBuffer, clear: true);
+    //        Draw(RenderPassType.ForwardOpac, sceneContext);
+    //    }
+    //    else if (RenderingType == SceneRenderingType.DeferredShading)
+    //    {
+    //        graphicPipeline.SetRenderTarget(RenderTargetType.GeometryBuffers, clear: false);
+    //        Draw(RenderPassType.DeferredShadingGeometry, sceneContext);
+    //        graphicPipeline.SetRenderTarget(RenderTargetType.BackBuffer, clear: false);
+    //        graphicPipeline.OutputMergerStage.SetDepthStencilState(graphicPipeline.ReadonlyGreaterDSS);
+    //        sceneContext.MatViewProj = Matrix4x4.CreateOrthographicOffCenterLeftHanded(-1, 1, -1, 1, 0, 1);
+    //        Draw(RenderPassType.DeferredShadingLightning, sceneContext);
+    //        graphicPipeline.OutputMergerStage.SetDefaultDepthStencilState();
+    //    }
+    //}
+
+    //private void Draw(RenderPassType renderPassType, SceneViewContext sceneContext)
+    //{
+    //    foreach (IDrawableObjet obj in _objectsDrawablePerRenderPass[renderPassType])
+    //    {
+    //        obj.Draw(renderPassType, sceneContext);
+    //    }
+    //}
 
     public void OnScreenResize(Size newSize)
     {

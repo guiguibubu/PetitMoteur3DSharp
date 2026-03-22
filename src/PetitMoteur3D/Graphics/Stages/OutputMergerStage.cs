@@ -9,7 +9,10 @@ namespace PetitMoteur3D.Graphics.Stages;
 
 internal sealed class OutputMergerStage
 {
+    public const uint NbRenderTargets = Windows.Win32.PInvoke.D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT;
+    
     private readonly ComPtr<ID3D11DeviceContext> _deviceContext;
+
     public OutputMergerStage(ComPtr<ID3D11DeviceContext> deviceContext) { _deviceContext = deviceContext; }
 
     public void GetBlendState(ref ComPtr<ID3D11BlendState> ppBlendState, ref float BlendFactor, ref uint pSampleMask)
@@ -46,10 +49,10 @@ internal sealed class OutputMergerStage
     {
         _deviceContext.OMSetRenderTargets(0, (ID3D11RenderTargetView**)null, (ID3D11DepthStencilView*)null);
 
-        ComPtr<ID3D11RenderTargetView>[] renderTargetsAfter = new ComPtr<ID3D11RenderTargetView>[Windows.Win32.PInvoke.D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT];
+        ComPtr<ID3D11RenderTargetView>[] renderTargetsAfter = new ComPtr<ID3D11RenderTargetView>[NbRenderTargets];
         GCHandle handle = GCHandle.Alloc(renderTargetsAfter, GCHandleType.Pinned);
         IntPtr address = handle.AddrOfPinnedObject();
-        _deviceContext.OMGetRenderTargets(Windows.Win32.PInvoke.D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT, (ID3D11RenderTargetView**)address, (ID3D11DepthStencilView**) null);
+        _deviceContext.OMGetRenderTargets(NbRenderTargets, (ID3D11RenderTargetView**)address, (ID3D11DepthStencilView**) null);
         handle.Free();
 
         Debug.Assert(!renderTargetsAfter.Any(p => p.Handle != null));

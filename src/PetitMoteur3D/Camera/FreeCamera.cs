@@ -2,6 +2,7 @@ using System;
 using System.Drawing;
 using System.Numerics;
 using PetitMoteur3D.Core.Math;
+using PetitMoteur3D.Graphics;
 using PetitMoteur3D.Input;
 using PetitMoteur3D.Window;
 
@@ -275,5 +276,10 @@ internal sealed class FreeCamera : ICamera, IRotationObjet
     public void LookTo(Vector3 direction)
     {
         LookTo(in direction);
+    }
+
+    public void Accept(IVisitor visitor)
+    {
+        throw new NotImplementedException();
     }
 }

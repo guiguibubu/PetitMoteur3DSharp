@@ -3,7 +3,7 @@ using PetitMoteur3D.Graphics;
 
 namespace PetitMoteur3D;
 
-internal ref struct SceneViewContext
+internal struct SceneViewContext
 {
     public bool ShowShadow { get; set; }
     public bool UseDebugCam { get; set; }

@@ -20,8 +20,8 @@ internal sealed class Bloc : BaseObjet3D
 
     protected override bool SupportShadow => true;
 
-    public unsafe Bloc(float dx, float dy, float dz, GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, RenderPassFactory shaderFactory)
-        : base(graphicDeviceRessourceFactory, shaderFactory)
+    public unsafe Bloc(float dx, float dy, float dz, GraphicDeviceRessourceFactory graphicDeviceRessourceFactory)
+        : base(graphicDeviceRessourceFactory)
     {
         _vertices = new Vector3[]
         {

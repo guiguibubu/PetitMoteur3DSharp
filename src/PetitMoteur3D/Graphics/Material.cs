@@ -18,7 +18,7 @@ internal class Material : IDisposable
     private bool _disposed;
 
     public Material()
-    : this(Vector4.One, Vector4.One, Vector4.One, Vector4.One, Vector4.One, 64f, transparent: false)
+    : this(Vector4.One, Vector4.One, Vector4.One, Vector4.Zero, Vector4.Zero, 64f, transparent: false)
     { }
 
     public Material(Vector4 ambient,

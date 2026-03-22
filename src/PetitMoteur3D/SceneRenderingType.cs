@@ -3,5 +3,7 @@
 public enum SceneRenderingType
 {
     Forward,
-    DeferredShading
+    DeferredShading,
+    DepthTest,
+    Wireframe
 }
