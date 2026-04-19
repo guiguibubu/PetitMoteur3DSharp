@@ -3,7 +3,6 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.Runtime.CompilerServices;
-using PetitMoteur3D.Graphics.RenderTechniques;
 using PetitMoteur3D.Graphics.Stages;
 using PetitMoteur3D.Window;
 using Silk.NET.Core.Native;
@@ -218,9 +217,9 @@ internal class D3D11GraphicPipeline : IDisposable
         _backgroundColour[3] = a;
     }
 
-    public void DrawIndexed(uint IndexCount, uint StartIndexLocation, int BaseVertexLocation)
+    public void DrawIndexed(uint indexCount, uint startIndexLocation, int baseVertexLocation)
     {
-        _deviceContext.DrawIndexed(IndexCount, StartIndexLocation, BaseVertexLocation);
+        _deviceContext.DrawIndexed(indexCount, startIndexLocation, baseVertexLocation);
     }
 
     public void ResetViewport()

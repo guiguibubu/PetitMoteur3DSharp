@@ -25,6 +25,7 @@ public class Engine
     private readonly IInputContext? _inputContext;
 
     private ImGuiController _imGuiController;
+    private RenderTarget _imGuiRenderTarget;
     private D3D11GraphicDevice _graphicDevice;
     private D3D11GraphicPipeline _graphicPipeline;
 
@@ -105,6 +106,7 @@ public class Engine
         _inputContext = conf.InputContext;
 
         _imGuiController = default!;
+        _imGuiRenderTarget = default!;
         _graphicDevice = default!;
         _graphicPipeline = default!;
         _wireFrameRenderPass = default!;
@@ -440,7 +442,6 @@ public class Engine
                             ImGui.TextUnformatted("Bonjour !");
                             ImGui.End();
                         }
-                        _imGuiController.Render(false);
 
                         if (backGroundColorChanged)
                         {
@@ -452,10 +453,10 @@ public class Engine
                             GC.Collect();
                         }
                     }
-                    else
-                    {
-                        _imGuiController.Render(false);
-                    }
+
+                    _imGuiRenderTarget.Bind(_graphicPipeline);
+                    _imGuiController.Render(false);
+                    _graphicPipeline.OutputMergerStage.UnbindRenderTargets();
                 }
             }
 
@@ -520,8 +521,8 @@ public class Engine
 
         RenderTarget forwardRenderTarget = new(forwardBuffer, _defaultDepthTexture);
         RenderTarget shadowMapRenderTarget = new(Array.Empty<Texture?>(), _shadowMapTexture.DepthTexture);
-        ClearRenderTargetPass forwardClearRenderTargetPass = new ClearRenderTargetPass(_graphicPipeline, forwardRenderTarget, ClearRenderTargetPass.ClearOption.RenderTargetAndDepthStencil,"ForwardClearRenderTargetPass");
-        _shadowMapClearRenderTargetPass = new ClearRenderTargetPass(_graphicPipeline, shadowMapRenderTarget, ClearRenderTargetPass.ClearOption.DepthStencil,"ShadowMapClearRenderTargetPass");
+        ClearRenderTargetPass forwardClearRenderTargetPass = new ClearRenderTargetPass(_graphicPipeline, forwardRenderTarget, ClearRenderTargetPass.ClearOption.RenderTargetAndDepthStencil, "ForwardClearRenderTargetPass");
+        _shadowMapClearRenderTargetPass = new ClearRenderTargetPass(_graphicPipeline, shadowMapRenderTarget, ClearRenderTargetPass.ClearOption.DepthStencil, "ShadowMapClearRenderTargetPass");
         _forwardOpaqueRenderPass = new ForwardOpaqueRenderPass(_graphicPipeline, forwardRenderTarget, _shadowMapTexture.DepthTexture, "ForwardOpaqueRenderPass");
         _shadowMapRenderPass = new ShadowMapRenderPass(_graphicPipeline, shadowMapRenderTarget, "ShadowMapRenderPass");
         _forwardRenderingTechnique = new RenderTechnique(_shadowMapClearRenderTargetPass, _shadowMapRenderPass, forwardClearRenderTargetPass, _forwardOpaqueRenderPass);
@@ -539,6 +540,8 @@ public class Engine
         ClearRenderTargetPass depthTestClearRenderTargetPass = new ClearRenderTargetPass(_graphicPipeline, depthTestRenderTarget, ClearRenderTargetPass.ClearOption.RenderTargetAndDepthStencil, "DepthTestClearRenderTargetPass");
         _depthTestRenderPass = new DepthTestRenderPass(_graphicPipeline, depthTestRenderTarget, "DepthTestRenderPass");
         _depthTestTechnique = new RenderTechnique(depthTestClearRenderTargetPass, _depthTestRenderPass);
+
+        _imGuiRenderTarget = new RenderTarget(forwardBuffer, null, "ImGuiRendnerTarget");
     }
 
     private void InitRenderTargets(TextureManager textureManager, uint width, uint height)
