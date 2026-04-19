@@ -48,7 +48,7 @@ internal sealed class OutputMergerStage
     public unsafe void UnbindRenderTargets()
     {
         _deviceContext.OMSetRenderTargets(0, (ID3D11RenderTargetView**)null, (ID3D11DepthStencilView*)null);
-
+#if DEBUG
         ComPtr<ID3D11RenderTargetView>[] renderTargetsAfter = new ComPtr<ID3D11RenderTargetView>[NbRenderTargets];
         GCHandle handle = GCHandle.Alloc(renderTargetsAfter, GCHandleType.Pinned);
         IntPtr address = handle.AddrOfPinnedObject();
@@ -56,6 +56,7 @@ internal sealed class OutputMergerStage
         handle.Free();
 
         Debug.Assert(!renderTargetsAfter.Any(p => p.Handle != null));
+#endif
     }
 
     public unsafe void SetRenderTarget(uint NumViews, in ID3D11RenderTargetView* ppRenderTargetViews, ComPtr<ID3D11DepthStencilView> pDepthStencilView)

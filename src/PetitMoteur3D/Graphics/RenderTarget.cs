@@ -13,6 +13,9 @@ internal sealed class RenderTarget
     private Texture?[] _renderTargets;
     private Texture? _depthTexture;
 
+    ComPtr<ID3D11RenderTargetView>[] _rtvs;
+    ComPtr<ID3D11DepthStencilView> _dsv;
+
     private const uint NbRenderTargets = OutputMergerStage.NbRenderTargets;
 
     /// <summary>
@@ -40,21 +43,17 @@ internal sealed class RenderTarget
         }
 
         _renderTargets = new Texture?[NbRenderTargets];
-        for (int i = 0; i < textures.Length; i++)
-        {
-            _renderTargets[i] = textures[i];
-        }
-        for (int i = textures.Length; i < NbRenderTargets; i++)
-        {
-            _renderTargets[i] = null;
-        }
+        _rtvs = new ComPtr<ID3D11RenderTargetView>[NbRenderTargets];
+        SetRenderTarget(textures);
         _depthTexture = depthTexture;
+        _dsv = _depthTexture?.DepthStencilView ?? (ComPtr<ID3D11DepthStencilView>)null;
     }
 
     public void SetRenderTarget(uint slot, Texture? texture)
     {
         ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(slot, NbRenderTargets, nameof(slot));
         _renderTargets[slot] = texture;
+        _rtvs[slot] = texture?.RenderTargetView ?? (ComPtr<ID3D11RenderTargetView>)null;
     }
 
     public void SetRenderTarget(Texture?[] textures)
@@ -62,24 +61,31 @@ internal sealed class RenderTarget
         ArgumentOutOfRangeException.ThrowIfGreaterThan((uint)textures.Length, NbRenderTargets, nameof(textures));
         for (int i = 0; i < textures.Length; i++)
         {
-            _renderTargets[i] = textures[i];
+            Texture? texture = textures[i];
+            _renderTargets[i] = texture;
+            _rtvs[i] = texture?.RenderTargetView ?? (ComPtr<ID3D11RenderTargetView>)null;
         }
         for (int i = textures.Length; i < NbRenderTargets; i++)
         {
             _renderTargets[i] = null;
+            _rtvs[i] = (ComPtr<ID3D11RenderTargetView>)null;
         }
     }
 
     public void SetDepth(Texture? texture)
     {
         _depthTexture = texture;
+        _dsv = _depthTexture?.DepthStencilView ?? (ComPtr<ID3D11DepthStencilView>)null;
     }
 
     public unsafe void ClearRenderTarget(ComPtr<ID3D11DeviceContext> deviceContext, float[] colorRGBA)
     {
-        foreach (Texture? renderTarget in _renderTargets.Where(t => t is not null))
+        foreach (Texture? renderTarget in _renderTargets)
         {
-            deviceContext.ClearRenderTargetView(renderTarget!.RenderTargetView, colorRGBA.AsSpan());
+            if (renderTarget is not null)
+            {
+                deviceContext.ClearRenderTargetView(renderTarget!.RenderTargetView, colorRGBA.AsSpan());
+            }
         }
     }
 
@@ -93,8 +99,6 @@ internal sealed class RenderTarget
 
     public void Bind(D3D11GraphicPipeline graphicPipeline)
     {
-        ComPtr<ID3D11RenderTargetView>[] rtvs = _renderTargets.Select(t => t?.RenderTargetView ?? (ComPtr<ID3D11RenderTargetView>)null).ToArray();
-        ComPtr<ID3D11DepthStencilView> dsv = _depthTexture?.DepthStencilView ?? (ComPtr<ID3D11DepthStencilView>)null;
-        graphicPipeline.OutputMergerStage.SetRenderTarget(NbRenderTargets, in rtvs[0], dsv);
+        graphicPipeline.OutputMergerStage.SetRenderTarget(NbRenderTargets, in _rtvs[0], _dsv);
     }
 }

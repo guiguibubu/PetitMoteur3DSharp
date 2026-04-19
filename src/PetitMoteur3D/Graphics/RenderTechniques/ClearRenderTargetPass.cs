@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Numerics;
-using static PetitMoteur3D.Graphics.RenderTechniques.ClearRenderTargetPass;
 
 namespace PetitMoteur3D.Graphics.RenderTechniques;
 
