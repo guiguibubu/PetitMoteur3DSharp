@@ -2,7 +2,7 @@
 
 namespace PetitMoteur3D.Graphics.Shaders;
 
-internal class ShaderFactory : IDisposable
+internal sealed class ShaderFactory : IDisposable
 {
     private ShaderManager _shaderManager;
 
@@ -24,7 +24,7 @@ internal class ShaderFactory : IDisposable
         return _shaderManager.GetOrLoadPixelShader(shaderFile);
     }
 
-    protected virtual void Dispose(bool disposing)
+    private void Dispose(bool disposing)
     {
         if (!_disposed)
         {

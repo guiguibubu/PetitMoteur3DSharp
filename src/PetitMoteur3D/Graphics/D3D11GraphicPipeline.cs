@@ -227,12 +227,13 @@ internal class D3D11GraphicPipeline : IDisposable
         SetViewport(_currentSize.Width, _currentSize.Height);
     }
 
+    [MemberNotNull(nameof(_swapchain))]
     private unsafe void InitSwapChain(IWindow window, bool forceDxvk)
     {
         if (window is ICompositionWindow)
         {
             _isSwapChainComposition = true;
-            InitSwapChain((uint)window.Size.Width, (uint)window.Size.Height, windowPtr: 0, forceDxvk);
+            _swapchain = CreateSwapChain((uint)window.Size.Width, (uint)window.Size.Height, windowPtr: 0, forceDxvk);
             // Ensure that DXGI does not queue more than one frame at a time. This both reduces 
             // latency and ensures that the application will only render after each VSync, minimizing 
             // power consumption.
@@ -240,11 +241,11 @@ internal class D3D11GraphicPipeline : IDisposable
         }
         else
         {
-            InitSwapChain((uint)window.Size.Width, (uint)window.Size.Height, window.NativeHandle!.Value, forceDxvk);
+            _swapchain = CreateSwapChain((uint)window.Size.Width, (uint)window.Size.Height, window.NativeHandle!.Value, forceDxvk);
         }
     }
 
-    private unsafe void InitSwapChain(uint width, uint heigth, nint windowPtr, bool forceDxvk)
+    private D3D11SwapChain CreateSwapChain(uint width, uint heigth, nint windowPtr, bool forceDxvk)
     {
         // Create our swapchain description.
         SwapChainDesc1 swapChainDesc = new()
@@ -265,7 +266,7 @@ internal class D3D11GraphicPipeline : IDisposable
             {
                 Windowed = true
             };
-            _swapchain = _graphicRessourceFactory.SwapChainFactory.CreateSwapChainForHwnd(windowPtr, in swapChainDesc, in swapChainFullscreenDesc, ref Unsafe.NullRef<IDXGIOutput>());
+            return _graphicRessourceFactory.SwapChainFactory.CreateSwapChainForHwnd(windowPtr, in swapChainDesc, in swapChainFullscreenDesc, ref Unsafe.NullRef<IDXGIOutput>());
         }
         else
         {
@@ -279,7 +280,7 @@ internal class D3D11GraphicPipeline : IDisposable
             swapChainDesc.BufferCount = 2;
             //swapChainDesc.Flags = 0;
             //swapChainDesc.AlphaMode = AlphaMode.Premultiplied;
-            _swapchain = _graphicRessourceFactory.SwapChainFactory.CreateSwapChainForComposition(in swapChainDesc, ref Unsafe.NullRef<IDXGIOutput>());
+            return _graphicRessourceFactory.SwapChainFactory.CreateSwapChainForComposition(in swapChainDesc, ref Unsafe.NullRef<IDXGIOutput>());
         }
     }
 

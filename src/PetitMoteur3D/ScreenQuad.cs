@@ -1,7 +1,5 @@
-﻿using System;
-using System.Numerics;
+﻿using System.Numerics;
 using PetitMoteur3D.Graphics;
-using PetitMoteur3D.Graphics.RenderTechniques;
 
 namespace PetitMoteur3D;
 
@@ -22,8 +20,6 @@ internal sealed class ScreenQuad : BaseObjet3D
     private readonly Sommet[] _sommets;
     private readonly ushort[] _indices;
     private readonly SubObjet3D[] _subObjects;
-
-    protected override bool SupportShadow => false;
 
     public ScreenQuad(float left, float right, float bottom, float top, float z, GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, string name = "")
         : base(graphicDeviceRessourceFactory, name)

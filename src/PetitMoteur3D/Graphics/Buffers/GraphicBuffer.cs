@@ -4,7 +4,7 @@ using Silk.NET.Direct3D11;
 
 namespace PetitMoteur3D.Graphics.Buffers;
 
-internal class GraphicBuffer : IDisposable
+internal sealed class GraphicBuffer : IDisposable
 {
     public ref ComPtr<ID3D11Buffer> DataRef => ref _data;
     public string Name { get; init; }
@@ -54,7 +54,7 @@ internal class GraphicBuffer : IDisposable
         deviceContext.Unmap(_data, subresource);
     }
 
-    protected virtual void Dispose(bool disposing)
+    private void Dispose(bool disposing)
     {
         if (!_disposedValue)
         {

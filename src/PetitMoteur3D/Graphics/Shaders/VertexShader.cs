@@ -5,7 +5,7 @@ using Silk.NET.Direct3D11;
 
 namespace PetitMoteur3D.Graphics.Shaders;
 
-internal class VertexShader : IDisposable
+internal sealed class VertexShader : IDisposable
 {
     public ComPtr<ID3D11VertexShader> ShaderInterface { get; init; }
     public InputLayout InputLayout { get; init; }
@@ -29,7 +29,7 @@ internal class VertexShader : IDisposable
         graphicPipeline.VertexShaderStage.SetShader(ShaderInterface, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
     }
 
-    protected virtual void Dispose(bool disposing)
+    private void Dispose(bool disposing)
     {
         if (!_disposed)
         {

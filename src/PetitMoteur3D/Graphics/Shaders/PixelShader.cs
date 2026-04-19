@@ -5,7 +5,7 @@ using Silk.NET.Direct3D11;
 
 namespace PetitMoteur3D.Graphics.Shaders;
 
-internal class PixelShader : IDisposable
+internal sealed class PixelShader : IDisposable
 {
     public ComPtr<ID3D11PixelShader> ShaderInterface { get; init; }
 
@@ -16,7 +16,7 @@ internal class PixelShader : IDisposable
         graphicPipeline.PixelShaderStage.SetShader(ShaderInterface, ref Unsafe.NullRef<ComPtr<ID3D11ClassInstance>>(), 0);
     }
 
-    protected virtual void Dispose(bool disposing)
+    private void Dispose(bool disposing)
     {
         if (!disposedValue)
         {

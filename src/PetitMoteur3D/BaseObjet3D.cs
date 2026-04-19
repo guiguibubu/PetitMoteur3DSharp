@@ -1,10 +1,10 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Numerics;
 using PetitMoteur3D.Core.Math;
 using PetitMoteur3D.Graphics;
 using PetitMoteur3D.Graphics.Buffers;
-using PetitMoteur3D.Graphics.RenderTechniques;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
 
@@ -31,11 +31,8 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
     #endregion
 
     #region Protected Properties
-    protected abstract bool SupportShadow { get; }
     protected ref readonly Matrix4x4 MatWorld { get { return ref _matWorld; } }
     protected GraphicBufferFactory BufferFactory { get { return _bufferFactory; } }
-    protected Action<D3D11GraphicPipeline, SubObjet3D> AdditionalDrawConfig { get; set; }
-    protected Action<D3D11GraphicPipeline, SubObjet3D> PostDrawConfig { get; set; }
     #endregion
 
     private VertexBuffer _vertexBuffer;
@@ -68,6 +65,7 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
 
         _sommets = Array.Empty<Sommet>();
         _indices = Array.Empty<ushort>();
+        _subObjects = Array.Empty<SubObjet3D>();
 
         if (string.IsNullOrEmpty(name))
         {
@@ -204,6 +202,9 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
         }
     }
 
+    [MemberNotNull(nameof(_sommets))]
+    [MemberNotNull(nameof(_indices))]
+    [MemberNotNull(nameof(_subObjects))]
     protected virtual void Initialisation()
     {
         _sommets = InitVertex();
@@ -231,6 +232,9 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
     /// <returns></returns>
     protected abstract SubObjet3D[] InitSubObjets();
 
+    [MemberNotNull(nameof(_vertexBuffer))]
+    [MemberNotNull(nameof(_vertexBufferPosition))]
+    [MemberNotNull(nameof(_indexBuffer))]
     private unsafe void InitBuffers<TIndice>(GraphicBufferFactory bufferFactory, Sommet[] sommets, TIndice[] indices)
         where TIndice : unmanaged
     {

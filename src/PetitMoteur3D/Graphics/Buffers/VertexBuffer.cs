@@ -3,7 +3,7 @@ using Silk.NET.Direct3D11;
 
 namespace PetitMoteur3D.Graphics.Buffers;
 
-internal class VertexBuffer : IDisposable
+internal sealed class VertexBuffer : IDisposable
 {
     public GraphicBuffer Buffer => _buffer;
 
@@ -47,7 +47,7 @@ internal class VertexBuffer : IDisposable
         _isBound = false;
     }
 
-    protected virtual void Dispose(bool disposing)
+    private void Dispose(bool disposing)
     {
         if (!_disposedValue)
         {

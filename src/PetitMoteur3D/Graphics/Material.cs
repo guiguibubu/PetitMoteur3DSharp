@@ -3,7 +3,7 @@ using System.Numerics;
 
 namespace PetitMoteur3D.Graphics;
 
-internal class Material : IDisposable
+internal sealed class Material : IDisposable
 {
     public Vector4 Ambient;
     public Vector4 Diffuse;

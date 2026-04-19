@@ -120,6 +120,13 @@ public class Engine
         _forwardRenderingTechnique = default!;
         _deferredRenderingTechnique = default!;
         _depthTestTechnique = default!;
+
+        _lightAccumulationGeometryBuffer = default!;
+        _diffuseGeometryBuffer = default!;
+        _specularGeometryBuffer = default!;
+        _normalGeometryBuffer = default!;
+
+        _defaultDepthTexture = default!;
         _shadowMapTexture = default!;
 
         _backgroundColour = default;
@@ -299,7 +306,6 @@ public class Engine
 
                         ImGuiIOPtr io = ImGui.GetIO();
 
-                        float f = 0.0f;
                         ImGui.Begin("Title : PetitMoteur3D (DebugTools)!", ref _showDebugTool);
                         ImGui.Text("Window : " + _window.GetType().Name);
                         ImGui.Text(string.Format("Application average {0} ms/frame ({1} FPS)", (1000.0f / io.Framerate).ToString("F3", System.Globalization.CultureInfo.InvariantCulture), io.Framerate.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)));

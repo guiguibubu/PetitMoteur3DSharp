@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
@@ -7,7 +6,7 @@ using Silk.NET.DXGI;
 
 namespace PetitMoteur3D.Graphics;
 
-internal class D3D11SwapChain : IDisposable
+internal sealed class D3D11SwapChain : IDisposable
 {
     public uint Width => _description.Width;
     public uint Height => _description.Height;
@@ -102,7 +101,7 @@ internal class D3D11SwapChain : IDisposable
         }
     }
 
-    protected virtual void Dispose(bool disposing)
+    private void Dispose(bool disposing)
     {
         if (!_disposed)
         {

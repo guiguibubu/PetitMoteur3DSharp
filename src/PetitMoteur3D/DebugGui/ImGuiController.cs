@@ -3,11 +3,9 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.Metrics;
 using System.Drawing;
 using System.Numerics;
 using ImGuiNET;
-using OpenTelemetry.Metrics;
 using PetitMoteur3D.DebugGui.Extensions;
 using PetitMoteur3D.Graphics;
 using PetitMoteur3D.Input;
@@ -33,18 +31,6 @@ internal sealed class ImGuiController : IDisposable
     private float _windowHeight;
 
     public IntPtr ContextPtr;
-
-    #region Telemetry
-    // Define a meter
-    private static readonly Meter MyMeter = new("PetitMoteur3D.DebugGui.ImGuiController", "1.0");
-
-    // Create a counter instrument
-    private static readonly Gauge<long> CmdListsCounter = MyMeter.CreateGauge<long>("CmdListsCounter", "cmd list count", "Command list count");
-    private static readonly Gauge<long> TotalIdxCounter = MyMeter.CreateGauge<long>("TotalIdxCounter", "index count", "Index count");
-    private static readonly Gauge<long> TotalVtxCounter = MyMeter.CreateGauge<long>("TotalVtxCounter", "vertex count", "Vertex count");
-
-    private readonly MeterProvider _meterProvider;
-    #endregion
 
     /// <summary>
     /// Constructs a new ImGuiController.
@@ -95,12 +81,6 @@ internal sealed class ImGuiController : IDisposable
         InitCallbacks();
 
         _backendRenderer.Init(in io);
-
-        // Configure the OpenTelemetry MeterProvider
-        _meterProvider = OpenTelemetry.Sdk.CreateMeterProviderBuilder()
-            .AddMeter("PetitMoteur3D.DebugGui.ImGuiController")
-            .AddConsoleExporter()
-            .Build();
 
         _disposed = false;
     }
@@ -387,7 +367,6 @@ internal sealed class ImGuiController : IDisposable
             {
                 // Dispose managed resources.
                 _backendRenderer.Dispose();
-                _meterProvider.Dispose();
             }
 
             // Call the appropriate methods to clean up

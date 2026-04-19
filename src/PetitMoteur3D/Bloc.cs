@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Numerics;
 using PetitMoteur3D.Graphics;
-using PetitMoteur3D.Graphics.RenderTechniques;
 
 namespace PetitMoteur3D;
 
@@ -17,8 +16,6 @@ internal sealed class Bloc : BaseObjet3D
     private readonly SubObjet3D[] _subObjects;
 
     private System.Numerics.Matrix4x4 _transformation;
-
-    protected override bool SupportShadow => true;
 
     public unsafe Bloc(float dx, float dy, float dz, GraphicDeviceRessourceFactory graphicDeviceRessourceFactory)
         : base(graphicDeviceRessourceFactory)

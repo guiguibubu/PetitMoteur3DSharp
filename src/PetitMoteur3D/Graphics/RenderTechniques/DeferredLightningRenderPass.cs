@@ -15,7 +15,6 @@ namespace PetitMoteur3D.Graphics.RenderTechniques;
 internal sealed class DeferredLightningRenderPass : BaseRenderPass, IDisposable
 {
     private ConstantBuffer _sceneConstantBuffer;
-    private ConstantBuffer _pixelObjectConstantBuffer;
     private ConstantBuffer _vertexObjectConstantBuffer;
 
     private Texture _geometryBufferLightAccumulation;
@@ -344,7 +343,6 @@ internal sealed class DeferredLightningRenderPass : BaseRenderPass, IDisposable
             // TODO: free unmanaged resources (unmanaged objects) and override finalizer
             // TODO: set large fields to null
             _sceneConstantBuffer.Dispose();
-            _pixelObjectConstantBuffer.Dispose();
             _vertexObjectConstantBuffer.Dispose();
 
             base.Dispose(disposing);

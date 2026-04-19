@@ -6,7 +6,7 @@ using Silk.NET.DXGI;
 
 namespace PetitMoteur3D.Graphics;
 
-internal class D3D11SwapChainFactory
+internal sealed class D3D11SwapChainFactory
 {
     private readonly ComPtr<ID3D11Device> _device;
     private readonly TextureManager _textureManager;

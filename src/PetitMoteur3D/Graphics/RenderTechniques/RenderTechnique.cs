@@ -1,6 +1,6 @@
 ﻿namespace PetitMoteur3D.Graphics.RenderTechniques;
 
-internal class RenderTechnique
+internal sealed class RenderTechnique
 {
     private IRenderPass[] _passes;
 

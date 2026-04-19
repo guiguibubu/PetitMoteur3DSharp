@@ -5,7 +5,7 @@ using PetitMoteur3D.Logging;
 
 namespace PetitMoteur3D.Graphics.Buffers;
 
-internal class ConstantBuffer : IDisposable
+internal sealed class ConstantBuffer : IDisposable
 {
     public GraphicBuffer Buffer  => _buffer;
 
@@ -83,7 +83,7 @@ internal class ConstantBuffer : IDisposable
         _bindingSlotByShader[shaderType] = null;
     }
 
-    protected virtual void Dispose(bool disposing)
+    private void Dispose(bool disposing)
     {
         if (!_disposedValue)
         {

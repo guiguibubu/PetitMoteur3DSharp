@@ -22,7 +22,7 @@ internal class D3D11GraphicPipelineState
     /// <summary>
     /// 
     /// </summary>
-    internal unsafe D3D11GraphicPipelineState(D3D11GraphicPipeline graphicPipelie, RenderTarget renderTarget)
+    internal D3D11GraphicPipelineState(D3D11GraphicPipeline graphicPipelie, RenderTarget renderTarget)
     {
         _graphicPipeline = graphicPipelie;
         _renderTargets = renderTarget;

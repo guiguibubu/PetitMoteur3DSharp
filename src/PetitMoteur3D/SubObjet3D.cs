@@ -4,22 +4,23 @@ using PetitMoteur3D.Graphics;
 
 namespace PetitMoteur3D;
 
-internal class SubObjet3D : IVisitable
+internal sealed class SubObjet3D : IVisitable
 {
     public ushort[] Indices { get; init; }
     public Matrix4x4 Transformation { get; init; }
     public Material Material { get; init; }
 
     public SubObjet3D()
+        : this(new Material(), Array.Empty<ushort>(), Matrix4x4.Identity)
     {
-        this.Material = new Material();
-        this.Indices = Array.Empty<ushort>();
-        this.Transformation = Matrix4x4.Identity;
     }
-    public SubObjet3D(Material material)
+
+    public SubObjet3D(Material material, ushort[] indices, Matrix4x4 transformation)
     {
         ArgumentNullException.ThrowIfNull(material);
         this.Material = material;
+        this.Indices = indices;
+        this.Transformation = transformation;
     }
 
     public void Accept(IVisitor visitor)
