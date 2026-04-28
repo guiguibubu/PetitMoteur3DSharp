@@ -5,7 +5,7 @@ using Silk.NET.Direct3D11;
 
 namespace PetitMoteur3D.Graphics;
 
-internal class D3D11GraphicPipelineState
+internal sealed class D3D11GraphicPipelineState
 {
     public VertexShader VertexShader { get; set; }
     public ComPtr<ID3D11GeometryShader> GeometryShader { get; set; }

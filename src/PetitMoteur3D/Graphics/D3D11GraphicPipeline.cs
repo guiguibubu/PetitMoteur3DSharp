@@ -11,7 +11,7 @@ using Silk.NET.DXGI;
 
 namespace PetitMoteur3D.Graphics;
 
-internal class D3D11GraphicPipeline : IDisposable
+internal sealed class D3D11GraphicPipeline : IDisposable
 {
     public D3D11SwapChain SwapChain { get { return _swapchain; } }
 
@@ -305,7 +305,7 @@ internal class D3D11GraphicPipeline : IDisposable
         RasterizerStage.SetViewports(1, in viewport);
     }
 
-    protected virtual void Dispose(bool disposing)
+    public void Dispose(bool disposing)
     {
         if (!_disposed)
         {

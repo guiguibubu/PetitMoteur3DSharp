@@ -1,4 +1,4 @@
-//#define PM3D_USE_RUNTIME_INTEROP
+#define PM3D_USE_RUNTIME_INTEROP
 using System;
 using System.Threading;
 using Microsoft.UI.Dispatching;
@@ -101,7 +101,7 @@ public sealed partial class MainWindow : global::Microsoft.UI.Xaml.Window
             {
 #if PM3D_USE_RUNTIME_INTEROP
                 ABI.WinUIDesktopInterop.ISwapChainPanelNative swapChainPanelNative = nativeReference.AsInterface<ABI.WinUIDesktopInterop.ISwapChainPanelNative>();
-                int errorCode = swapChainPanelNative.SetSwapChain((nint)engine.DeviceD3D11.Swapchain.Handle);
+                int errorCode = swapChainPanelNative.SetSwapChain((nint)engine.SwapchainPtr);
 #else
                 int errorCode = ABI.WinUIDesktopInterop.SetSwapchain(nativeReference.ThisPtr, engine.SwapchainPtr);
 #endif

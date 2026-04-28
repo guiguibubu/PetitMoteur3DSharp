@@ -7,7 +7,7 @@ using Silk.NET.Direct3D11;
 
 namespace PetitMoteur3D.Graphics.Shaders;
 
-internal class InputLayout : IDisposable
+internal sealed class InputLayout : IDisposable
 {
 
     public InputLayoutDesc InputLayoutDesc { get; init; }
@@ -23,7 +23,7 @@ internal class InputLayout : IDisposable
         _disposed = false;
     }
 
-    protected virtual void Dispose(bool disposing)
+    public void Dispose(bool disposing)
     {
         if (!_disposed)
         {
@@ -54,7 +54,7 @@ internal class InputLayout : IDisposable
     }
 }
 
-internal class InputLayoutDesc
+internal sealed class InputLayoutDesc
 {
     public InputElementDesc[] Data => _inputLayoutDesc;
 
@@ -75,7 +75,7 @@ internal class InputLayoutDesc
     }
 }
 
-internal class InputLayoutDescBuilder
+internal sealed class InputLayoutDescBuilder
 {
     private static readonly ConcurrentDictionary<D3D11Semantics, GlobalMemory> _semanticsChache = new ConcurrentDictionary<D3D11Semantics, GlobalMemory>();
     private Dictionary<InputLayoutBuilderKey, InputElementDesc> _inputLayout;
