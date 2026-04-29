@@ -7,15 +7,15 @@ using PetitMoteur3D.Graphics;
 
 namespace PetitMoteur3D;
 
-internal sealed class Scene : IVisitable, IDisposable
+internal sealed class Scene : IVisitable<Scene>, IDisposable
 {
     public bool ShowDepthTest { get; set; }
     public bool UseDebugCam { get; set; }
     public ICamera GameCamera => _gameCamera;
     public LightShadersParams Light => _light;
-    public IObjet3D[] Content => _allObjects.ToArray();
+    public SceneNode<IObjet3D> RootNode => _rootNode;
 
-    private readonly List<IObjet3D> _allObjects;
+    private readonly SceneNode<IObjet3D> _rootNode;
     private readonly List<IUpdatableObjet> _objectsUpdatable;
     private ICamera _gameCamera;
     private ICamera _debugCamera;
@@ -35,7 +35,8 @@ internal sealed class Scene : IVisitable, IDisposable
 
     public Scene(ICamera camera, Size windowSize)
     {
-        _allObjects = new List<IObjet3D>();
+        _rootNode = new SceneNode<IObjet3D>();
+
         _objectsUpdatable = new List<IUpdatableObjet>();
         _gameCamera = camera;
 
@@ -71,7 +72,16 @@ internal sealed class Scene : IVisitable, IDisposable
             _objectsUpdatable.Add(updatableObjet);
         }
 
-        _allObjects.Add(obj);
+        _rootNode.AddMesh(obj);
+    }
+
+    public void AddChildren(SceneNode<IObjet3D> node)
+    {
+        // Update
+        IUpdatableObjet[] updatableObjet = node.GetObject<IUpdatableObjet>();
+        _objectsUpdatable.AddRange(updatableObjet);
+
+        _rootNode.AddChild(node);
     }
 
     public void Anime(float elapsedTime)
@@ -89,9 +99,16 @@ internal sealed class Scene : IVisitable, IDisposable
 
     public void Accept(IVisitor visitor)
     {
-        foreach (IObjet3D obj in _allObjects)
+        visitor.Visit(this);
+        _rootNode.Accept(visitor);
+    }
+
+    public void Accept(IVisitor<Scene> visitor)
+    {
+        visitor.Visit(this);
+        if (visitor is IVisitor<SceneNode<IObjet3D>> visitorNode)
         {
-            obj.Accept(visitor);
+            _rootNode.Accept(visitorNode);
         }
     }
 

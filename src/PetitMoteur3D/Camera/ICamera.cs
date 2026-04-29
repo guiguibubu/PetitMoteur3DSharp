@@ -2,7 +2,7 @@ using System.Numerics;
 
 namespace PetitMoteur3D.Camera;
 
-internal interface ICamera : ISceneObjet, IMovableObjet, IInputListener
+internal interface ICamera : ISceneObjet<ICamera>, IMovableObjet, IInputListener
 {
     /// <summary>
     /// Champ vision

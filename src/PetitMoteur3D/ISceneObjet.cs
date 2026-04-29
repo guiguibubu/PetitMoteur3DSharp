@@ -5,10 +5,6 @@ namespace PetitMoteur3D;
 /// <summary>
 /// Interface for scene object
 /// </summary>
-internal interface ISceneObjet : IUpdatableObjet, IVisitable
+internal interface ISceneObjet<T> : IPositionObjet, IUpdatableObjet, IVisitable, IVisitable<T> where T : class
 {
-    /// <summary>
-    /// Position
-    /// </summary>
-    ref readonly System.Numerics.Vector3 Position { get; }
 }

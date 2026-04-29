@@ -133,7 +133,7 @@ internal class ForwardOpaqueRenderPass : BaseRenderPass, IDisposable
         UpdateVertexBuffer(baseObjet3D.VertexBuffer);
     }
 
-    protected override void UpdatePerMeshRessourcesBuffers(SubObjet3D subObjet3D)
+    protected override void UpdatePerMeshRessourcesBuffers(Mesh mesh)
     {
         SceneViewContext sceneContext = RenderArgs.SceneContext;
         Matrix4x4 matViewProj = sceneContext.MatViewProj;
@@ -154,7 +154,7 @@ internal class ForwardOpaqueRenderPass : BaseRenderPass, IDisposable
             CameraPos = sceneContext.GameCameraPos
         });
 
-        Matrix4x4 matrixWorld = subObjet3D.Transformation * matWorld;
+        Matrix4x4 matrixWorld = RenderArgs.ObjectContext.AdditionalTransformation * matWorld;
         UpdateVertexObjectConstantBuffer(new ForwardOpaqueRenderPass.VertexObjectConstantBufferParams()
         {
             matWorldViewProj = Matrix4x4.Transpose(matrixWorld * matViewProj),
@@ -166,18 +166,18 @@ internal class ForwardOpaqueRenderPass : BaseRenderPass, IDisposable
         {
             Material = new ForwardOpaqueRenderPass.MaterialParams()
             {
-                AmbiantColor = subObjet3D.Material.Ambient,
-                DiffuseColor = subObjet3D.Material.Diffuse,
-                SpecularColor = subObjet3D.Material.Specular,
-                SpecularPower = subObjet3D.Material.SpecularPower,
-                HasDiffuseTexture = Convert.ToInt32(subObjet3D.Material.DiffuseTexture is not null),
-                HasNormalTexture = Convert.ToInt32(subObjet3D.Material.NormalTexture is not null),
+                AmbiantColor = mesh.Material.Ambient,
+                DiffuseColor = mesh.Material.Diffuse,
+                SpecularColor = mesh.Material.Specular,
+                SpecularPower = mesh.Material.SpecularPower,
+                HasDiffuseTexture = Convert.ToInt32(mesh.Material.DiffuseTexture is not null),
+                HasNormalTexture = Convert.ToInt32(mesh.Material.NormalTexture is not null),
             }
         });
 
         // Activation de la texture
-        _textureD3D = subObjet3D.Material.DiffuseTexture;
-        _normalMap = subObjet3D.Material.NormalTexture;
+        _textureD3D = mesh.Material.DiffuseTexture;
+        _normalMap = mesh.Material.NormalTexture;
     }
 
     /// <inheritdoc/>

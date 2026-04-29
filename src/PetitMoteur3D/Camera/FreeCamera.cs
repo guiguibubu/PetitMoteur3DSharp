@@ -278,6 +278,11 @@ internal sealed class FreeCamera : ICamera, IRotationObjet
         LookTo(in direction);
     }
 
+    public void Accept(IVisitor<ICamera> visitor)
+    {
+        throw new NotImplementedException();
+    }
+
     public void Accept(IVisitor visitor)
     {
         throw new NotImplementedException();

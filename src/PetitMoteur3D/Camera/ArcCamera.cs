@@ -190,6 +190,11 @@ internal sealed class ArcCamera : ICamera
         viewMatrix = Matrix4x4Helper.CreateLookAtLeftHanded(in cameraPosition, in cameraTarget, in cameraUpVector);
     }
 
+    public void Accept(IVisitor<ICamera> visitor)
+    {
+        throw new NotImplementedException();
+    }
+
     public void Accept(IVisitor visitor)
     {
         throw new NotImplementedException();

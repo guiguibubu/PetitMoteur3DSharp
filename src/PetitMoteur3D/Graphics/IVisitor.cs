@@ -2,7 +2,10 @@
 
 internal interface IVisitor
 {
-    void Visit(Scene scene);
-    void Visit(BaseObjet3D baseObject3D);
-    void Visit(SubObjet3D subObjet3D);
+    void Visit(IVisitable visitable);
+}
+
+internal interface IVisitor<T> where T : class
+{
+    void Visit(T visitable);
 }

@@ -2,7 +2,7 @@ using System.Linq;
 
 namespace PetitMoteur3D.Graphics;
 
-internal sealed class Mesh
+internal sealed class Mesh : IMesh, IVisitable, IVisitable<Mesh>
 {
     public Sommet[] Sommets { get { return _sommets; } }
     public ushort[] Indices { get { return _indices; } }
@@ -25,5 +25,15 @@ internal sealed class Mesh
         ushort[] indices = _indices.ToArray();
         Material material = _material.Clone();
         return new Mesh(sommets, indices, material);
+    }
+
+    public void Accept(IVisitor visitor)
+    {
+        visitor.Visit(this);
+    }
+
+    public void Accept(IVisitor<Mesh> visitor)
+    {
+        visitor.Visit(this);
     }
 }

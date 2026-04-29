@@ -19,15 +19,14 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
     public Orientation3D Orientation { get { return _orientation; } }
     /// <inheritdoc/>
     public string Name { get { return _name; } }
-    public SubObjet3D[] SubObjects { get { return _subObjects; } }
-
+    public Mesh Mesh { get { return _mesh; } }
+    public Sommet[] Sommets => _sommets;
+    public ushort[] Indices => _indices;
 
     public VertexBuffer VertexBuffer => _vertexBuffer;
     public VertexBuffer VertexBufferPosition => _vertexBufferPosition;
     public IndexBuffer IndexBuffer => _indexBuffer;
     public readonly D3DPrimitiveTopology Topology = D3DPrimitiveTopology.D3D11PrimitiveTopologyTrianglelist;
-
-    public ushort[] Indices => _indices;
     #endregion
 
     #region Protected Properties
@@ -49,23 +48,23 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
 
     private Sommet[] _sommets;
     private ushort[] _indices;
-    private SubObjet3D[] _subObjects;
+    private Mesh _mesh;
 
     private readonly string _name;
 
     private bool _disposed;
     private readonly GraphicBufferFactory _bufferFactory;
 
-    protected BaseObjet3D(GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, string name = "")
+    protected BaseObjet3D(Mesh mesh, GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, string name = "")
     {
         _scale = Vector3.One;
         _position = Vector3.Zero;
         _orientation = new Orientation3D();
         _matWorld = Matrix4x4.Identity;
 
-        _sommets = Array.Empty<Sommet>();
-        _indices = Array.Empty<ushort>();
-        _subObjects = Array.Empty<SubObjet3D>();
+        _mesh = mesh;
+        _sommets = mesh.Sommets;
+        _indices = mesh.Indices;
 
         if (string.IsNullOrEmpty(name))
         {
@@ -192,45 +191,27 @@ internal abstract class BaseObjet3D : IObjet3D, IDisposable
     }
 
     /// <inheritdoc/>
+    public void Accept(IVisitor<IObjet3D> visitor)
+    {
+        visitor.Visit(this);
+    }
+
+    /// <inheritdoc/>
+    public void Accept(IVisitor<BaseObjet3D> visitor)
+    {
+        visitor.Visit(this);
+    }
+
+    /// <inheritdoc/>
     public void Accept(IVisitor visitor)
     {
         visitor.Visit(this);
-
-        foreach (SubObjet3D subObjet3D in _subObjects)
-        {
-            subObjet3D.Accept(visitor);
-        }
     }
 
-    [MemberNotNull(nameof(_sommets))]
-    [MemberNotNull(nameof(_indices))]
-    [MemberNotNull(nameof(_subObjects))]
     protected virtual void Initialisation()
     {
-        _sommets = InitVertex();
-        _indices = InitIndex();
-        _subObjects = InitSubObjets();
-
         InitBuffers(_bufferFactory, _sommets, _indices);
     }
-
-    /// <summary>
-    /// Initialise les vertex
-    /// </summary>
-    /// <returns></returns>
-    protected abstract Sommet[] InitVertex();
-
-    /// <summary>
-    /// Initialise l'index de rendu
-    /// </summary>
-    /// <returns></returns>
-    protected abstract ushort[] InitIndex();
-
-    /// <summary>
-    /// Initialise les parties de l'objet pour le rendu
-    /// </summary>
-    /// <returns></returns>
-    protected abstract SubObjet3D[] InitSubObjets();
 
     [MemberNotNull(nameof(_vertexBuffer))]
     [MemberNotNull(nameof(_vertexBufferPosition))]

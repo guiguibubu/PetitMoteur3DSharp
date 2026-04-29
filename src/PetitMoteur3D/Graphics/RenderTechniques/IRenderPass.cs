@@ -8,8 +8,8 @@ internal interface IRenderPass
     #region Public methods
 
     void Render(Scene scene);
+    void Render(SceneNode<IObjet3D> node);
     void Render(BaseObjet3D objet);
-    void Render(SubObjet3D subObjet3D);
-    
+
     #endregion
 }

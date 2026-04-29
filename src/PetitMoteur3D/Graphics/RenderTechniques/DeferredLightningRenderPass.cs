@@ -22,11 +22,11 @@ internal sealed class DeferredLightningRenderPass : BaseRenderPass, IDisposable
     private Texture _geometryBufferSpecular;
     private Texture _geometryBufferNormal;
 
-    private ScreenQuad _fullScreenQuad;
+    private ObjetMesh _fullScreenQuad;
 
     private bool _disposedValue;
 
-    public DeferredLightningRenderPass(D3D11GraphicPipeline graphicPipeline, RenderTarget renderTarget, Texture geometryBufferLightAccumulation, Texture geometryBufferDiffuse, Texture geometryBufferSpecular, Texture geometryBufferNormal, string name = "")
+    public DeferredLightningRenderPass(D3D11GraphicPipeline graphicPipeline, RenderTarget renderTarget, Texture geometryBufferLightAccumulation, Texture geometryBufferDiffuse, Texture geometryBufferSpecular, Texture geometryBufferNormal, MeshFactory meshFactory, string name = "")
         : base(graphicPipeline, renderTarget, name)
     {
         _geometryBufferLightAccumulation = geometryBufferLightAccumulation;
@@ -34,7 +34,16 @@ internal sealed class DeferredLightningRenderPass : BaseRenderPass, IDisposable
         _geometryBufferSpecular = geometryBufferSpecular;
         _geometryBufferNormal = geometryBufferNormal;
 
-        _fullScreenQuad = new ScreenQuad(-1, 1, -1, 1, 1, graphicPipeline.GraphicDevice.RessourceFactory, "DeferredLightning_ScreenQuad");
+        /// <summary>
+        /// Create a screen-space quad that can be used to render full-screen post-process effects to the screen.
+        /// By default, the quad will have clip-space coordinates and can be used with a pass-through vertex shader
+        /// to render full-screen post-process effects. If you want more control over the area of the screen the quad covers, 
+        /// you can specify your own screen coordinates and supply an appropriate orthographic projection matrix to align the 
+        /// screen quad appropriately.
+        /// </summary>
+        Mesh meshScreenQuad = meshFactory.CreateQuad(-1, 1, -1, 1, 1);
+
+        _fullScreenQuad = new ObjetMesh(meshScreenQuad, graphicPipeline.GraphicDevice.RessourceFactory, "DeferredLightning_ScreenQuad");
 
         _disposedValue = false;
     }
@@ -122,6 +131,20 @@ internal sealed class DeferredLightningRenderPass : BaseRenderPass, IDisposable
         GraphicPipeline.PixelShaderStage.ClearShaderResources(3);
     }
     #endregion
+
+    public override void Visit(Scene scene)
+    {
+        base.Visit(scene);
+        Render(_fullScreenQuad);
+    }
+
+    public override void Visit(SceneNode<IObjet3D> node)
+    {
+    }
+
+    public override void Visit(IObjet3D objet3D)
+    {
+    }
     #endregion
 
     #region Protected methods
@@ -140,7 +163,7 @@ internal sealed class DeferredLightningRenderPass : BaseRenderPass, IDisposable
         UpdateVertexBuffer(baseObjet3D.VertexBuffer);
     }
 
-    protected override void UpdatePerMeshRessourcesBuffers(SubObjet3D subObjet3D)
+    protected override void UpdatePerMeshRessourcesBuffers(Mesh mesh)
     {
         SceneViewContext sceneContext = RenderArgs.SceneContext;
         Matrix4x4 matViewProj = sceneContext.MatViewProj;
@@ -159,7 +182,7 @@ internal sealed class DeferredLightningRenderPass : BaseRenderPass, IDisposable
             CameraPos = sceneContext.GameCameraPos
         });
 
-        Matrix4x4 matrixWorld = subObjet3D.Transformation * matWorld;
+        Matrix4x4 matrixWorld = RenderArgs.ObjectContext.AdditionalTransformation * matWorld;
         UpdateVertexObjectConstantBuffer(new DeferredLightningRenderPass.VertexObjectConstantBufferParams()
         {
             matWorldViewProj = Matrix4x4.Transpose(matrixWorld * matViewProj),
@@ -258,8 +281,8 @@ internal sealed class DeferredLightningRenderPass : BaseRenderPass, IDisposable
 
     protected sealed override void RenderCoreImpl(Scene scene)
     {
+        base.RenderCoreImpl(scene);
         Render(_fullScreenQuad);
-        Render(_fullScreenQuad.SubObjects[0]);
     }
     #endregion
 

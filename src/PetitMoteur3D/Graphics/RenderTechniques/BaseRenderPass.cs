@@ -7,7 +7,7 @@ using Silk.NET.Direct3D11;
 
 namespace PetitMoteur3D.Graphics.RenderTechniques;
 
-internal abstract class BaseRenderPass : IRenderPass, IVisitor
+internal abstract class BaseRenderPass : IRenderPass, IVisitor<Scene>, IVisitor<SceneNode<IObjet3D>>, IVisitor<IObjet3D>
 {
     public bool IsEnabled { get; set; } = true;
     public string Name { get; init; }
@@ -22,7 +22,7 @@ internal abstract class BaseRenderPass : IRenderPass, IVisitor
     private readonly D3D11GraphicPipeline _graphicPipeline;
     private readonly D3D11GraphicPipelineState _graphicPipelineState;
 
-    protected RenderArgs RenderArgs  => _renderArgs;
+    protected RenderArgs RenderArgs => _renderArgs;
     private RenderArgs _renderArgs;
 
     private bool _disposedValue;
@@ -121,42 +121,37 @@ internal abstract class BaseRenderPass : IRenderPass, IVisitor
         _graphicPipeline.DrawIndexed(indexCount, startIndexLocation, baseVertexLocation);
     }
 
-    public void Visit(Scene scene)
+    public virtual void Visit(Scene scene)
     {
-        Render(scene);
+        UpdateSceneContext(scene.GetSceneViewContext());
     }
 
-    public void Visit(BaseObjet3D baseObjet3D)
+    public virtual void Visit(SceneNode<IObjet3D> node)
     {
-        Render(baseObjet3D);
+        Render(node);
     }
 
-    public void Visit(SubObjet3D subObjet3D)
+    public virtual void Visit(IObjet3D objet3D)
     {
-        Render(subObjet3D);
+        if (objet3D is BaseObjet3D baseObjet3D)
+        {
+            Render(baseObjet3D);
+        }
     }
 
     public void Render(Scene scene)
     {
-        UpdateSceneContext(scene.GetSceneViewContext());
         RenderCoreImpl(scene);
+    }
+
+    public void Render(SceneNode<IObjet3D> node)
+    {
+        RenderCoreImpl(node);
     }
 
     public void Render(BaseObjet3D baseObjet3D)
     {
-        UpdatePrimitiveTopology(baseObjet3D.Topology);
-        UpdateVertexBuffer(baseObjet3D);
-        UpdateIndexBuffer(baseObjet3D.IndexBuffer);
-        UpdateObjectContext(baseObjet3D.GetViewContext());
-    }
-
-    public void Render(SubObjet3D subObjet3D)
-    {
-        UpdatePerMeshRessourcesBuffers(subObjet3D);
-        Bind();
-        DrawIndexed(_indexBuffer.Buffer.NbElements, 0, 0);
-        ClearPixelShaderResources();
-        _graphicPipeline.OutputMergerStage.UnbindRenderTargets();
+        RenderCoreImpl(baseObjet3D);
     }
 
     #endregion
@@ -177,8 +172,8 @@ internal abstract class BaseRenderPass : IRenderPass, IVisitor
     /// <summary>
     /// Update constant buffers from Mesh
     /// </summary>
-    /// <param name="subObjet3D"></param>
-    protected abstract void UpdatePerMeshRessourcesBuffers(SubObjet3D subObjet3D);
+    /// <param name="mesh"></param>
+    protected abstract void UpdatePerMeshRessourcesBuffers(Mesh mesh);
 
     /// <summary>
     /// Get vertex input layout description
@@ -229,17 +224,36 @@ internal abstract class BaseRenderPass : IRenderPass, IVisitor
     /// <param name="objectContext"></param>
     protected virtual void UpdateObjectContext(ObjectViewContext objectContext)
     {
-        _renderArgs.ObjectContext = objectContext;
+        _renderArgs.ObjectContext.MatWorld = objectContext.MatWorld;
     }
 
     /// <summary>
     /// Render scene core impl
     /// </summary>
-    /// <remarks>Called after <see cref="UpdateSceneContext(SceneViewContext)"/></remarks>
     /// <param name="scene"></param>
     protected virtual void RenderCoreImpl(Scene scene)
     {
         scene.Accept(this);
+    }
+
+    protected virtual void RenderCoreImpl(SceneNode<IObjet3D> node)
+    {
+        _renderArgs.ObjectContext.AdditionalTransformation = node.Transformation;
+    }
+
+    protected virtual void RenderCoreImpl(BaseObjet3D baseObjet3D)
+    {
+        UpdatePrimitiveTopology(baseObjet3D.Topology);
+        UpdateVertexBuffer(baseObjet3D);
+        UpdateIndexBuffer(baseObjet3D.IndexBuffer);
+        UpdateObjectContext(baseObjet3D.GetViewContext());
+        UpdatePerMeshRessourcesBuffers(baseObjet3D.Mesh);
+
+        Bind();
+        DrawIndexed(_indexBuffer.Buffer.NbElements, 0, 0);
+
+        ClearPixelShaderResources();
+        _graphicPipeline.OutputMergerStage.UnbindRenderTargets();
     }
     #endregion
 

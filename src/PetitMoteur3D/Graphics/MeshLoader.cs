@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Numerics;
-using ImGuiNET;
 using PetitMoteur3D.Logging;
 using Assimp = Silk.NET.Assimp;
 
@@ -17,7 +16,7 @@ internal sealed class MeshLoader
         _importer = Assimp.Assimp.GetApi();
     }
 
-    public unsafe SceneMesh[] Load(string filePath)
+    public unsafe SceneNode<Mesh> Load(string filePath)
     {
         byte[] fileData = System.IO.File.ReadAllBytes(filePath);
         uint postProcessFlags = (uint)Assimp.PostProcessSteps.Triangulate
@@ -28,7 +27,7 @@ internal sealed class MeshLoader
         | (uint)Assimp.PostProcessSteps.FlipWindingOrder
         | (uint)Assimp.PostProcessSteps.FlipUVs;
         Assimp.Scene* scenePtr = _importer.ImportFileFromMemory(in fileData[0], (uint)fileData.Length, postProcessFlags, (byte*)0);
-        SceneMesh[] sceneMeshes;
+        SceneNode<Mesh> sceneRootNode;
         try
         {
             if (scenePtr is null)
@@ -44,18 +43,18 @@ internal sealed class MeshLoader
             Assimp.Node* rootNode = scene.MRootNode;
             if (rootNode is null)
             {
-                sceneMeshes = meshes.Select(m => new SceneMesh(m)).ToArray();
+                sceneRootNode = new SceneNode<Mesh>(meshes);
             }
             else
             {
-                sceneMeshes = ReadNode(*rootNode, meshes);
+                sceneRootNode = ReadNode(*rootNode, meshes);
             }
         }
         finally
         {
             _importer.ReleaseImport(scenePtr);
         }
-        return sceneMeshes;
+        return sceneRootNode;
     }
 
     private unsafe Material[] ReadMaterials(Assimp.Scene scene)
@@ -165,48 +164,32 @@ internal sealed class MeshLoader
         return meshes;
     }
 
-    private static unsafe SceneMesh[] ReadNode(Assimp.Node node, Mesh[] meshes)
+    private static unsafe SceneNode<Mesh> ReadNode(Assimp.Node node, IReadOnlyList<Mesh> sceneMeshes)
     {
-        uint nbSubmesh = node.MNumMeshes;
-        SceneMesh[] sceneMeshes;
-        if (nbSubmesh > 0)
+        uint nbMesh = node.MNumMeshes;
+        uint nbChildren = node.MNumChildren;
+        Matrix4x4 transformation = node.MTransformation;
+
+        Mesh[] nodeMeshes = new Mesh[nbMesh];
+        for (int i = 0; i < nbMesh; i++)
         {
-            sceneMeshes = new SceneMesh[(int)nbSubmesh];
-            for (int i = 0; i < nbSubmesh; i++)
-            {
-                uint indexMesh = node.MMeshes[i];
-                Mesh mesh = meshes[(int)indexMesh];
-                Matrix4x4 transformation = node.MTransformation;
-                SceneMesh sceneMesh = new(mesh, transformation);
-                uint nbChildren = node.MNumChildren;
-                for (int j = 0; j < nbChildren; j++)
-                {
-                    Assimp.Node* child = node.MChildren[j];
-                    if (child is null)
-                    {
-                        continue;
-                    }
-                    sceneMesh.AddChildren(ReadNode(*child, meshes));
-                }
-                sceneMeshes[i] = sceneMesh;
-            }
+            uint indexMesh = node.MMeshes[i];
+            Mesh mesh = sceneMeshes[(int)indexMesh];
+            nodeMeshes[i] = mesh;
         }
-        else
+
+        SceneNode<Mesh>[] nodes = new SceneNode<Mesh>[nbChildren];
+        for (int i = 0; i < nbChildren; i++)
         {
-            uint nbChildren = node.MNumChildren;
-            List<SceneMesh> sceneMeshesTmp = new((int)nbChildren);
-            for (int j = 0; j < nbChildren; j++)
+            Assimp.Node* child = node.MChildren[i];
+            if (child is null)
             {
-                Assimp.Node* child = node.MChildren[j];
-                if (child is null)
-                {
-                    continue;
-                }
-                sceneMeshesTmp.AddRange(ReadNode(*child, meshes));
+                continue;
             }
-            sceneMeshes = sceneMeshesTmp.ToArray();
+            nodes[i] = ReadNode(*child, sceneMeshes);
         }
-        return sceneMeshes;
+
+        return new SceneNode<Mesh>(nodeMeshes, transformation, nodes);
     }
 
     private unsafe static Sommet[] ReadVertices(Assimp.Mesh mesh)

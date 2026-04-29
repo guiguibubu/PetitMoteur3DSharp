@@ -1,61 +1,28 @@
-using System.Collections.Generic;
-using System.Linq;
+using System;
 using PetitMoteur3D.Graphics;
 
 namespace PetitMoteur3D;
 
 internal sealed class ObjetMesh : BaseObjet3D
 {
-    private readonly SceneMesh _sceneMesh;
+    private readonly Mesh _mesh;
 
-    private readonly SubObjet3D[] _subObjects;
+    private static readonly System.Numerics.Vector3 AxisRotation = System.Numerics.Vector3.UnitY;
 
-    public ObjetMesh(SceneMesh sceneMesh, GraphicDeviceRessourceFactory graphicDeviceRessourceFactory)
-        : base(graphicDeviceRessourceFactory)
+    public ObjetMesh(Mesh mesh, GraphicDeviceRessourceFactory graphicDeviceRessourceFactory, string name = "")
+        : base(mesh, graphicDeviceRessourceFactory, name)
     {
-        _sceneMesh = sceneMesh;
-
-        _subObjects = GetSubObjets(_sceneMesh);
+        _mesh = mesh;
 
         Initialisation();
     }
 
     /// <inheritdoc/>
-    protected override Sommet[] InitVertex()
+    public override void Update(float elapsedTime)
     {
-        return _sceneMesh.GetAllVertices().ToArray();
-    }
-
-    /// <inheritdoc/>
-    protected override ushort[] InitIndex()
-    {
-        return _sceneMesh.GetAllIndices().ToArray();
-    }
-
-    /// <inheritdoc/>
-    protected override SubObjet3D[] InitSubObjets()
-    {
-        return _subObjects;
-    }
-
-    private static SubObjet3D[] GetSubObjets(SceneMesh sceneMesh)
-    {
-        List<SubObjet3D> subObjects = new();
-        subObjects.Add(ToSubObjet3D(sceneMesh, System.Numerics.Matrix4x4.Identity));
-        foreach (SceneMesh child in sceneMesh.Children)
-        {
-            subObjects.AddRange(GetSubObjets(child));
-        }
-        return subObjects.ToArray();
-    }
-
-    private static SubObjet3D ToSubObjet3D(SceneMesh sceneMesh, System.Numerics.Matrix4x4 parentTransform)
-    {
-        return new SubObjet3D()
-        {
-            Indices = sceneMesh.Mesh.Indices,
-            Material = sceneMesh.Mesh.Material,
-            Transformation = parentTransform * sceneMesh.Transformation
-        };
+        base.Update(elapsedTime);
+        Orientation.Rotate(in AxisRotation, (float)((Math.PI * 2.0f) / 24.0f * elapsedTime / 1000f));
+        // modifier la matrice de l’objet bloc
+        UpdateMatWorld();
     }
 }

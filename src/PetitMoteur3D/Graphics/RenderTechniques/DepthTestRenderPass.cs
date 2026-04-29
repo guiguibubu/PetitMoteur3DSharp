@@ -80,14 +80,14 @@ internal sealed class DepthTestRenderPass : BaseRenderPass, IDisposable
         UpdateVertexBuffer(baseObjet3D.VertexBuffer);
     }
 
-    protected override void UpdatePerMeshRessourcesBuffers(SubObjet3D subObjet3D)
+    protected override void UpdatePerMeshRessourcesBuffers(Mesh mesh)
     {
         SceneViewContext sceneContext = RenderArgs.SceneContext;
         Matrix4x4 matViewProj = sceneContext.MatViewProj;
         Matrix4x4 matWorld = RenderArgs.ObjectContext.MatWorld;
         UpdateVertexShaderConstantBuffer(new DepthTestRenderPass.VertexConstantBufferParams()
         {
-            matWorldViewProj = Matrix4x4.Transpose(subObjet3D.Transformation * matWorld * matViewProj)
+            matWorldViewProj = Matrix4x4.Transpose(RenderArgs.ObjectContext.AdditionalTransformation * matWorld * matViewProj)
         });
 
         UpdatePixelShaderConstantBuffer(new DepthTestRenderPass.PixelConstantBufferParams()

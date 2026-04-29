@@ -28,6 +28,7 @@ public class Engine
     private RenderTarget _imGuiRenderTarget;
     private D3D11GraphicDevice _graphicDevice;
     private D3D11GraphicPipeline _graphicPipeline;
+    private MeshFactory _meshFactory;
 
     private Scene _scene;
     private ICamera _activeCamera;
@@ -104,6 +105,8 @@ public class Engine
         _onNativeDxPlatform = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
         _window = conf.Window;
         _inputContext = conf.InputContext;
+
+        _meshFactory = new MeshFactory();
 
         _imGuiController = default!;
         _imGuiRenderTarget = default!;
@@ -339,42 +342,8 @@ public class Engine
                         if (_imGuiShowSceneEditor)
                         {
                             ImGui.Begin("PetitMoteur3D Scene Editor", ref _imGuiShowSceneEditor);
-                            foreach (IObjet3D objet3D in _scene.Content)
-                            {
-                                if (ImGui.TreeNode(objet3D.Name))
-                                {
-                                    ImGui.SeparatorText("Position (WIP)");
-                                    ImGui.SeparatorText("Material");
-                                    foreach (SubObjet3D subObjet in objet3D.SubObjects)
-                                    {
-                                        Material material = subObjet.Material;
-                                        ImGui.ColorEdit4("Ambient Color", ref material.Ambient);
-                                        ImGui.ColorEdit4("Diffuse Color", ref material.Diffuse);
-                                        ImGui.ColorEdit4("Specular Color", ref material.Specular);
-                                        ImGui.InputFloat("Specular Power", ref material.SpecularPower);
-                                        if (material.DiffuseTexture is not null)
-                                        {
-                                            if (ImGui.TreeNode("Diffuse Texture"))
-                                            {
-                                                ImGui.Text(string.Format("size = {0} x {1}", material.DiffuseTexture.Width, material.DiffuseTexture.Height));
-                                                ImGui.Image((nint)material.DiffuseTexture.ShaderRessourceView.Handle, new Vector2(int.Min(material.DiffuseTexture.Width, 256), int.Min(material.DiffuseTexture.Height, 256)));
-                                                ImGui.TreePop();
-                                            }
-                                        }
-                                        if (material.NormalTexture is not null)
-                                        {
-                                            if (ImGui.TreeNode("Normal Texture"))
-                                            {
-                                                ImGui.Text(string.Format("size = {0} x {1}", material.NormalTexture.Width, material.NormalTexture.Height));
-                                                ImGui.Image((nint)material.NormalTexture.ShaderRessourceView.Handle, new Vector2(int.Min(material.NormalTexture.Width, 256), int.Min(material.NormalTexture.Height, 256)));
-                                                ImGui.TreePop();
-                                            }
-                                        }
-                                    }
-                                    ImGui.TreePop();
-                                }
-                                ImGui.Separator();
-                            }
+                            SceneNode<IObjet3D> rootNode = _scene.RootNode;
+                            ImGuiRenderNode(rootNode);
                             ImGui.End();
                         }
 
@@ -478,6 +447,51 @@ public class Engine
         }
     }
 
+    private unsafe void ImGuiRenderNode(SceneNode<IObjet3D> node)
+    {
+        foreach (IObjet3D objet3D in node.Meshes)
+        {
+            if (ImGui.TreeNode(objet3D.Name))
+            {
+                ImGui.SeparatorText("Position (WIP)");
+                ImGui.SeparatorText("Material");
+                Mesh mesh = objet3D.Mesh;
+                {
+                    Material material = mesh.Material;
+                    ImGui.ColorEdit4("Ambient Color", ref material.Ambient);
+                    ImGui.ColorEdit4("Diffuse Color", ref material.Diffuse);
+                    ImGui.ColorEdit4("Specular Color", ref material.Specular);
+                    ImGui.InputFloat("Specular Power", ref material.SpecularPower);
+                    if (material.DiffuseTexture is not null)
+                    {
+                        if (ImGui.TreeNode("Diffuse Texture"))
+                        {
+                            ImGui.Text(string.Format("size = {0} x {1}", material.DiffuseTexture.Width, material.DiffuseTexture.Height));
+                            ImGui.Image((nint)material.DiffuseTexture.ShaderRessourceView.Handle, new Vector2(int.Min(material.DiffuseTexture.Width, 256), int.Min(material.DiffuseTexture.Height, 256)));
+                            ImGui.TreePop();
+                        }
+                    }
+                    if (material.NormalTexture is not null)
+                    {
+                        if (ImGui.TreeNode("Normal Texture"))
+                        {
+                            ImGui.Text(string.Format("size = {0} x {1}", material.NormalTexture.Width, material.NormalTexture.Height));
+                            ImGui.Image((nint)material.NormalTexture.ShaderRessourceView.Handle, new Vector2(int.Min(material.NormalTexture.Width, 256), int.Min(material.NormalTexture.Height, 256)));
+                            ImGui.TreePop();
+                        }
+                    }
+                }
+                ImGui.TreePop();
+            }
+            ImGui.Separator();
+        }
+
+        foreach (SceneNode<IObjet3D> child in node.Children)
+        {
+            ImGuiRenderNode(child);
+        }
+    }
+
     private void OnResize(Size newSize)
     {
         // If the window resizes, we need to be sure to update the swapchain's back buffers.
@@ -539,7 +553,7 @@ public class Engine
         ClearRenderTargetPass deferredGeometryClearRenderTargetPass = new ClearRenderTargetPass(_graphicPipeline, deferredGeometryRenderTarget, ClearRenderTargetPass.ClearOption.RenderTargetAndDepthStencil, "DeferredGeometryClearRenderTargetPass");
         ClearRenderTargetPass deferredLightningClearRenderTargetPass = new ClearRenderTargetPass(_graphicPipeline, deferredlightningRenderTarget, ClearRenderTargetPass.ClearOption.RenderTarget, "DeferredLightningClearRenderTargetPass");
         _deferredGeometryRenderPass = new DeferredGeometryRenderPass(_graphicPipeline, deferredGeometryRenderTarget, "DeferredGeometryRenderPass");
-        _deferredLightningRenderPass = new DeferredLightningRenderPass(_graphicPipeline, deferredlightningRenderTarget, _lightAccumulationGeometryBuffer, _diffuseGeometryBuffer, _specularGeometryBuffer, _normalGeometryBuffer, "DeferredLightningRenderPass");
+        _deferredLightningRenderPass = new DeferredLightningRenderPass(_graphicPipeline, deferredlightningRenderTarget, _lightAccumulationGeometryBuffer, _diffuseGeometryBuffer, _specularGeometryBuffer, _normalGeometryBuffer, _meshFactory, "DeferredLightningRenderPass");
         _deferredRenderingTechnique = new RenderTechnique(deferredGeometryClearRenderTargetPass, _deferredGeometryRenderPass, deferredLightningClearRenderTargetPass, _deferredLightningRenderPass);
 
         RenderTarget depthTestRenderTarget = new(forwardBuffer, _defaultDepthTexture);
@@ -687,41 +701,46 @@ public class Engine
         };
         _gameCamera.Move(0f, 2f, -10f);
 
-        _scene = InitDefaultScene(_graphicDevice.RessourceFactory, _gameCamera, _window);
+        _scene = InitDefaultScene(_meshFactory, _graphicDevice.RessourceFactory, _gameCamera, _window);
         _scene.SetDebugCamera(_debugCamera);
     }
 
-    private static Scene InitDefaultScene(GraphicDeviceRessourceFactory ressourceFactory, ICamera gameCamera, IWindow window)
+    private static Scene InitDefaultScene(MeshFactory meshFactory, GraphicDeviceRessourceFactory ressourceFactory, ICamera gameCamera, IWindow window)
     {
         Scene scene = new(gameCamera, window.Size);
-        Bloc bloc1 = new(4.0f, 4.0f, 4.0f, ressourceFactory);
-        bloc1.Material.Specular = Vector4.Zero;
-        bloc1.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\herringbone_brick_diff.jpg");
-        bloc1.Material.NormalTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\herringbone_brick_norm.jpg");
+
+        Mesh meshBloc1 = meshFactory.CreateBloc(4.0f, 4.0f, 4.0f);
+        meshBloc1.Material.Specular = Vector4.Zero;
+        meshBloc1.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\herringbone_brick_diff.jpg");
+        meshBloc1.Material.NormalTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\herringbone_brick_norm.jpg");
+        ObjetMesh bloc1 = new(meshBloc1, ressourceFactory);
         bloc1.Move(-4f, 2f, 0f);
 
-        Bloc bloc2 = new(4.0f, 4.0f, 4.0f, ressourceFactory);
-        bloc2.Material.Specular = Vector4.Zero;
-        bloc2.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\brickwall.jpg");
-        bloc2.Material.NormalTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\brickwall_normal.jpg");
+        Mesh meshBloc2 = meshFactory.CreateBloc(4.0f, 4.0f, 4.0f);
+        meshBloc2.Material.Specular = Vector4.Zero;
+        meshBloc2.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\brickwall.jpg");
+        meshBloc2.Material.NormalTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\brickwall_normal.jpg");
+        ObjetMesh bloc2 = new(meshBloc2, ressourceFactory);
         bloc2.Move(4f, 2f, 0f);
 
-        Bloc bloc3 = new(4.0f, 4.0f, 4.0f, ressourceFactory);
-        bloc3.Material.Specular = Vector4.Zero;
-        bloc3.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\brickwall.jpg");
-        bloc3.Material.NormalTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\brickwall_normal.jpg");
+        Mesh meshBloc3 = meshFactory.CreateBloc(4.0f, 4.0f, 4.0f);
+        meshBloc3.Material.Specular = Vector4.Zero;
+        meshBloc3.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\brickwall.jpg");
+        meshBloc3.Material.NormalTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\brickwall_normal.jpg");
+        ObjetMesh bloc3 = new(meshBloc3, ressourceFactory);
         bloc3.Move(-4f, 2f, 4f);
 
-        Bloc bloc4 = new(4.0f, 4.0f, 4.0f, ressourceFactory);
-        bloc4.Material.Specular = Vector4.Zero;
-        bloc4.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\brickwall.jpg");
-        bloc4.Material.NormalTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\brickwall_normal.jpg");
+        Mesh meshBloc4 = meshFactory.CreateBloc(4.0f, 4.0f, 4.0f);
+        meshBloc4.Material.Specular = Vector4.Zero;
+        meshBloc4.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\brickwall.jpg");
+        meshBloc4.Material.NormalTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\brickwall_normal.jpg");
+        ObjetMesh bloc4 = new(meshBloc4, ressourceFactory);
         bloc4.Move(4f, 2f, 4f);
 
+        // Teapot
         MeshLoader meshLoader = new();
-        SceneMesh[] meshes = meshLoader.Load("models\\teapot.gltf");
+        SceneNode<Mesh> rootMesh = meshLoader.Load("models\\teapot.gltf");
 
-        SceneMesh rootMesh = meshes[0];
         BoundingBox boundingBox = rootMesh.GetBoundingBox();
         float centerX = (boundingBox.Min.X + boundingBox.Max.X) / 2f;
         float centerY = (boundingBox.Min.Y + boundingBox.Max.Y) / 2f;
@@ -730,19 +749,20 @@ public class Engine
         float dimY = boundingBox.Max.Y - boundingBox.Min.Y;
         float dimZ = boundingBox.Max.Z - boundingBox.Min.Z;
 
-        ObjetMesh objetMesh = new(rootMesh, ressourceFactory);
-        objetMesh.Move(0f, 2f, 0f);
-        objetMesh.SetScale(4f / float.Max(float.Max(dimX, dimY), dimZ));
+        rootMesh.AddTransform(Matrix4x4.CreateScale(4f / float.Max(float.Max(dimX, dimY), dimZ)) * Matrix4x4.CreateTranslation(0f, 2f, 0f));
 
-        Plane ground = new(10f, 10f, ressourceFactory);
-        ground.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\silk.png");
+        SceneNode<IObjet3D> objetMeshes = rootMesh.Select<IObjet3D>(m => new ObjetMesh(m, ressourceFactory));
+
+        Mesh meshGround = meshFactory.CreatePlane(10f, 10f);
+        meshGround.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\silk.png");
+        ObjetMesh ground = new(meshGround, ressourceFactory);
         ground.Rotate(Vector3.UnitX, (float)(Math.PI / 2f));
 
         scene.AddObjet(bloc1);
         scene.AddObjet(bloc2);
         scene.AddObjet(bloc3);
         scene.AddObjet(bloc4);
-        scene.AddObjet(objetMesh);
+        scene.AddChildren(objetMeshes);
         scene.AddObjet(ground);
 
         return scene;

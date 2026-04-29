@@ -27,13 +27,13 @@ internal sealed class TrailingCamera : ICamera
     /// <summary>
     /// The target of the camera.
     /// <summary>
-    private ISceneObjet _target;
+    private IPositionObjet _target;
 
     /// <summary>
     /// Constructeur par defaut
     /// </summary>
     /// <param name="target"></param>
-    public TrailingCamera(ISceneObjet target) : this(target, (float)(Math.PI / 4d))
+    public TrailingCamera(IPositionObjet target) : this(target, (float)(Math.PI / 4d))
     {
 
     }
@@ -43,7 +43,7 @@ internal sealed class TrailingCamera : ICamera
     /// </summary>
     /// <param name="target"></param>
     /// <param name="champVision"></param>
-    public TrailingCamera(ISceneObjet target, float champVision) : this(target, champVision, Vector3.Zero)
+    public TrailingCamera(IPositionObjet target, float champVision) : this(target, champVision, Vector3.Zero)
     {
     }
 
@@ -53,7 +53,7 @@ internal sealed class TrailingCamera : ICamera
     /// <param name="target"></param>
     /// <param name="champVision"></param>
     /// <param name="position"></param>
-    public TrailingCamera(ISceneObjet target, float champVision, Vector3 position)
+    public TrailingCamera(IPositionObjet target, float champVision, Vector3 position)
     {
         _target = target;
         ChampVision = champVision;
@@ -121,6 +121,11 @@ internal sealed class TrailingCamera : ICamera
         ref readonly Vector3 cameraTarget = ref _target.Position;
         ref readonly Vector3 cameraUpVector = ref CameraUpVector;
         viewMatrix = Matrix4x4Helper.CreateLookAtLeftHanded(in cameraPosition, in cameraTarget, in cameraUpVector);
+    }
+
+    public void Accept(IVisitor<ICamera> visitor)
+    {
+        throw new NotImplementedException();
     }
 
     public void Accept(IVisitor visitor)

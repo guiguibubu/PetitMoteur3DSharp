@@ -124,7 +124,7 @@ internal sealed class DeferredGeometryRenderPass : BaseRenderPass, IDisposable
         UpdateVertexBuffer(baseObjet3D.VertexBuffer);
     }
 
-    protected override void UpdatePerMeshRessourcesBuffers(SubObjet3D subObjet3D)
+    protected override void UpdatePerMeshRessourcesBuffers(Mesh mesh)
     {
         SceneViewContext sceneContext = RenderArgs.SceneContext;
         Matrix4x4 matViewProj = sceneContext.MatViewProj;
@@ -142,7 +142,7 @@ internal sealed class DeferredGeometryRenderPass : BaseRenderPass, IDisposable
             CameraPos = sceneContext.GameCameraPos
         });
 
-        Matrix4x4 matrixWorld = subObjet3D.Transformation * matWorld;
+        Matrix4x4 matrixWorld = RenderArgs.ObjectContext.AdditionalTransformation * matWorld;
         UpdateVertexObjectConstantBuffer(new DeferredGeometryRenderPass.VertexObjectConstantBufferParams()
         {
             matWorldViewProj = Matrix4x4.Transpose(matrixWorld * matViewProj),
@@ -153,18 +153,18 @@ internal sealed class DeferredGeometryRenderPass : BaseRenderPass, IDisposable
         {
             Material = new DeferredGeometryRenderPass.MaterialParams()
             {
-                AmbiantColor = subObjet3D.Material.Ambient,
-                DiffuseColor = subObjet3D.Material.Diffuse,
-                SpecularColor = subObjet3D.Material.Specular,
-                SpecularPower = subObjet3D.Material.SpecularPower,
-                HasDiffuseTexture = Convert.ToInt32(subObjet3D.Material.DiffuseTexture is not null),
-                HasNormalTexture = Convert.ToInt32(subObjet3D.Material.NormalTexture is not null),
+                AmbiantColor = mesh.Material.Ambient,
+                DiffuseColor = mesh.Material.Diffuse,
+                SpecularColor = mesh.Material.Specular,
+                SpecularPower = mesh.Material.SpecularPower,
+                HasDiffuseTexture = Convert.ToInt32(mesh.Material.DiffuseTexture is not null),
+                HasNormalTexture = Convert.ToInt32(mesh.Material.NormalTexture is not null),
             }
         });
 
         // Activation de la texture
-        UpdateTexture(subObjet3D.Material.DiffuseTexture?.ShaderRessourceView ?? new ComPtr<ID3D11ShaderResourceView>());
-        UpdateNormalMap(subObjet3D.Material.NormalTexture?.ShaderRessourceView ?? new ComPtr<ID3D11ShaderResourceView>());
+        UpdateTexture(mesh.Material.DiffuseTexture?.ShaderRessourceView ?? new ComPtr<ID3D11ShaderResourceView>());
+        UpdateNormalMap(mesh.Material.NormalTexture?.ShaderRessourceView ?? new ComPtr<ID3D11ShaderResourceView>());
     }
 
     /// <inheritdoc/>

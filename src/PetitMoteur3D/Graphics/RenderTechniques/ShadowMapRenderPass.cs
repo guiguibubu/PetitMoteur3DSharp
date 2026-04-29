@@ -65,7 +65,7 @@ internal sealed class ShadowMapRenderPass : BaseRenderPass, IDisposable
         UpdateVertexBuffer(baseObjet3D.VertexBuffer);
     }
 
-    protected override void UpdatePerMeshRessourcesBuffers(SubObjet3D subObjet3D)
+    protected override void UpdatePerMeshRessourcesBuffers(Mesh mesh)
     {
         SceneViewContext sceneContext = RenderArgs.SceneContext;
         Matrix4x4 matViewProj = sceneContext.MatViewProj;
@@ -74,7 +74,7 @@ internal sealed class ShadowMapRenderPass : BaseRenderPass, IDisposable
         // Initialiser et sélectionner les « constantes » des shaders
         UpdateVertexShaderConstantBuffer(new ShadowMapRenderPass.VertexShaderConstantBufferParams()
         {
-            matWorldViewProj = Matrix4x4.Transpose(subObjet3D.Transformation * matWorld * matViewProjLight)
+            matWorldViewProj = Matrix4x4.Transpose(RenderArgs.ObjectContext.AdditionalTransformation * matWorld * matViewProjLight)
         });
     }
 

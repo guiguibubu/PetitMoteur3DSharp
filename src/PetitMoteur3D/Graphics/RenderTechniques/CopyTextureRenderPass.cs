@@ -38,7 +38,7 @@ internal sealed class CopyTextureRenderPass : IRenderPass
     {
     }
 
-    public void Render(SubObjet3D subObjet3D)
+    public void Render(SceneNode<IObjet3D> node)
     {
     }
     #endregion

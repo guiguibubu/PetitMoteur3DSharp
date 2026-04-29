@@ -43,11 +43,11 @@ internal sealed class ClearRenderTargetPass : IRenderPass
         ClearRenderTarget();
     }
 
-    public void Render(BaseObjet3D objet)
+    public void Render(SceneNode<IObjet3D> node)
     {
     }
 
-    public void Render(SubObjet3D subObjet3D)
+    public void Render(BaseObjet3D objet)
     {
     }
     #endregion

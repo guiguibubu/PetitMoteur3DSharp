@@ -1,6 +1,8 @@
-﻿namespace PetitMoteur3D;
+﻿using PetitMoteur3D.Graphics;
 
-internal interface IObjet3D : INamedObjet, ISceneObjet, IMovableObjet, IRotationObjet, IScalableObjet
+namespace PetitMoteur3D;
+
+internal interface IObjet3D : INamedObjet, ISceneObjet<IObjet3D>, IMovableObjet, IRotationObjet, IScalableObjet, IMesh
 {
-    SubObjet3D[] SubObjects { get; }
+    Mesh Mesh { get; }
 }
