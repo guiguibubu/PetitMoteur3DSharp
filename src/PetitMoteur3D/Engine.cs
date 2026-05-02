@@ -709,32 +709,26 @@ public class Engine
     {
         Scene scene = new(gameCamera, window.Size);
 
-        Mesh meshBloc1 = meshFactory.CreateBloc(4.0f, 4.0f, 4.0f);
-        meshBloc1.Material.Specular = Vector4.Zero;
-        meshBloc1.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\herringbone_brick_diff.jpg");
-        meshBloc1.Material.NormalTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\herringbone_brick_norm.jpg");
-        ObjetMesh bloc1 = new(meshBloc1, ressourceFactory);
-        bloc1.Move(-4f, 2f, 0f);
+        Mesh meshBlocHerringbone = meshFactory.CreateBloc(4.0f, 4.0f, 4.0f);
+        meshBlocHerringbone.Material.Specular = Vector4.Zero;
+        meshBlocHerringbone.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\herringbone_brick_diff.jpg");
+        meshBlocHerringbone.Material.NormalTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\herringbone_brick_norm.jpg");
+        
+        Mesh meshBlocBrickwall = meshFactory.CreateBloc(4.0f, 4.0f, 4.0f);
+        meshBlocBrickwall.Material.Specular = Vector4.Zero;
+        meshBlocBrickwall.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\brickwall.jpg");
+        meshBlocBrickwall.Material.NormalTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\brickwall_normal.jpg");
 
-        Mesh meshBloc2 = meshFactory.CreateBloc(4.0f, 4.0f, 4.0f);
-        meshBloc2.Material.Specular = Vector4.Zero;
-        meshBloc2.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\brickwall.jpg");
-        meshBloc2.Material.NormalTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\brickwall_normal.jpg");
-        ObjetMesh bloc2 = new(meshBloc2, ressourceFactory);
+        ObjetMesh bloc1 = new(meshBlocHerringbone, ressourceFactory);
+        bloc1.Move(-4f, 2f, 0f);
+        
+        ObjetMesh bloc2 = new(meshBlocBrickwall, ressourceFactory);
         bloc2.Move(4f, 2f, 0f);
 
-        Mesh meshBloc3 = meshFactory.CreateBloc(4.0f, 4.0f, 4.0f);
-        meshBloc3.Material.Specular = Vector4.Zero;
-        meshBloc3.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\brickwall.jpg");
-        meshBloc3.Material.NormalTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\brickwall_normal.jpg");
-        ObjetMesh bloc3 = new(meshBloc3, ressourceFactory);
+        ObjetMesh bloc3 = new(meshBlocBrickwall, ressourceFactory);
         bloc3.Move(-4f, 2f, 4f);
 
-        Mesh meshBloc4 = meshFactory.CreateBloc(4.0f, 4.0f, 4.0f);
-        meshBloc4.Material.Specular = Vector4.Zero;
-        meshBloc4.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\brickwall.jpg");
-        meshBloc4.Material.NormalTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\brickwall_normal.jpg");
-        ObjetMesh bloc4 = new(meshBloc4, ressourceFactory);
+        ObjetMesh bloc4 = new(meshBlocHerringbone, ressourceFactory);
         bloc4.Move(4f, 2f, 4f);
 
         // Teapot
@@ -751,10 +745,11 @@ public class Engine
 
         rootMesh.AddTransform(Matrix4x4.CreateScale(4f / float.Max(float.Max(dimX, dimY), dimZ)) * Matrix4x4.CreateTranslation(0f, 2f, 0f));
 
-        SceneNode<IObjet3D> objetMeshes = rootMesh.Select<IObjet3D>(m => new ObjetMesh(m, ressourceFactory));
+        SceneNode<IObjet3D> teapotMeshes = rootMesh.Select<IObjet3D>(m => new ObjetMesh(m, ressourceFactory));
 
         Mesh meshGround = meshFactory.CreatePlane(10f, 10f);
         meshGround.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\silk.png");
+        
         ObjetMesh ground = new(meshGround, ressourceFactory);
         ground.Rotate(Vector3.UnitX, (float)(Math.PI / 2f));
 
@@ -762,7 +757,7 @@ public class Engine
         scene.AddObjet(bloc2);
         scene.AddObjet(bloc3);
         scene.AddObjet(bloc4);
-        scene.AddChildren(objetMeshes);
+        scene.AddChildren(teapotMeshes);
         scene.AddObjet(ground);
 
         return scene;
