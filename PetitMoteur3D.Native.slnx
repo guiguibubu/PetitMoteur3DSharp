@@ -1,0 +1,7 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="src/PetitMoteur3D.Application.Native/PetitMoteur3D.Application.Native.vcxproj" Id="9aa14744-634a-4671-9e74-0f8f0db90357" />
+</Solution>

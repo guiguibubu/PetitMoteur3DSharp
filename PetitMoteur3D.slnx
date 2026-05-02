@@ -1,0 +1,35 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="src/PetitMoteur3D.Application.ABI/PetitMoteur3D.Application.ABI.csproj">
+    <Platform Solution="Debug|x64" Project="x64" />
+    <Platform Solution="Debug|x86" Project="x86" />
+  </Project>
+  <Project Path="src/PetitMoteur3D.Application/PetitMoteur3D.Application.csproj">
+    <Platform Solution="*|Any CPU" Project="x64" />
+    <Platform Solution="*|x64" Project="x64" />
+    <Platform Solution="*|x86" Project="x86" />
+    <Deploy Solution="*|Any CPU" />
+  </Project>
+  <Project Path="src/PetitMoteur3D.CLI/PetitMoteur3D.CLI.csproj" />
+  <Project Path="src/PetitMoteur3D.Core/PetitMoteur3D.Core.csproj" />
+  <Project Path="src/PetitMoteur3D.Editor/PetitMoteur3D.Editor.csproj">
+    <Platform Solution="*|Any CPU" Project="x64" />
+    <Platform Solution="*|x64" Project="x64" />
+    <Platform Solution="*|x86" Project="x86" />
+    <Deploy Solution="*|Any CPU" />
+  </Project>
+  <Project Path="src/PetitMoteur3D.Input.SilkNet/PetitMoteur3D.Input.SilkNet.csproj" />
+  <Project Path="src/PetitMoteur3D.Input.WinUI/PetitMoteur3D.Input.WinUI.csproj" />
+  <Project Path="src/PetitMoteur3D.Input/PetitMoteur3D.Input.csproj" />
+  <Project Path="src/PetitMoteur3D.Logging/PetitMoteur3D.Logging.csproj" />
+  <Project Path="src/PetitMoteur3D.Physics.Demo/PetitMoteur3D.Physics.Demo.csproj" />
+  <Project Path="src/PetitMoteur3D.Physics/PetitMoteur3D.Physics.csproj" />
+  <Project Path="src/PetitMoteur3D.Window.SilkNet/PetitMoteur3D.Window.SilkNet.csproj" />
+  <Project Path="src/PetitMoteur3D.Window.WinUI/PetitMoteur3D.Window.WinUI.csproj" />
+  <Project Path="src/PetitMoteur3D.Window/PetitMoteur3D.Window.csproj" />
+  <Project Path="src/PetitMoteur3D/PetitMoteur3D.csproj" />
+</Solution>
