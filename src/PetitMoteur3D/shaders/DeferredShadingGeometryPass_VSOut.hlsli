@@ -6,4 +6,5 @@ struct DeferredShadingGeometryPass_VertexParams
     float3 vDirLum : TEXCOORD1;
     float3 vDirCam : TEXCOORD2;
     float2 coordTex : TEXCOORD3;
+    float4 lightSpacePos : TEXCOORD4;
 };

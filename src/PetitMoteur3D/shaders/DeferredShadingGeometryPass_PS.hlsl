@@ -16,6 +16,23 @@ struct MaterialParams
     int offset; // Offset for memory alignment
 };
 
+struct LightParams
+{
+    float3 pos; // la position de la source d’éclairage (Point)
+    float3 dir; // la direction de la source d’éclairage (Directionnelle)
+    float4 vAEcl; // la valeur ambiante de l’éclairage
+    float4 vDEcl; // la valeur diffuse de l’éclairage
+    bool enable; // l'éclairage est allumé
+    bool enableShadow; // autoriser ombre (ShadowMapping)
+    int2 offset; // Offset for memory alignment
+};
+
+cbuffer frameBuffer
+{
+    LightParams vLumiere; // la position de la source d’éclairage (Point)
+    float4 vCamera; // la position de la caméra
+}
+
 cbuffer objectBuffer
 {
     MaterialParams vMaterial;
@@ -26,6 +43,7 @@ SamplerComparisonState ShadowMapSampler; // sampling pour la shadow map
 
 Texture2D textureDiffuse; // la texture
 Texture2D textureNormalMap; // la normal map
+Texture2D textureShadowMap; // la shadow map
 
 struct PS_OUT
 {
@@ -33,9 +51,10 @@ struct PS_OUT
     float4 Diffuse : SV_Target1; // Diffuse Albedo (R8G8B8_UNORM) Unused (A8_UNORM)
     float4 Specular : SV_Target2; // Specular Color (R8G8B8_UNROM) Specular Power(A8_UNORM)
     float4 NormalVS : SV_Target3; // View space normal (R32G32B32_FLOAT) Unused (A32_FLOAT)
+    float4 Shadow : SV_Target4; // Shadow Mask (DXGI_FORMAT_R8_UNORM)
 };
 
-PS_OUT DeferredShadingGeometryPassPSImpl(DeferredShadingGeometryPass_VertexParams vertex, uniform bool useNormalMap, uniform bool useTextureColor)
+PS_OUT DeferredShadingGeometryPassPSImpl(DeferredShadingGeometryPass_VertexParams vertex, uniform bool useNormalMap, uniform bool useTextureColor, uniform bool drawShadow)
 {
     // Normal Geometry
     if (useNormalMap)
@@ -66,12 +85,51 @@ PS_OUT DeferredShadingGeometryPassPSImpl(DeferredShadingGeometryPass_VertexParam
     // from Michiel van der Leeuw, Guerrilla (2007)
     float specularPowerPacked = log2(specularPower) / 10.5f;
     
+    // ********* OMBRE *********
+    bool isInShadow = false;
+    if (drawShadow)
+    {
+        // Conversion space [-1;1] to texture space [0;1]
+        float2 shadowTexCoords = 0.5f * vertex.lightSpacePos.xy / vertex.lightSpacePos.w + float2(0.5f, 0.5f);
+        shadowTexCoords.y = 1.0f - shadowTexCoords.y;
+        float pixelDepth = vertex.lightSpacePos.z / vertex.lightSpacePos.w;
+
+        // Check if the pixel texture coordinate is in the view frustum of the 
+        // light before doing any shadow work.
+        bool isInLightFrustum = saturate(shadowTexCoords.xy) == shadowTexCoords.xy;
+        if (isInLightFrustum && pixelDepth > 0)
+        {
+            // Use an offset value to mitigate shadow artifacts due to imprecise 
+            // floating-point values (shadow acne).
+            //
+            // This is an approximation of epsilon * tan(acos(saturate(NdotL))):
+            float3 N = normalize(vertex.Norm);
+            float3 L = normalize(vertex.vDirLum);
+            float3 NdotL = saturate(dot(N, L));
+            float margin = acos(NdotL);
+#ifdef LINEAR
+            // The offset can be slightly smaller with smoother shadow edges.
+            float epsilon = 0.0005 / margin;
+#else
+            float epsilon = 0.001 / margin;
+#endif
+            // Clamp epsilon to a fixed range so it doesn't go overboard.
+            epsilon = clamp(epsilon, 0, 0.1);
+
+            // Use the SampleCmpLevelZero Texture2D method (or SampleCmp) to sample from 
+            // the shadow map, just as you would with Direct3D feature level 10_0 and
+            // higher.  Feature level 9_1 only supports LessOrEqual, which returns 0 if
+            // the pixel is in the shadow.
+            isInShadow = textureShadowMap.SampleCmpLevelZero(ShadowMapSampler, shadowTexCoords, pixelDepth + epsilon).x == 0;
+        }
+    }
     
     PS_OUT result = (PS_OUT) 0;
     result.LightAccumulation = float4(ambianteMaterial, 0);
     result.Diffuse = float4(couleurDiffuseTexture * diffuseMaterial, 0);
     result.Specular = float4(specularMaterial, specularPowerPacked);
     result.NormalVS = float4(vertex.Norm, 0);
+    result.Shadow = isInShadow ? 255 : 0;
     return result;
 }
 
@@ -79,7 +137,7 @@ PS_OUT DeferredShadingGeometryPassPSImpl(DeferredShadingGeometryPass_VertexParam
 [earlydepthstencil]
 PS_OUT DeferredShadingGeometryPassPS(DeferredShadingGeometryPass_VertexParams vertex)
 {
-    return DeferredShadingGeometryPassPSImpl(vertex, vMaterial.hasNormalTexture, vMaterial.hasDiffuseTexture);
+    return DeferredShadingGeometryPassPSImpl(vertex, vMaterial.hasNormalTexture, vMaterial.hasDiffuseTexture, vLumiere.enableShadow);
 }
 
 #endif

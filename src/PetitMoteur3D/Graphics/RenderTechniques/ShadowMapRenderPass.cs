@@ -74,7 +74,7 @@ internal sealed class ShadowMapRenderPass : BaseRenderPass, IDisposable
         // Initialiser et sélectionner les « constantes » des shaders
         UpdateVertexShaderConstantBuffer(new ShadowMapRenderPass.VertexShaderConstantBufferParams()
         {
-            matWorldViewProj = Matrix4x4.Transpose(RenderArgs.ObjectContext.AdditionalTransformation * matWorld * matViewProjLight)
+            matWorldViewProjLight = Matrix4x4.Transpose(RenderArgs.ObjectContext.AdditionalTransformation * matWorld * matViewProjLight)
         });
     }
 
@@ -148,7 +148,7 @@ internal sealed class ShadowMapRenderPass : BaseRenderPass, IDisposable
         /// <summary>
         /// la matrice totale
         /// </summary>
-        public Matrix4x4 matWorldViewProj;
+        public Matrix4x4 matWorldViewProjLight;
 
         public void Reset()
         {

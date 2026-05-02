@@ -31,6 +31,8 @@ Texture2D textureDiffuse : register(t1);
 Texture2D textureSpecular : register(t2);
 // The normal from the screen space texture.
 Texture2D textureNormal : register(t3);
+// The shadow application from the screen space texture.
+Texture2D textureShadow : register(t4);
 
 struct PS_OUT
 {
@@ -44,6 +46,7 @@ PS_OUT DeferredShadingLightningPassPSImpl(DeferredShadingLightningPass_VertexPar
     float3 diffuse = textureDiffuse.Load(int3(texCoord, 0)).rgb;
     float4 specular = textureSpecular.Load(int3(texCoord, 0));
     float3 normal = textureNormal.Load(int3(texCoord, 0)).xyz;
+    float isInShadow = textureShadow.Load(int3(texCoord, 0)).x;
     
     // Unpack the specular power from the alpha component of the specular color.
     float specularPower = exp2(specular.a * 10.5f);
@@ -58,7 +61,18 @@ PS_OUT DeferredShadingLightningPassPSImpl(DeferredShadingLightningPass_VertexPar
     LightingResult lit = DoDirectionalLight(light, specularPower, V, normal);
     
     //float3 couleur = 0.4f * lightAccumultation * vLumiere.vAEcl.rgb + (diffuse * lit.Diffuse + specular.rgb * lit.Specular);
-    float3 couleur = (diffuse * lit.Diffuse) + (specular.rgb * lit.Specular);
+    //float3 couleur = (diffuse * lit.Diffuse) + (specular.rgb * lit.Specular);
+    
+    float3 couleur;
+    
+    if (isInShadow)
+    {
+        couleur = lightAccumultation * vLumiere.vAEcl.rgb;
+    }
+    else
+    {
+        couleur = (diffuse * lit.Diffuse) + (specular.rgb * lit.Specular);
+    }
     
     PS_OUT result = (PS_OUT) 0;
     result.color = float4(couleur, 1.0f);

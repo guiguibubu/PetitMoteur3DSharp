@@ -18,16 +18,20 @@ internal sealed class DeferredGeometryRenderPass : BaseRenderPass, IDisposable
     private ConstantBuffer _pixelObjectConstantBuffer;
     private ConstantBuffer _vertexObjectConstantBuffer;
 
-    private ComPtr<ID3D11SamplerState> _sampleState;
+    private ComPtr<ID3D11SamplerState> _samplerState;
+    private ComPtr<ID3D11SamplerState> _shadowMapSamplerState;
 
-    private ComPtr<ID3D11ShaderResourceView> _textureD3D;
-    private ComPtr<ID3D11ShaderResourceView> _normalMap;
+    private Texture? _textureD3D;
+    private Texture? _normalMap;
+    private Texture? _shadowMap;
 
     private bool _disposedValue;
 
-    public DeferredGeometryRenderPass(D3D11GraphicPipeline graphicPipeline, RenderTarget renderTarget, string name = "")
+    public DeferredGeometryRenderPass(D3D11GraphicPipeline graphicPipeline, RenderTarget renderTarget, Texture? shadowMap, string name = "")
         : base(graphicPipeline, renderTarget, name)
     {
+        _shadowMap = shadowMap;
+
         _disposedValue = false;
     }
 
@@ -48,15 +52,6 @@ internal sealed class DeferredGeometryRenderPass : BaseRenderPass, IDisposable
         _pixelObjectConstantBuffer.Buffer.UpdateSubresource(GraphicPipeline.DeviceContext, 0, in Unsafe.NullRef<Box>(), in value, 0, 0);
     }
 
-    public void UpdateTexture(ComPtr<ID3D11ShaderResourceView> texture)
-    {
-        _textureD3D = texture;
-    }
-
-    public void UpdateNormalMap(ComPtr<ID3D11ShaderResourceView> normalMap)
-    {
-        _normalMap = normalMap;
-    }
     #endregion
 
     #region Vertex Shader
@@ -70,33 +65,47 @@ internal sealed class DeferredGeometryRenderPass : BaseRenderPass, IDisposable
     #region Pixel Shader
     public override void BindPixelShaderConstantBuffers()
     {
-        _pixelObjectConstantBuffer.Bind(GraphicPipeline, ShaderType.PixelShader, idSlot: 0);
+        _sceneConstantBuffer.Bind(GraphicPipeline, ShaderType.PixelShader, idSlot: 0);
+        _pixelObjectConstantBuffer.Bind(GraphicPipeline, ShaderType.PixelShader, idSlot: 1);
     }
 
     public override unsafe void BindPixelShaderRessources()
     {
+        ComPtr<ID3D11ShaderResourceView> texture3D = _textureD3D?.ShaderRessourceView ?? new();
+        ComPtr<ID3D11ShaderResourceView> normalMap = _normalMap?.ShaderRessourceView ?? new();
+        ComPtr<ID3D11ShaderResourceView> shadowMap = _shadowMap?.ShaderRessourceView ?? new();
+
         // Activation de la texture
-        if (_textureD3D.Handle is not null)
+        if (texture3D.Handle is not null)
         {
-            GraphicPipeline.PixelShaderStage.SetShaderResources(0, 1, ref _textureD3D);
+            GraphicPipeline.PixelShaderStage.SetShaderResources(0, 1, ref texture3D);
         }
         else
         {
             GraphicPipeline.PixelShaderStage.ClearShaderResources(0);
         }
-        if (_normalMap.Handle is not null)
+        if (normalMap.Handle is not null)
         {
-            GraphicPipeline.PixelShaderStage.SetShaderResources(1, 1, ref _normalMap);
+            GraphicPipeline.PixelShaderStage.SetShaderResources(1, 1, ref normalMap);
         }
         else
         {
             GraphicPipeline.PixelShaderStage.ClearShaderResources(1);
         }
+        if (shadowMap.Handle is not null)
+        {
+            GraphicPipeline.PixelShaderStage.SetShaderResources(2, 1, ref shadowMap);
+        }
+        else
+        {
+            GraphicPipeline.PixelShaderStage.ClearShaderResources(2);
+        }
     }
 
     public override void BindSamplers()
     {
-        GraphicPipeline.PixelShaderStage.SetSamplers(0, 1, in _sampleState);
+        GraphicPipeline.PixelShaderStage.SetSamplers(0, 1, in _samplerState);
+        GraphicPipeline.PixelShaderStage.SetSamplers(1, 1, in _shadowMapSamplerState);
     }
 
     public override void ClearPixelShaderResources()
@@ -128,6 +137,7 @@ internal sealed class DeferredGeometryRenderPass : BaseRenderPass, IDisposable
     {
         SceneViewContext sceneContext = RenderArgs.SceneContext;
         Matrix4x4 matViewProj = sceneContext.MatViewProj;
+        Matrix4x4 matViewProjLight = sceneContext.MatViewProjLight;
         Matrix4x4 matWorld = RenderArgs.ObjectContext.MatWorld;
         UpdateSceneConstantBuffer(new DeferredGeometryRenderPass.SceneConstantBufferParams()
         {
@@ -138,6 +148,7 @@ internal sealed class DeferredGeometryRenderPass : BaseRenderPass, IDisposable
                 AmbiantColor = sceneContext.Light.AmbiantColor,
                 DiffuseColor = sceneContext.Light.DiffuseColor,
                 Enable = Convert.ToInt32(true),
+                EnableShadow = Convert.ToInt32(_shadowMap is not null),
             },
             CameraPos = sceneContext.GameCameraPos
         });
@@ -147,6 +158,7 @@ internal sealed class DeferredGeometryRenderPass : BaseRenderPass, IDisposable
         {
             matWorldViewProj = Matrix4x4.Transpose(matrixWorld * matViewProj),
             matWorld = Matrix4x4.Transpose(matrixWorld),
+            matWorldViewProjLight = Matrix4x4.Transpose(matrixWorld * matViewProjLight),
         });
 
         UpdatePixelObjectConstantBuffer(new DeferredGeometryRenderPass.PixelObjectConstantBufferParams()
@@ -163,8 +175,8 @@ internal sealed class DeferredGeometryRenderPass : BaseRenderPass, IDisposable
         });
 
         // Activation de la texture
-        UpdateTexture(mesh.Material.DiffuseTexture?.ShaderRessourceView ?? new ComPtr<ID3D11ShaderResourceView>());
-        UpdateNormalMap(mesh.Material.NormalTexture?.ShaderRessourceView ?? new ComPtr<ID3D11ShaderResourceView>());
+        _textureD3D = mesh.Material.DiffuseTexture;
+        _normalMap = mesh.Material.NormalTexture;
     }
 
     /// <inheritdoc/>
@@ -248,6 +260,7 @@ internal sealed class DeferredGeometryRenderPass : BaseRenderPass, IDisposable
     protected sealed override void InitialisationImpl(GraphicDeviceRessourceFactory graphicDeviceRessourceFactory)
     {
         InitTextureSampler(graphicDeviceRessourceFactory.TextureManager);
+        InitShadowMapSampler(graphicDeviceRessourceFactory.TextureManager);
     }
     #endregion
 
@@ -273,7 +286,30 @@ internal sealed class DeferredGeometryRenderPass : BaseRenderPass, IDisposable
         samplerDesc.BorderColor[3] = 0f;
 
         // Création de l’état de sampling
-        _sampleState = textureManager.Factory.CreateSampler(samplerDesc);
+        _samplerState = textureManager.Factory.CreateSampler(samplerDesc);
+    }
+    private unsafe void InitShadowMapSampler(TextureManager textureManager)
+    {
+        // Initialisation des paramètres de sampling de la texture
+        SamplerDesc samplerDesc = new()
+        {
+            Filter = Filter.ComparisonMinMagMipPoint,
+            AddressU = TextureAddressMode.Border,
+            AddressV = TextureAddressMode.Border,
+            AddressW = TextureAddressMode.Border,
+            MipLODBias = 0f,
+            MaxAnisotropy = 0,
+            ComparisonFunc = ComparisonFunc.LessEqual,
+            MinLOD = 0,
+            MaxLOD = float.MaxValue,
+        };
+        samplerDesc.BorderColor[0] = 1f;
+        samplerDesc.BorderColor[1] = 1f;
+        samplerDesc.BorderColor[2] = 1f;
+        samplerDesc.BorderColor[3] = 1f;
+
+        // Création de l’état de sampling
+        _shadowMapSamplerState = textureManager.Factory.CreateSampler(samplerDesc);
     }
     #endregion
 
@@ -284,25 +320,33 @@ internal sealed class DeferredGeometryRenderPass : BaseRenderPass, IDisposable
         /// la position de la source d’éclairage (Source Point)
         /// </summary>
         public Vector4 Position;
+        // ---- 16 bytes ----
         /// <summary>
         /// la direction de la source d’éclairage (Source Directionnelle)
         /// </summary>
         public Vector4 Direction;
+        // ---- 16 bytes ----
         /// <summary>
         /// la valeur ambiante de l’éclairage
         /// </summary>
         public Vector4 AmbiantColor;
+        // ---- 16 bytes ----
         /// <summary>
         /// la valeur diffuse de l’éclairage
         /// </summary>
         public Vector4 DiffuseColor;
+        // ---- 16 bytes ----
         /// <summary>
         /// Indique la lumiere est active
         /// </summary>
         public int Enable;
+        /// <summary>
+        /// Indique la lumiere fait une ombre (ShadowMapping)
+        /// </summary>
+        public int EnableShadow;
         private readonly uint alignement1_1;
         private readonly uint alignement1_2;
-        private readonly uint alignement1_3;
+        // ---- 16 bytes ----
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 16)]
@@ -368,7 +412,7 @@ internal sealed class DeferredGeometryRenderPass : BaseRenderPass, IDisposable
         /// Valeurs du matériau
         /// </summary>
         public MaterialParams Material;
-
+        // ---- 4 x 16 bytes ----
         public void Reset()
         {
             MemoryHelper.ResetMemory(this);
@@ -387,6 +431,11 @@ internal sealed class DeferredGeometryRenderPass : BaseRenderPass, IDisposable
         /// matrice de transformation dans le monde
         /// </summary>
         public Matrix4x4 matWorld;
+
+        /// <summary>
+        /// la matrice View Proj de la lumiere
+        /// </summary>
+        public Matrix4x4 matWorldViewProjLight;
 
         public void Reset()
         {
@@ -408,7 +457,8 @@ internal sealed class DeferredGeometryRenderPass : BaseRenderPass, IDisposable
             _sceneConstantBuffer.Dispose();
             _pixelObjectConstantBuffer.Dispose();
             _vertexObjectConstantBuffer.Dispose();
-            _sampleState.Dispose();
+            _samplerState.Dispose();
+            _shadowMapSamplerState.Dispose();
 
             base.Dispose(disposing);
 

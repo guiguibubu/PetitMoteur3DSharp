@@ -51,7 +51,7 @@ public class Engine
     private bool _isCameraOrthographique;
     private bool _useDebugCamera;
     private SceneRenderingType[] _sceneRenderingTypeValues = Enum.GetValues<SceneRenderingType>();
-    private SceneRenderingType _sceneRenderingType = SceneRenderingType.Forward;
+    private SceneRenderingType _sceneRenderingType = SceneRenderingType.DeferredShading;
     private Vector4 _backgroundColour;
 
     private readonly Stopwatch _horlogeEngine;
@@ -97,6 +97,7 @@ public class Engine
     private Texture _diffuseGeometryBuffer;
     private Texture _specularGeometryBuffer;
     private Texture _normalGeometryBuffer;
+    private Texture _shadowGeometryBuffer;
     #endregion
 
     public Engine(EngineConfiguration conf)
@@ -128,6 +129,7 @@ public class Engine
         _diffuseGeometryBuffer = default!;
         _specularGeometryBuffer = default!;
         _normalGeometryBuffer = default!;
+        _shadowGeometryBuffer = default!;
 
         _defaultDepthTexture = default!;
         _shadowMapTexture = default!;
@@ -547,14 +549,14 @@ public class Engine
         _shadowMapRenderPass = new ShadowMapRenderPass(_graphicPipeline, shadowMapRenderTarget, "ShadowMapRenderPass");
         _forwardRenderingTechnique = new RenderTechnique(_shadowMapClearRenderTargetPass, _shadowMapRenderPass, forwardClearRenderTargetPass, _forwardOpaqueRenderPass);
 
-        Texture[]? geometryBuffersRenderTargets = [_lightAccumulationGeometryBuffer, _diffuseGeometryBuffer, _specularGeometryBuffer, _normalGeometryBuffer];
+        Texture[]? geometryBuffersRenderTargets = [_lightAccumulationGeometryBuffer, _diffuseGeometryBuffer, _specularGeometryBuffer, _normalGeometryBuffer, _shadowGeometryBuffer];
         RenderTarget deferredGeometryRenderTarget = new(geometryBuffersRenderTargets, _defaultDepthTexture);
         RenderTarget deferredlightningRenderTarget = new(forwardBuffer, _defaultDepthTexture);
         ClearRenderTargetPass deferredGeometryClearRenderTargetPass = new ClearRenderTargetPass(_graphicPipeline, deferredGeometryRenderTarget, ClearRenderTargetPass.ClearOption.RenderTargetAndDepthStencil, "DeferredGeometryClearRenderTargetPass");
         ClearRenderTargetPass deferredLightningClearRenderTargetPass = new ClearRenderTargetPass(_graphicPipeline, deferredlightningRenderTarget, ClearRenderTargetPass.ClearOption.RenderTarget, "DeferredLightningClearRenderTargetPass");
-        _deferredGeometryRenderPass = new DeferredGeometryRenderPass(_graphicPipeline, deferredGeometryRenderTarget, "DeferredGeometryRenderPass");
-        _deferredLightningRenderPass = new DeferredLightningRenderPass(_graphicPipeline, deferredlightningRenderTarget, _lightAccumulationGeometryBuffer, _diffuseGeometryBuffer, _specularGeometryBuffer, _normalGeometryBuffer, _meshFactory, "DeferredLightningRenderPass");
-        _deferredRenderingTechnique = new RenderTechnique(deferredGeometryClearRenderTargetPass, _deferredGeometryRenderPass, deferredLightningClearRenderTargetPass, _deferredLightningRenderPass);
+        _deferredGeometryRenderPass = new DeferredGeometryRenderPass(_graphicPipeline, deferredGeometryRenderTarget, _shadowMapTexture.DepthTexture, "DeferredGeometryRenderPass");
+        _deferredLightningRenderPass = new DeferredLightningRenderPass(_graphicPipeline, deferredlightningRenderTarget, _lightAccumulationGeometryBuffer, _diffuseGeometryBuffer, _specularGeometryBuffer, _normalGeometryBuffer, _shadowGeometryBuffer, _meshFactory, "DeferredLightningRenderPass");
+        _deferredRenderingTechnique = new RenderTechnique(_shadowMapClearRenderTargetPass, _shadowMapRenderPass, deferredGeometryClearRenderTargetPass, _deferredGeometryRenderPass, deferredLightningClearRenderTargetPass, _deferredLightningRenderPass);
 
         RenderTarget depthTestRenderTarget = new(forwardBuffer, _defaultDepthTexture);
         ClearRenderTargetPass depthTestClearRenderTargetPass = new ClearRenderTargetPass(_graphicPipeline, depthTestRenderTarget, ClearRenderTargetPass.ClearOption.RenderTargetAndDepthStencil, "DepthTestClearRenderTargetPass");
@@ -605,6 +607,51 @@ public class Engine
         _specularGeometryBuffer = textureManager.GetOrCreateTexture("Engine_SpecularGeometryBuffer", colorTextureDesc,
             (TextureBuilder builder) => builder
             .WithShaderRessourceView(colorTextureShaderResourceViewDesc)
+            .WithRenderTargetView());
+
+        Silk.NET.DXGI.Format formatShadow;
+        uint formatSupport = 0;
+        Windows.Win32.Foundation.HRESULT hresultCheckFormatSupport = (Windows.Win32.Foundation.HRESULT)_graphicDevice.Device.CheckFormatSupport(Silk.NET.DXGI.Format.FormatR1Unorm, ref formatSupport);
+        FormatSupport formatSupportEnum = (FormatSupport)formatSupport;
+        if (hresultCheckFormatSupport == Windows.Win32.Foundation.HRESULT.E_FAIL && formatSupportEnum.HasFlag(FormatSupport.RenderTarget) && formatSupportEnum.HasFlag(FormatSupport.ShaderLoad))
+        {
+            formatShadow = Silk.NET.DXGI.Format.FormatR1Unorm;
+        }
+        else
+        {
+            formatShadow = Silk.NET.DXGI.Format.FormatR8Unorm;
+        }
+        Texture2DDesc shadowTextureDesc = new()
+        {
+            Width = width,
+            Height = height,
+            MipLevels = 1,
+            ArraySize = 1,
+            Format = formatShadow,
+            SampleDesc = new Silk.NET.DXGI.SampleDesc(1, 0),
+            Usage = Usage.Default,
+            BindFlags = (uint)(BindFlag.RenderTarget | BindFlag.ShaderResource),
+            CPUAccessFlags = 0,
+            MiscFlags = 0
+        };
+
+        ShaderResourceViewDesc shadowTextureShaderResourceViewDesc = new()
+        {
+            Format = formatShadow,
+            ViewDimension = D3DSrvDimension.D3DSrvDimensionTexture2D,
+            Anonymous = new ShaderResourceViewDescUnion
+            {
+                Texture2D =
+                {
+                    MostDetailedMip = 0,
+                    MipLevels = 1
+                }
+            }
+        };
+
+        _shadowGeometryBuffer = textureManager.GetOrCreateTexture("Engine_ShadowGeometryBuffer", shadowTextureDesc,
+            (TextureBuilder builder) => builder
+            .WithShaderRessourceView(shadowTextureShaderResourceViewDesc)
             .WithRenderTargetView());
 
         _shadowMapTexture = new ShadowMap(textureManager, width, height, "Engine_ShadowMap");

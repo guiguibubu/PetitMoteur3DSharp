@@ -10,7 +10,8 @@ struct LightParams
     float4 vAEcl; // la valeur ambiante de l’éclairage
     float4 vDEcl; // la valeur diffuse de l’éclairage
     bool enable; // l'éclairage est allumé
-    int3 offset; // Offset for memory alignment
+    bool enableShadow; // autoriser ombre (ShadowMapping)
+    int2 offset; // Offset for memory alignment
 };
 
 cbuffer frameBuffer
@@ -23,12 +24,14 @@ cbuffer objectBuffer
 {
     float4x4 matWorldViewProj; // la matrice totale
     float4x4 matWorld; // matrice de transformation dans le monde
+    float4x4 matWorldViewProjLight; // Matrice VP pour lumière
 }
 
 DeferredShadingGeometryPass_VertexParams DeferredShadingGeometryPassVSImpl(uniform float4 Pos, uniform float3 Normale, uniform float2 coordTex, uniform float3 Tangent)
 {
     DeferredShadingGeometryPass_VertexParams sortie = (DeferredShadingGeometryPass_VertexParams) 0;
     sortie.Pos = mul(Pos, matWorldViewProj);
+    sortie.lightSpacePos = mul(Pos, matWorldViewProjLight);
     sortie.Norm = mul(float4(Normale, 0.0f), matWorld).xyz;
     sortie.Tang = mul(float4(Tangent, 0.0f), matWorld).xyz;
     float3 PosWorld = mul(Pos, matWorld).xyz;

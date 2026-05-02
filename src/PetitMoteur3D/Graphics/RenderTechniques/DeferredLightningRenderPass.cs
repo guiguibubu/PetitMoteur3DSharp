@@ -21,18 +21,20 @@ internal sealed class DeferredLightningRenderPass : BaseRenderPass, IDisposable
     private Texture _geometryBufferDiffuse;
     private Texture _geometryBufferSpecular;
     private Texture _geometryBufferNormal;
+    private Texture _geometryBufferShadow;
 
     private ObjetMesh _fullScreenQuad;
 
     private bool _disposedValue;
 
-    public DeferredLightningRenderPass(D3D11GraphicPipeline graphicPipeline, RenderTarget renderTarget, Texture geometryBufferLightAccumulation, Texture geometryBufferDiffuse, Texture geometryBufferSpecular, Texture geometryBufferNormal, MeshFactory meshFactory, string name = "")
+    public DeferredLightningRenderPass(D3D11GraphicPipeline graphicPipeline, RenderTarget renderTarget, Texture geometryBufferLightAccumulation, Texture geometryBufferDiffuse, Texture geometryBufferSpecular, Texture geometryBufferNormal, Texture geometryBufferShadow, MeshFactory meshFactory, string name = "")
         : base(graphicPipeline, renderTarget, name)
     {
         _geometryBufferLightAccumulation = geometryBufferLightAccumulation;
         _geometryBufferDiffuse = geometryBufferDiffuse;
         _geometryBufferSpecular = geometryBufferSpecular;
         _geometryBufferNormal = geometryBufferNormal;
+        _geometryBufferShadow = geometryBufferShadow;
 
         /// <summary>
         /// Create a screen-space quad that can be used to render full-screen post-process effects to the screen.
@@ -80,6 +82,7 @@ internal sealed class DeferredLightningRenderPass : BaseRenderPass, IDisposable
         ComPtr<ID3D11ShaderResourceView> textureDiffuse = _geometryBufferDiffuse.ShaderRessourceView;
         ComPtr<ID3D11ShaderResourceView> textureSpecular = _geometryBufferSpecular.ShaderRessourceView;
         ComPtr<ID3D11ShaderResourceView> textureNormal = _geometryBufferNormal.ShaderRessourceView;
+        ComPtr<ID3D11ShaderResourceView> textureShadow = _geometryBufferShadow.ShaderRessourceView;
 
         // Activation de la texture
         if (textureLightAccumulation.Handle is not null)
@@ -117,6 +120,15 @@ internal sealed class DeferredLightningRenderPass : BaseRenderPass, IDisposable
         {
             GraphicPipeline.PixelShaderStage.ClearShaderResources(3);
         }
+        
+        if (textureShadow.Handle is not null)
+        {
+            GraphicPipeline.PixelShaderStage.SetShaderResources(4, 1, ref textureShadow);
+        }
+        else
+        {
+            GraphicPipeline.PixelShaderStage.ClearShaderResources(4);
+        }
     }
 
     public override void BindSamplers()
@@ -129,6 +141,7 @@ internal sealed class DeferredLightningRenderPass : BaseRenderPass, IDisposable
         GraphicPipeline.PixelShaderStage.ClearShaderResources(1);
         GraphicPipeline.PixelShaderStage.ClearShaderResources(2);
         GraphicPipeline.PixelShaderStage.ClearShaderResources(3);
+        GraphicPipeline.PixelShaderStage.ClearShaderResources(4);
     }
     #endregion
 
@@ -279,11 +292,6 @@ internal sealed class DeferredLightningRenderPass : BaseRenderPass, IDisposable
         base.UpdateSceneContext(sceneContext);
     }
 
-    protected sealed override void RenderCoreImpl(Scene scene)
-    {
-        base.RenderCoreImpl(scene);
-        Render(_fullScreenQuad);
-    }
     #endregion
 
     #region Private methods
@@ -296,25 +304,33 @@ internal sealed class DeferredLightningRenderPass : BaseRenderPass, IDisposable
         /// la position de la source d’éclairage (Source Point)
         /// </summary>
         public Vector4 Position;
+        // ---- 16 bytes ----
         /// <summary>
         /// la direction de la source d’éclairage (Source Directionnelle)
         /// </summary>
         public Vector4 Direction;
+        // ---- 16 bytes ----
         /// <summary>
         /// la valeur ambiante de l’éclairage
         /// </summary>
         public Vector4 AmbiantColor;
+        // ---- 16 bytes ----
         /// <summary>
         /// la valeur diffuse de l’éclairage
         /// </summary>
         public Vector4 DiffuseColor;
+        // ---- 16 bytes ----
         /// <summary>
         /// Indique la lumiere est active
         /// </summary>
         public int Enable;
+        /// <summary>
+        /// Indique la lumiere fait une ombre (ShadowMapping)
+        /// </summary>
+        public int EnableShadow;
         private readonly uint alignement1_1;
         private readonly uint alignement1_2;
-        private readonly uint alignement1_3;
+        // ---- 16 bytes ----
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 16)]
