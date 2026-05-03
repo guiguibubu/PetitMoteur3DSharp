@@ -226,7 +226,7 @@ internal sealed class DeferredLightningRenderPass : BaseRenderPass, IDisposable
     protected override ShaderCodeFile InitVertexShaderCodeFile()
     {
         // Compilation et chargement du vertex shader
-        string filePath = "shaders\\DeferredShadingLightningPass_VS.hlsl";
+        string filePath = "Assets\\shaders\\DeferredShadingLightningPass_VS.hlsl";
         string entryPoint = "DeferredShadingLightningPassVS";
         string target = "vs_5_0";
         // #define D3DCOMPILE_ENABLE_STRICTNESS                    (1 << 11)
@@ -255,7 +255,7 @@ internal sealed class DeferredLightningRenderPass : BaseRenderPass, IDisposable
     [return: NotNull]
     protected override ShaderCodeFile? InitPixelShaderCodeFile()
     {
-        string filePath = "shaders\\DeferredShadingLightningPass_PS.hlsl";
+        string filePath = "Assets\\shaders\\DeferredShadingLightningPass_PS.hlsl";
         string entryPoint = "DeferredShadingLightningPassPS";
         string target = "ps_5_0";
         // #define D3DCOMPILE_ENABLE_STRICTNESS                    (1 << 11)

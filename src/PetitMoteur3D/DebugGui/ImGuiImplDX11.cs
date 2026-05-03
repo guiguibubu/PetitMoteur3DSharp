@@ -472,7 +472,7 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
     private bool InitVertexShader(ShaderFactory shaderFactory, GraphicBufferFactory bufferFactory)
     {
         // Compilation et chargement du vertex shader
-        string filePath = "shaders\\vs_imgui.hlsl";
+        string filePath = "Assets\\shaders\\vs_imgui.hlsl";
         string entryPoint = "main";
         string target = "vs_5_0";
         // #define D3DCOMPILE_ENABLE_STRICTNESS                    (1 << 11)
@@ -508,7 +508,7 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
     /// <param name="shaderFactory"></param>
     private bool InitPixelShader(ShaderFactory shaderFactory)
     {
-        string filePath = "shaders\\ps_imgui.hlsl";
+        string filePath = "Assets\\shaders\\ps_imgui.hlsl";
         string entryPoint = "main";
         string target = "ps_5_0";
         // #define D3DCOMPILE_ENABLE_STRICTNESS                    (1 << 11)

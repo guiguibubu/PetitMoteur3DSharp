@@ -758,13 +758,13 @@ public class Engine
 
         Mesh meshBlocHerringbone = meshFactory.CreateBloc(4.0f, 4.0f, 4.0f);
         meshBlocHerringbone.Material.Specular = Vector4.Zero;
-        meshBlocHerringbone.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\herringbone_brick_diff.jpg");
-        meshBlocHerringbone.Material.NormalTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\herringbone_brick_norm.jpg");
+        meshBlocHerringbone.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("Assets\\textures\\herringbone_brick_diff.jpg");
+        meshBlocHerringbone.Material.NormalTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("Assets\\textures\\herringbone_brick_norm.jpg");
         
         Mesh meshBlocBrickwall = meshFactory.CreateBloc(4.0f, 4.0f, 4.0f);
         meshBlocBrickwall.Material.Specular = Vector4.Zero;
-        meshBlocBrickwall.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\brickwall.jpg");
-        meshBlocBrickwall.Material.NormalTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\brickwall_normal.jpg");
+        meshBlocBrickwall.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("Assets\\textures\\brickwall.jpg");
+        meshBlocBrickwall.Material.NormalTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("Assets\\textures\\brickwall_normal.jpg");
 
         ObjetMesh bloc1 = new(meshBlocHerringbone, ressourceFactory);
         bloc1.Move(-4f, 2f, 0f);
@@ -780,7 +780,7 @@ public class Engine
 
         // Teapot
         MeshLoader meshLoader = new();
-        SceneNode<Mesh> rootMesh = meshLoader.Load("models\\teapot.gltf");
+        SceneNode<Mesh> rootMesh = meshLoader.Load("Assets\\models\\teapot.gltf");
 
         BoundingBox boundingBox = rootMesh.GetBoundingBox();
         float centerX = (boundingBox.Min.X + boundingBox.Max.X) / 2f;
@@ -795,7 +795,7 @@ public class Engine
         SceneNode<IObjet3D> teapotMeshes = rootMesh.Select<IObjet3D>(m => new ObjetMesh(m, ressourceFactory));
 
         Mesh meshGround = meshFactory.CreatePlane(10f, 10f);
-        meshGround.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("textures\\silk.png");
+        meshGround.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("Assets\\textures\\silk.png");
         
         ObjetMesh ground = new(meshGround, ressourceFactory);
         ground.Rotate(Vector3.UnitX, (float)(Math.PI / 2f));

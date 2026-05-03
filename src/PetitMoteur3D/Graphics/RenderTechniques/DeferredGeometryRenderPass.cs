@@ -202,7 +202,7 @@ internal sealed class DeferredGeometryRenderPass : BaseRenderPass, IDisposable
     protected override ShaderCodeFile InitVertexShaderCodeFile()
     {
         // Compilation et chargement du vertex shader
-        string filePath = "shaders\\DeferredShadingGeometryPass_VS.hlsl";
+        string filePath = "Assets\\shaders\\DeferredShadingGeometryPass_VS.hlsl";
         string entryPoint = "DeferredShadingGeometryPassVS";
         string target = "vs_5_0";
         // #define D3DCOMPILE_ENABLE_STRICTNESS                    (1 << 11)
@@ -231,7 +231,7 @@ internal sealed class DeferredGeometryRenderPass : BaseRenderPass, IDisposable
     [return: NotNull]
     protected override ShaderCodeFile? InitPixelShaderCodeFile()
     {
-        string filePath = "shaders\\DeferredShadingGeometryPass_PS.hlsl";
+        string filePath = "Assets\\shaders\\DeferredShadingGeometryPass_PS.hlsl";
         string entryPoint = "DeferredShadingGeometryPassPS";
         string target = "ps_5_0";
         // #define D3DCOMPILE_ENABLE_STRICTNESS                    (1 << 11)

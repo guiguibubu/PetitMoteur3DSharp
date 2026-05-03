@@ -120,7 +120,7 @@ internal sealed class DepthTestRenderPass : BaseRenderPass, IDisposable
     protected override ShaderCodeFile InitVertexShaderCodeFile()
     {
         // Compilation et chargement du vertex shader
-        string filePath = "shaders\\DepthTest_VS.hlsl";
+        string filePath = "Assets\\shaders\\DepthTest_VS.hlsl";
         string entryPoint = "DepthTestVS";
         string target = "vs_5_0";
         // #define D3DCOMPILE_ENABLE_STRICTNESS                    (1 << 11)
@@ -149,7 +149,7 @@ internal sealed class DepthTestRenderPass : BaseRenderPass, IDisposable
     [return : NotNull]
     protected override ShaderCodeFile? InitPixelShaderCodeFile()
     {
-        string filePath = "shaders\\DepthTest_PS.hlsl";
+        string filePath = "Assets\\shaders\\DepthTest_PS.hlsl";
         string entryPoint = "DepthTestPS";
         string target = "ps_5_0";
         // #define D3DCOMPILE_ENABLE_STRICTNESS                    (1 << 11)

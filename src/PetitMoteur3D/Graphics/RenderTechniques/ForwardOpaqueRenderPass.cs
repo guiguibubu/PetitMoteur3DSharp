@@ -203,7 +203,7 @@ internal class ForwardOpaqueRenderPass : BaseRenderPass, IDisposable
     protected override ShaderCodeFile InitVertexShaderCodeFile()
     {
         // Compilation et chargement du vertex shader
-        string filePath = "shaders\\ForwardRendering_VS.hlsl";
+        string filePath = "Assets\\shaders\\ForwardRendering_VS.hlsl";
         string entryPoint = "ForwardRenderingVS";
         string target = "vs_5_0";
         // #define D3DCOMPILE_ENABLE_STRICTNESS                    (1 << 11)
@@ -232,7 +232,7 @@ internal class ForwardOpaqueRenderPass : BaseRenderPass, IDisposable
     [return: NotNull]
     protected override ShaderCodeFile? InitPixelShaderCodeFile()
     {
-        string filePath = "shaders\\ForwardRendering_PS.hlsl";
+        string filePath = "Assets\\shaders\\ForwardRendering_PS.hlsl";
         string entryPoint = "ForwardRenderingPS";
         string target = "ps_5_0";
         // #define D3DCOMPILE_ENABLE_STRICTNESS                    (1 << 11)

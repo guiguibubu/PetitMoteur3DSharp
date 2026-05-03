@@ -101,7 +101,7 @@ internal sealed class ShadowMapRenderPass : BaseRenderPass, IDisposable
     protected override ShaderCodeFile InitVertexShaderCodeFile()
     {
         // Compilation et chargement du vertex shader
-        string filePath = "shaders\\ShadowMap.hlsl";
+        string filePath = "Assets\\shaders\\ShadowMap.hlsl";
         string entryPoint = "ShadowMapVS";
         string target = "vs_5_0";
         // #define D3DCOMPILE_ENABLE_STRICTNESS                    (1 << 11)
