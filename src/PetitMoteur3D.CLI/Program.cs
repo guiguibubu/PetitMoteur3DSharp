@@ -48,6 +48,10 @@ try
         engine.Run();
     }
 }
+catch(Exception ex)
+{
+    PetitMoteur3D.Logging.Log.Fatal(ex);
+}
 finally
 {
     Serilog.Log.CloseAndFlush();

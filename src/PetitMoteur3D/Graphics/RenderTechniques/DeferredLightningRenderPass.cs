@@ -78,52 +78,52 @@ internal sealed class DeferredLightningRenderPass : BaseRenderPass, IDisposable
 
     public override unsafe void BindPixelShaderRessources()
     {
-        ComPtr<ID3D11ShaderResourceView> textureLightAccumulation = _geometryBufferLightAccumulation.ShaderRessourceView;
-        ComPtr<ID3D11ShaderResourceView> textureDiffuse = _geometryBufferDiffuse.ShaderRessourceView;
-        ComPtr<ID3D11ShaderResourceView> textureSpecular = _geometryBufferSpecular.ShaderRessourceView;
-        ComPtr<ID3D11ShaderResourceView> textureNormal = _geometryBufferNormal.ShaderRessourceView;
-        ComPtr<ID3D11ShaderResourceView> textureShadow = _geometryBufferShadow.ShaderRessourceView;
+        D3D11ShaderResourceView? textureLightAccumulation = _geometryBufferLightAccumulation.ShaderRessourceView;
+        D3D11ShaderResourceView? textureDiffuse = _geometryBufferDiffuse.ShaderRessourceView;
+        D3D11ShaderResourceView? textureSpecular = _geometryBufferSpecular.ShaderRessourceView;
+        D3D11ShaderResourceView? textureNormal = _geometryBufferNormal.ShaderRessourceView;
+        D3D11ShaderResourceView? textureShadow = _geometryBufferShadow.ShaderRessourceView;
 
         // Activation de la texture
-        if (textureLightAccumulation.Handle is not null)
+        if (textureLightAccumulation is not null)
         {
-            GraphicPipeline.PixelShaderStage.SetShaderResources(0, 1, ref textureLightAccumulation);
+            GraphicPipeline.PixelShaderStage.SetShaderResources(0, 1, ref textureLightAccumulation.NativeHandleRef);
         }
         else
         {
             GraphicPipeline.PixelShaderStage.ClearShaderResources(0);
         }
 
-        if (textureDiffuse.Handle is not null)
+        if (textureDiffuse is not null)
         {
-            GraphicPipeline.PixelShaderStage.SetShaderResources(1, 1, ref textureDiffuse);
+            GraphicPipeline.PixelShaderStage.SetShaderResources(1, 1, ref textureDiffuse.NativeHandleRef);
         }
         else
         {
             GraphicPipeline.PixelShaderStage.ClearShaderResources(1);
         }
 
-        if (textureSpecular.Handle is not null)
+        if (textureSpecular is not null)
         {
-            GraphicPipeline.PixelShaderStage.SetShaderResources(2, 1, ref textureSpecular);
+            GraphicPipeline.PixelShaderStage.SetShaderResources(2, 1, ref textureSpecular.NativeHandleRef);
         }
         else
         {
             GraphicPipeline.PixelShaderStage.ClearShaderResources(2);
         }
 
-        if (textureNormal.Handle is not null)
+        if (textureNormal is not null)
         {
-            GraphicPipeline.PixelShaderStage.SetShaderResources(3, 1, ref textureNormal);
+            GraphicPipeline.PixelShaderStage.SetShaderResources(3, 1, ref textureNormal.NativeHandleRef);
         }
         else
         {
             GraphicPipeline.PixelShaderStage.ClearShaderResources(3);
         }
         
-        if (textureShadow.Handle is not null)
+        if (textureShadow is not null)
         {
-            GraphicPipeline.PixelShaderStage.SetShaderResources(4, 1, ref textureShadow);
+            GraphicPipeline.PixelShaderStage.SetShaderResources(4, 1, ref textureShadow.NativeHandleRef);
         }
         else
         {

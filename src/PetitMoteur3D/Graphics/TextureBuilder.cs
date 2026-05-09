@@ -16,7 +16,7 @@ internal interface ITextureBuilder<TBuilder>
 internal sealed class TextureBuilder : ITextureBuilder<TextureBuilder>
 {
     private Texture2DDesc _textureDesc;
-    private ComPtr<ID3D11Texture2D>? _textureRessource;
+    private D3D11Texture2D? _textureRessource;
     private Texture? _texture;
     private SubresourceData? _textureInitialData;
     private ShaderResourceViewDesc? _shaderRessourceViewDesc;
@@ -31,6 +31,7 @@ internal sealed class TextureBuilder : ITextureBuilder<TextureBuilder>
         _textureFactory = textureFactory;
         _textureDesc = textureDesc;
         _name = "";
+        _texture = null;
         _textureRessource = null;
         _textureInitialData = null;
         _shaderRessourceViewDesc = null;
@@ -38,11 +39,25 @@ internal sealed class TextureBuilder : ITextureBuilder<TextureBuilder>
         _createRenderTargetView = false;
     }
 
-    public TextureBuilder(TextureFactory textureFactory, ComPtr<ID3D11Texture2D> textureRessource)
+    public TextureBuilder(TextureFactory textureFactory, Texture2DDesc textureDesc, Texture texture)
+    {
+        _textureFactory = textureFactory;
+        _textureDesc = textureDesc;
+        _name = texture.Name;
+        _texture = texture;
+        _textureRessource = null;
+        _textureInitialData = null;
+        _shaderRessourceViewDesc = null;
+        _depthStencilViewDesc = null;
+        _createRenderTargetView = false;
+    }
+
+    public TextureBuilder(TextureFactory textureFactory, D3D11Texture2D textureRessource)
     {
         _textureFactory = textureFactory;
         _textureDesc = new Texture2DDesc();
         _name = "";
+        _texture = null;
         _textureRessource = textureRessource;
         _textureInitialData = null;
         _shaderRessourceViewDesc = null;
@@ -50,11 +65,11 @@ internal sealed class TextureBuilder : ITextureBuilder<TextureBuilder>
         _createRenderTargetView = false;
     }
 
-    public TextureBuilder(TextureFactory textureFactory, ComPtr<ID3D11Texture2D> textureRessource, Texture texture)
+    public TextureBuilder(TextureFactory textureFactory, D3D11Texture2D textureRessource, Texture texture)
     {
         _textureFactory = textureFactory;
         _textureDesc = new Texture2DDesc();
-        _name = "";
+        _name = texture.Name;
         _texture = texture;
         _textureRessource = textureRessource;
         _textureInitialData = null;
@@ -65,62 +80,49 @@ internal sealed class TextureBuilder : ITextureBuilder<TextureBuilder>
 
     public Texture Build()
     {
-        ComPtr<ID3D11Texture2D> texture;
+        D3D11Texture2D texture;
         bool textureOwner = true;
         if (_textureRessource is not null)
         {
-            texture = _textureRessource.Value;
-            texture.GetDesc(ref _textureDesc);
+            texture = _textureRessource;
             textureOwner = false;
         }
         else if (_textureInitialData is not null)
         {
-            texture = _textureFactory.CreateTexture2D(in _textureDesc, in (Nullable.GetValueRefOrDefaultRef(ref _textureInitialData)));
+            texture = _textureFactory.CreateTexture2D(in _textureDesc, in (Nullable.GetValueRefOrDefaultRef(ref _textureInitialData)), _name + "_Texture");
         }
         else
         {
-            texture = _textureFactory.CreateEmptyTexture2D(in _textureDesc);
+            texture = _textureFactory.CreateEmptyTexture2D(in _textureDesc, _name + "_Texture");
         }
 
-        ComPtr<ID3D11ShaderResourceView> textureView;
-        if (_shaderRessourceViewDesc is null)
+        D3D11ShaderResourceView? textureView = null;
+        if (_shaderRessourceViewDesc is not null)
         {
-            textureView = new ComPtr<ID3D11ShaderResourceView>();
-        }
-        else
-        {
-            textureView = _textureFactory.CreateShaderResourceView(texture, in (Nullable.GetValueRefOrDefaultRef(ref _shaderRessourceViewDesc)));
+            textureView = _textureFactory.CreateShaderResourceView(texture.NativeHandle, in (Nullable.GetValueRefOrDefaultRef(ref _shaderRessourceViewDesc)), _name + "_ShaderRessourceView");
         }
 
-        ComPtr<ID3D11DepthStencilView> depthStencilView;
-        if (_depthStencilViewDesc is null)
+        D3D11DepthStencilView? depthStencilView = null;
+        if (_depthStencilViewDesc is not null)
         {
-            depthStencilView = new ComPtr<ID3D11DepthStencilView>();
-        }
-        else
-        {
-            depthStencilView = _textureFactory.CreateDepthStencilView(texture, in (Nullable.GetValueRefOrDefaultRef(ref _depthStencilViewDesc)));
+            depthStencilView = _textureFactory.CreateDepthStencilView(texture.NativeHandle, in (Nullable.GetValueRefOrDefaultRef(ref _depthStencilViewDesc)), _name + "_DepthStencilView");
         }
 
-        ComPtr<ID3D11RenderTargetView> renderTargetView;
+        D3D11RenderTargetView? renderTargetView = null;
         if (_createRenderTargetView)
         {
-            renderTargetView = _textureFactory.CreateRenderTargetView(texture);
-        }
-        else
-        {
-            renderTargetView = new ComPtr<ID3D11RenderTargetView>();
+            renderTargetView = _textureFactory.CreateRenderTargetView(texture.NativeHandle, _name + "_RenderTargetView");
         }
 
         Texture textureResult;
         if (_texture is null)
         {
-            textureResult = new(_name, (int)_textureDesc.Width, (int)_textureDesc.Height, texture, textureOwner);
+            textureResult = new Texture(_name, texture, textureOwner);
         }
         else
         {
             textureResult = _texture;
-            textureResult.SetTextureRessource(texture, (int)_textureDesc.Width, (int)_textureDesc.Height);
+            textureResult.SetTextureRessource(texture);
         }
         textureResult.SetTextureView(textureView);
         textureResult.SetTextureDepthStencilView(depthStencilView);

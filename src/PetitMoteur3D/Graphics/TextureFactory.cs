@@ -1,6 +1,7 @@
 using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using PetitMoteur3D.Logging;
@@ -80,29 +81,29 @@ internal sealed class TextureFactory
         return new TextureBuilder(this, textureDesc);
     }
 
-    public TextureBuilder CreateBuilder(ComPtr<ID3D11Texture2D> texture)
+    public TextureBuilder CreateBuilder(D3D11Texture2D textureRessource)
     {
-        return new TextureBuilder(this, texture);
+        return new TextureBuilder(this, textureRessource);
     }
 
-    public TextureBuilder CreateBuilder(ComPtr<ID3D11Texture2D> textureRessource, Texture texture)
+    public TextureBuilder CreateBuilder(D3D11Texture2D textureRessource, Texture texture)
     {
         return new TextureBuilder(this, textureRessource, texture);
     }
 
-    public unsafe Texture CreateEmpty(string name, int width, int height)
+    public Texture CreateEmpty(string name, int width, int height)
     {
         Texture2DDesc textureDesc = CreateDefaultTextureDesc((uint)width, (uint)height);
         return CreateEmpty(name, width, height, in textureDesc);
     }
 
-    public unsafe Texture CreateEmpty(string name, int width, int height, in Texture2DDesc textureDesc)
+    public Texture CreateEmpty(string name, int width, int height, in Texture2DDesc textureDesc)
     {
         ShaderResourceViewDesc srvDesc = CreateDefaultShaderResourceViewDesc(textureDesc);
         return CreateEmpty(name, width, height, in textureDesc, in srvDesc);
     }
 
-    public unsafe Texture CreateEmpty(string name, int width, int height, in Texture2DDesc textureDesc, in ShaderResourceViewDesc shaderResourceViewDesc)
+    public Texture CreateEmpty(string name, int width, int height, in Texture2DDesc textureDesc, in ShaderResourceViewDesc shaderResourceViewDesc)
     {
         TextureBuilder textureBuilder = new(this, textureDesc);
         return textureBuilder
@@ -111,25 +112,25 @@ internal sealed class TextureFactory
             .Build();
     }
 
-    public ComPtr<ID3D11Texture2D> CreateTexture2D(in Texture2DDesc pDesc, in SubresourceData pInitialData)
+    public D3D11Texture2D CreateTexture2D(in Texture2DDesc pDesc, in SubresourceData pInitialData, string name = "")
     {
         ComPtr<ID3D11Texture2D> texture2D = default;
         SilkMarshal.ThrowHResult(
             _device.CreateTexture2D(in pDesc, in pInitialData, ref texture2D)
         );
-        return texture2D;
+        return new D3D11Texture2D(texture2D, true, name);
     }
 
-    public ComPtr<ID3D11Texture2D> CreateEmptyTexture2D(in Texture2DDesc pDesc)
+    public D3D11Texture2D CreateEmptyTexture2D(in Texture2DDesc pDesc, string name = "")
     {
         ComPtr<ID3D11Texture2D> texture2D = default;
         SilkMarshal.ThrowHResult(
             _device.CreateTexture2D(in pDesc, in Unsafe.NullRef<SubresourceData>(), ref texture2D)
         );
-        return texture2D;
+        return new D3D11Texture2D(texture2D, true, name);
     }
 
-    public ComPtr<ID3D11ShaderResourceView> CreateShaderResourceView(ComPtr<ID3D11Resource> pResource, in ShaderResourceViewDesc pDesc)
+    public D3D11ShaderResourceView CreateShaderResourceView(ComPtr<ID3D11Resource> pResource, in ShaderResourceViewDesc pDesc, string name = "")
     {
         ComPtr<ID3D11ShaderResourceView> textureView = default;
         SilkMarshal.ThrowHResult
@@ -141,10 +142,10 @@ internal sealed class TextureFactory
                     ref textureView
                 )
             );
-        return textureView;
+        return new D3D11ShaderResourceView(textureView, name);
     }
 
-    public ComPtr<ID3D11ShaderResourceView> CreateShaderResourceView(ComPtr<ID3D11Texture2D> pResource, in ShaderResourceViewDesc pDesc)
+    public D3D11ShaderResourceView CreateShaderResourceView(ComPtr<ID3D11Texture2D> pResource, in ShaderResourceViewDesc pDesc, string name = "")
     {
         ComPtr<ID3D11ShaderResourceView> textureView = default;
         SilkMarshal.ThrowHResult
@@ -156,7 +157,89 @@ internal sealed class TextureFactory
                     ref textureView
                 )
             );
-        return textureView;
+        return new D3D11ShaderResourceView(textureView, name);
+    }
+
+    public void Resize(Texture texture, uint width, uint height)
+    {
+        if (!texture.TextureOwner)
+        {
+            return;
+        }
+
+        RenderTargetViewDesc? rtvDesc = null;
+        DepthStencilViewDesc? dsvDesc = null;
+        ShaderResourceViewDesc? srvDesc = null;
+        Texture2DDesc textureDesc = texture.TextureRessource.Description;
+        textureDesc.Width = width;
+        textureDesc.Height = height;
+        if (texture.RenderTargetView is not null)
+        {
+            rtvDesc = texture.RenderTargetView.Description;
+        }
+        if (texture.DepthStencilView is not null)
+        {
+            dsvDesc = texture.DepthStencilView.Description;
+        }
+        if (texture.ShaderRessourceView is not null)
+        {
+            srvDesc = texture.ShaderRessourceView.Description;
+        }
+
+        TextureBuilder textureBuilder = new(this, textureDesc, texture);
+        if (rtvDesc is not null)
+        {
+            textureBuilder.WithRenderTargetView();
+        }
+        if (dsvDesc is not null)
+        {
+            textureBuilder.WithDepthStencilView(dsvDesc.Value);
+        }
+        if (srvDesc is not null)
+        {
+            textureBuilder.WithShaderRessourceView(srvDesc.Value);
+        }
+
+        texture.ReleaseViews();
+
+        texture = textureBuilder.Build();
+    }
+
+    public void UpdateViews(Texture texture)
+    {
+        RenderTargetViewDesc? rtvDesc = null;
+        DepthStencilViewDesc? dsvDesc = null;
+        ShaderResourceViewDesc? srvDesc = null;
+        if (texture.RenderTargetView is not null)
+        {
+            rtvDesc = texture.RenderTargetView.Description;
+        }
+        if (texture.DepthStencilView is not null)
+        {
+            dsvDesc = texture.DepthStencilView.Description;
+        }
+        if (texture.ShaderRessourceView is not null)
+        {
+            srvDesc = texture.ShaderRessourceView.Description;
+        }
+
+        TextureBuilder textureBuilder = new(this, texture.TextureRessource, texture);
+        if (rtvDesc is not null)
+        {
+            textureBuilder.WithRenderTargetView();
+        }
+        if (dsvDesc is not null)
+        {
+            textureBuilder.WithDepthStencilView(dsvDesc.Value);
+        }
+        if (srvDesc is not null)
+        {
+            textureBuilder.WithShaderRessourceView(srvDesc.Value);
+        }
+
+        texture.ReleaseViews();
+
+        texture = textureBuilder.Build();
     }
 
     private Dictionary<SamplerDesc, ComPtr<ID3D11SamplerState>> _samplerCache = new();
@@ -195,27 +278,27 @@ internal sealed class TextureFactory
         return sampler;
     }
 
-    public ComPtr<ID3D11DepthStencilView> CreateDepthStencilView(ComPtr<ID3D11Texture2D> pResource, in DepthStencilViewDesc pDesc)
+    public D3D11DepthStencilView CreateDepthStencilView(ComPtr<ID3D11Texture2D> pResource, in DepthStencilViewDesc pDesc, string name = "")
     {
         ComPtr<ID3D11DepthStencilView> depthStencilView = default;
         SilkMarshal.ThrowHResult(
             _device.CreateDepthStencilView(pResource, in pDesc, ref depthStencilView)
         );
-        return depthStencilView;
+        return new D3D11DepthStencilView(depthStencilView, name);
     }
 
-    public ComPtr<ID3D11RenderTargetView> CreateRenderTargetView(ComPtr<ID3D11Texture2D> pResource, in RenderTargetViewDesc pDesc)
+    public D3D11RenderTargetView CreateRenderTargetView(ComPtr<ID3D11Texture2D> pResource, in RenderTargetViewDesc pDesc, string name = "")
     {
         ComPtr<ID3D11RenderTargetView> renderTargetView = default;
         SilkMarshal.ThrowHResult(
             _device.CreateRenderTargetView(pResource, in pDesc, ref renderTargetView)
         );
-        return renderTargetView;
+        return new D3D11RenderTargetView(renderTargetView, name);
     }
 
-    public ComPtr<ID3D11RenderTargetView> CreateRenderTargetView(ComPtr<ID3D11Texture2D> pResource)
+    public D3D11RenderTargetView CreateRenderTargetView(ComPtr<ID3D11Texture2D> pResource, string name = "")
     {
-        return CreateRenderTargetView(pResource, in Unsafe.NullRef<RenderTargetViewDesc>());
+        return CreateRenderTargetView(pResource, in Unsafe.NullRef<RenderTargetViewDesc>(), name);
     }
 
     private static Texture2DDesc CreateDefaultTextureDesc(uint width, uint height)

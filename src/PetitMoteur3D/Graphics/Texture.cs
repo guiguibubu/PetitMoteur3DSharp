@@ -8,19 +8,20 @@ namespace PetitMoteur3D.Graphics;
 internal sealed class Texture : IDisposable
 {
     public string Name { get; private set; }
-    public int Width { get; private set; }
-    public int Height { get; private set; }
-    public ComPtr<ID3D11Texture2D> TextureRessource { get { return _texture; } }
-    private ComPtr<ID3D11Texture2D> _texture;
-    public ComPtr<ID3D11ShaderResourceView> ShaderRessourceView { get { return _shaderRessourceView; } }
-    private ComPtr<ID3D11ShaderResourceView> _shaderRessourceView;
-    public ComPtr<ID3D11DepthStencilView> DepthStencilView { get { return _depthStencilView; } }
-    private ComPtr<ID3D11DepthStencilView> _depthStencilView;
-    public ComPtr<ID3D11RenderTargetView> RenderTargetView { get { return _renderTargetView; } }
-    public ref ComPtr<ID3D11RenderTargetView> RenderTargetViewRef { get { return ref _renderTargetView; } }
-    private ComPtr<ID3D11RenderTargetView> _renderTargetView;
+    public uint Width { get; private set; }
+    public uint Height { get; private set; }
+    public D3D11Texture2D TextureRessource { get { return _texture; } }
+    private D3D11Texture2D _texture;
+    public D3D11ShaderResourceView? ShaderRessourceView { get { return _shaderRessourceView; } }
+    private D3D11ShaderResourceView? _shaderRessourceView;
+    public D3D11DepthStencilView? DepthStencilView { get { return _depthStencilView; } }
+    private D3D11DepthStencilView? _depthStencilView;
+    public D3D11RenderTargetView? RenderTargetView { get { return _renderTargetView; } }
+    private D3D11RenderTargetView? _renderTargetView;
 
-    private bool _textureOwner;
+    public bool TextureOwner => _textureOwner;
+
+    private readonly bool _textureOwner;
 
     private bool _disposed;
 
@@ -31,11 +32,13 @@ internal sealed class Texture : IDisposable
     /// <param name="width"></param>
     /// <param name="heigth"></param>
     /// <param name="texture">Released when Texture is disposed</param>
-    public unsafe Texture(string name, int width, int heigth, ComPtr<ID3D11Texture2D> texture, bool textureOwner = true)
+    public Texture(string name, D3D11Texture2D texture, bool textureOwner = true)
     {
+        ArgumentNullException.ThrowIfNull(texture);
+
         Name = name;
-        Width = width;
-        Height = heigth;
+        Width = texture.Description.Width;
+        Height = texture.Description.Height;
         _texture = texture;
         _shaderRessourceView = null;
         _depthStencilView = null;
@@ -43,97 +46,96 @@ internal sealed class Texture : IDisposable
 
         _textureOwner = textureOwner;
 
-        if (!string.IsNullOrEmpty(Name))
-        {
-            string nameDebug = Name + "_Texture";
-            // Set Debug Name
-            using (GlobalMemory unmanagedName = SilkMarshal.StringToMemory(nameDebug, NativeStringEncoding.Ansi))
-            {
-                nint namePtr = unmanagedName.Handle;
-                fixed (Guid* guidPtr = &Windows.Win32.PInvoke.WKPDID_D3DDebugObjectName)
-                {
-                    _texture.SetPrivateData(guidPtr, (uint)nameDebug.Length, namePtr.ToPointer());
-                }
-            }
-        }
         _disposed = false;
     }
 
-    public unsafe void SetTextureRessource(ComPtr<ID3D11Texture2D> textureRessource, int width, int height)
+    public void SetTextureRessource(D3D11Texture2D textureRessource)
     {
+        ArgumentNullException.ThrowIfNull(textureRessource);
         if (_textureOwner)
         {
-            throw new InvalidOperationException("Update texture resource only available for texture you don't own");
+            _texture.Dispose();
         }
-        Width = width;
-        Height = height;
         _texture = textureRessource;
-
-        if (!string.IsNullOrEmpty(Name))
-        {
-            string nameDebug = Name + "_Texture";
-            // Set Debug Name
-            using (GlobalMemory unmanagedName = SilkMarshal.StringToMemory(nameDebug, NativeStringEncoding.Ansi))
-            {
-                nint namePtr = unmanagedName.Handle;
-                fixed (Guid* guidPtr = &Windows.Win32.PInvoke.WKPDID_D3DDebugObjectName)
-                {
-                    _texture.SetPrivateData(guidPtr, (uint)nameDebug.Length, namePtr.ToPointer());
-                }
-            }
-        }
+        Width = _texture.Description.Width;
+        Height = _texture.Description.Height;
     }
 
-    public unsafe void SetTextureView(ComPtr<ID3D11ShaderResourceView> textureView)
+    public void SetTextureRessource(ComPtr<ID3D11Texture2D> textureRessource)
     {
+        _texture.UpdateHandle(textureRessource);
+        Width = _texture.Description.Width;
+        Height = _texture.Description.Height;
+    }
+
+    public void SetTextureView(D3D11ShaderResourceView? textureView)
+    {
+        if (_shaderRessourceView is not null)
+        {
+            _shaderRessourceView.Dispose();
+        }
         _shaderRessourceView = textureView;
-        if (_shaderRessourceView.Handle is not null && !string.IsNullOrEmpty(Name))
+    }
+
+    public void SetTextureView(ComPtr<ID3D11ShaderResourceView> textureView)
+    {
+        if (_shaderRessourceView is null)
         {
-            string name = Name + "_ShaderRessourceView";
-            // Set Debug Name
-            using (GlobalMemory unmanagedName = SilkMarshal.StringToMemory(name, NativeStringEncoding.Ansi))
-            {
-                nint namePtr = unmanagedName.Handle;
-                fixed (Guid* guidPtr = &Windows.Win32.PInvoke.WKPDID_D3DDebugObjectName)
-                {
-                    _shaderRessourceView.SetPrivateData(guidPtr, (uint)name.Length, namePtr.ToPointer());
-                }
-            }
+            _shaderRessourceView = new D3D11ShaderResourceView(textureView, Name + "_ShaderRessourceView");
+        }
+        else
+        {
+            _shaderRessourceView.UpdateHandle(textureView);
         }
     }
-    public unsafe void SetTextureDepthStencilView(ComPtr<ID3D11DepthStencilView> textureDepthStencilView)
+
+    public void SetTextureDepthStencilView(D3D11DepthStencilView? textureDepthStencilView)
     {
+        if (_depthStencilView is not null)
+        {
+            _depthStencilView.Dispose();
+        }
         _depthStencilView = textureDepthStencilView;
-        if (_depthStencilView.Handle is not null && !string.IsNullOrEmpty(Name))
+    }
+
+    public void SetTextureDepthStencilView(ComPtr<ID3D11DepthStencilView> textureDepthStencilView)
+    {
+        if (_depthStencilView is null)
         {
-            string name = Name + "_DepthStencilView";
-            // Set Debug Name
-            using (GlobalMemory unmanagedName = SilkMarshal.StringToMemory(name, NativeStringEncoding.Ansi))
-            {
-                nint namePtr = unmanagedName.Handle;
-                fixed (Guid* guidPtr = &Windows.Win32.PInvoke.WKPDID_D3DDebugObjectName)
-                {
-                    _depthStencilView.SetPrivateData(guidPtr, (uint)name.Length, namePtr.ToPointer());
-                }
-            }
+            _depthStencilView = new D3D11DepthStencilView(textureDepthStencilView, Name + "_DepthStencilView");
+        }
+        else
+        {
+            _depthStencilView.UpdateHandle(textureDepthStencilView);
         }
     }
-    public unsafe void SetTextureRenderTargetView(ComPtr<ID3D11RenderTargetView> textureRenderTargetView)
+
+    public void SetTextureRenderTargetView(D3D11RenderTargetView? textureRenderTargetView)
     {
-        _renderTargetView = textureRenderTargetView;
-        if (_renderTargetView.Handle is not null && !string.IsNullOrEmpty(Name))
+        if (_renderTargetView is not null)
         {
-            string name = Name + "_RenderTargetView";
-            // Set Debug Name
-            using (GlobalMemory unmanagedName = SilkMarshal.StringToMemory(name, NativeStringEncoding.Ansi))
-            {
-                nint namePtr = unmanagedName.Handle;
-                fixed (Guid* guidPtr = &Windows.Win32.PInvoke.WKPDID_D3DDebugObjectName)
-                {
-                    _renderTargetView.SetPrivateData(guidPtr, (uint)name.Length, namePtr.ToPointer());
-                }
-            }
+            _renderTargetView.Dispose();
         }
+        _renderTargetView = textureRenderTargetView;
+    }
+
+    public void SetTextureRenderTargetView(ComPtr<ID3D11RenderTargetView> textureRenderTargetView)
+    {
+        if (_renderTargetView is null)
+        {
+            _renderTargetView = new D3D11RenderTargetView(textureRenderTargetView, Name + "_RenderTargetView");
+        }
+        else
+        {
+            _renderTargetView.UpdateHandle(textureRenderTargetView);
+        }
+    }
+
+    public void ReleaseViews()
+    {
+        _shaderRessourceView?.Dispose();
+        _depthStencilView?.Dispose();
+        _renderTargetView?.Dispose();
     }
 
     ~Texture()
@@ -180,9 +182,7 @@ internal sealed class Texture : IDisposable
             {
                 _texture.Dispose();
             }
-            _shaderRessourceView.Dispose();
-            _depthStencilView.Dispose();
-            _renderTargetView.Dispose();
+            ReleaseViews();
 
             // Note disposing has been done.
             _disposed = true;

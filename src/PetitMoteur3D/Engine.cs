@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Numerics;
@@ -45,7 +46,7 @@ public class Engine
     private bool _imGuiShowSceneEditor;
     private bool _debugToolKeyPressed;
     private bool _showDebugTool;
-    private bool _showScene;
+    private bool _enableRenderScene;
     private bool _showShadow;
     private bool _isShadowOrthographique;
     private bool _isCameraOrthographique;
@@ -74,6 +75,7 @@ public class Engine
     private bool _isInitializing;
     private bool _isInitialized;
     public event Action? Initialized;
+    private bool _isWindowResized;
 
     public ulong CurrentFrameCount;
 
@@ -98,6 +100,8 @@ public class Engine
     private Texture _specularGeometryBuffer;
     private Texture _normalGeometryBuffer;
     private Texture _shadowGeometryBuffer;
+
+    private List<RenderTarget> _renderTargets;
     #endregion
 
     public Engine(EngineConfiguration conf)
@@ -134,12 +138,15 @@ public class Engine
         _defaultDepthTexture = default!;
         _shadowMapTexture = default!;
 
+        _renderTargets = new List<RenderTarget>();
+
         _backgroundColour = default;
 
         _isInitializing = false;
         _isInitialized = false;
         _initAnimationFinished = false;
         CurrentFrameCount = 0;
+        _isWindowResized = false;
 
         _imGuiShowDemo = false;
         _imGuiShowDebugLogs = false;
@@ -150,7 +157,7 @@ public class Engine
         _imGuiShowSceneEditor = false;
         _debugToolKeyPressed = false;
         _showDebugTool = false;
-        _showScene = true;
+        _enableRenderScene = true;
         _showShadow = true;
         _isShadowOrthographique = true;
         _isCameraOrthographique = false;
@@ -269,8 +276,16 @@ public class Engine
         }
         CurrentFrameCount++;
         double elapsedTimeEngine = _horlogeEngine.ElapsedMilliseconds;
+
         try
         {
+            if (_isWindowResized)
+            {
+                Log.Information("[PetitMoteur3D] MainLoop Resize Begin");
+                OnResizeImpl(_window.Size);
+                _isWindowResized = false;
+                Log.Information("[PetitMoteur3D] MainLoop Resize Finished");
+            }
             // Est-il temps de rendre l’image ?
             if (elapsedTimeEngine > ECART_TEMPS_ENGINE)
             {
@@ -280,7 +295,7 @@ public class Engine
                 _horlogeEngine.Restart();
                 // On prépare la prochaine image
                 AnimeScene((float)elapsedTimeEngine);
-                if (_showScene)
+                if (_enableRenderScene)
                 {
                     double elapsedTimeScene = _horlogeScene.ElapsedMilliseconds;
                     if (elapsedTimeScene > ECART_TEMPS_SCENE)
@@ -322,7 +337,7 @@ public class Engine
                         ImGui.Checkbox("Show Debug Logs", ref _imGuiShowDebugLogs);     // Edit bool
                         ImGui.Checkbox("Show Metrics", ref _imGuiShowMetrics);     // Edit bool
                         ImGui.Checkbox("Show SceneEditor", ref _imGuiShowSceneEditor);     // Edit bool
-                        ImGui.Checkbox("Show Scene", ref _showScene);     // Edit bool
+                        ImGui.Checkbox("Render Scene", ref _enableRenderScene);     // Edit bool
                         ImGui.Checkbox("Show Shadow", ref _showShadow);     // Edit bool
                         ImGui.Checkbox("Show Shadow Orthographique", ref _isShadowOrthographique);     // Edit bool
                         ImGui.Checkbox("Show Debug Camera Options", ref _imGuiShowDebugCameraOptions);     // Edit bool
@@ -469,7 +484,7 @@ public class Engine
                         if (ImGui.TreeNode("Diffuse Texture"))
                         {
                             ImGui.Text(string.Format("size = {0} x {1}", material.DiffuseTexture.Width, material.DiffuseTexture.Height));
-                            ImGui.Image((nint)material.DiffuseTexture.ShaderRessourceView.Handle, new Vector2(int.Min(material.DiffuseTexture.Width, 256), int.Min(material.DiffuseTexture.Height, 256)));
+                            ImGui.Image((nint)material.DiffuseTexture.ShaderRessourceView?.NativeHandle.Handle, new Vector2(uint.Min(material.DiffuseTexture.Width, 256), uint.Min(material.DiffuseTexture.Height, 256)));
                             ImGui.TreePop();
                         }
                     }
@@ -478,7 +493,7 @@ public class Engine
                         if (ImGui.TreeNode("Normal Texture"))
                         {
                             ImGui.Text(string.Format("size = {0} x {1}", material.NormalTexture.Width, material.NormalTexture.Height));
-                            ImGui.Image((nint)material.NormalTexture.ShaderRessourceView.Handle, new Vector2(int.Min(material.NormalTexture.Width, 256), int.Min(material.NormalTexture.Height, 256)));
+                            ImGui.Image((nint)material.NormalTexture.ShaderRessourceView?.NativeHandle.Handle, new Vector2(uint.Min(material.NormalTexture.Width, 256), uint.Min(material.NormalTexture.Height, 256)));
                             ImGui.TreePop();
                         }
                     }
@@ -495,6 +510,21 @@ public class Engine
     }
 
     private void OnResize(Size newSize)
+    {
+        try
+        {
+            Log.Information("[PetitMoteur3D] OnResize");
+            _isWindowResized = true;
+            Log.Information("[PetitMoteur3D] OnResize Finished");
+        }
+        catch (Exception ex)
+        {
+            Log.Fatal(ex);
+            _window.Close();
+        }
+    }
+
+    private void OnResizeImpl(Size newSize)
     {
         // If the window resizes, we need to be sure to update the swapchain's back buffers.
         _graphicPipeline.Resize(in newSize);
@@ -516,8 +546,7 @@ public class Engine
             debugFrustrumView.NearPlaneDistance,
             debugFrustrumView.FarPlaneDistance);
 
-        _shadowMapTexture.Resize(newSize);
-        //_scene.OnScreenResize(newSize);
+        ResizeRenderTargets(_graphicDevice.RessourceFactory.TextureManager.Factory, in newSize);
     }
 
     private void BeginRender()
@@ -536,13 +565,13 @@ public class Engine
 
         Texture backBufferTexture = _graphicPipeline.SwapChain.BackBuffer;
         Texture[]? forwardBuffer = [backBufferTexture];
-        RenderTarget wireframeRenderTarget = new(forwardBuffer, _defaultDepthTexture);
+        RenderTarget wireframeRenderTarget = new(forwardBuffer, _defaultDepthTexture, "WireframeRenderTarget");
         ClearRenderTargetPass wireFrameClearRenderTargetPass = new(_graphicPipeline, wireframeRenderTarget, ClearRenderTargetPass.ClearOption.RenderTargetAndDepthStencil, "WireframeClearRenderTargetPass");
         _wireFrameRenderPass = new WireframeOpaqueRenderPass(_graphicPipeline, wireframeRenderTarget, "WireFrameRenderPass");
         _wireFrameTechnique = new RenderTechnique(wireFrameClearRenderTargetPass, _wireFrameRenderPass);
 
-        RenderTarget forwardRenderTarget = new(forwardBuffer, _defaultDepthTexture);
-        RenderTarget shadowMapRenderTarget = new(Array.Empty<Texture?>(), _shadowMapTexture.DepthTexture);
+        RenderTarget forwardRenderTarget = new(forwardBuffer, _defaultDepthTexture, "ForwardRenderTarget");
+        RenderTarget shadowMapRenderTarget = new(Array.Empty<Texture?>(), _shadowMapTexture.DepthTexture, "ShadowMapRenderTarget");
         ClearRenderTargetPass forwardClearRenderTargetPass = new ClearRenderTargetPass(_graphicPipeline, forwardRenderTarget, ClearRenderTargetPass.ClearOption.RenderTargetAndDepthStencil, "ForwardClearRenderTargetPass");
         _shadowMapClearRenderTargetPass = new ClearRenderTargetPass(_graphicPipeline, shadowMapRenderTarget, ClearRenderTargetPass.ClearOption.DepthStencil, "ShadowMapClearRenderTargetPass");
         _forwardOpaqueRenderPass = new ForwardOpaqueRenderPass(_graphicPipeline, forwardRenderTarget, _shadowMapTexture.DepthTexture, "ForwardOpaqueRenderPass");
@@ -550,20 +579,46 @@ public class Engine
         _forwardRenderingTechnique = new RenderTechnique(_shadowMapClearRenderTargetPass, _shadowMapRenderPass, forwardClearRenderTargetPass, _forwardOpaqueRenderPass);
 
         Texture[]? geometryBuffersRenderTargets = [_lightAccumulationGeometryBuffer, _diffuseGeometryBuffer, _specularGeometryBuffer, _normalGeometryBuffer, _shadowGeometryBuffer];
-        RenderTarget deferredGeometryRenderTarget = new(geometryBuffersRenderTargets, _defaultDepthTexture);
-        RenderTarget deferredlightningRenderTarget = new(forwardBuffer, _defaultDepthTexture);
+        RenderTarget deferredGeometryRenderTarget = new(geometryBuffersRenderTargets, _defaultDepthTexture, "DeferredGeometryRenderTarget");
+        RenderTarget deferredlightningRenderTarget = new(forwardBuffer, _defaultDepthTexture, "DeferredLightningRenderTarget");
         ClearRenderTargetPass deferredGeometryClearRenderTargetPass = new ClearRenderTargetPass(_graphicPipeline, deferredGeometryRenderTarget, ClearRenderTargetPass.ClearOption.RenderTargetAndDepthStencil, "DeferredGeometryClearRenderTargetPass");
         ClearRenderTargetPass deferredLightningClearRenderTargetPass = new ClearRenderTargetPass(_graphicPipeline, deferredlightningRenderTarget, ClearRenderTargetPass.ClearOption.RenderTarget, "DeferredLightningClearRenderTargetPass");
         _deferredGeometryRenderPass = new DeferredGeometryRenderPass(_graphicPipeline, deferredGeometryRenderTarget, _shadowMapTexture.DepthTexture, "DeferredGeometryRenderPass");
         _deferredLightningRenderPass = new DeferredLightningRenderPass(_graphicPipeline, deferredlightningRenderTarget, _lightAccumulationGeometryBuffer, _diffuseGeometryBuffer, _specularGeometryBuffer, _normalGeometryBuffer, _shadowGeometryBuffer, _meshFactory, "DeferredLightningRenderPass");
         _deferredRenderingTechnique = new RenderTechnique(_shadowMapClearRenderTargetPass, _shadowMapRenderPass, deferredGeometryClearRenderTargetPass, _deferredGeometryRenderPass, deferredLightningClearRenderTargetPass, _deferredLightningRenderPass);
 
-        RenderTarget depthTestRenderTarget = new(forwardBuffer, _defaultDepthTexture);
+        RenderTarget depthTestRenderTarget = new(forwardBuffer, _defaultDepthTexture, "DepthTestRenderTarget");
         ClearRenderTargetPass depthTestClearRenderTargetPass = new ClearRenderTargetPass(_graphicPipeline, depthTestRenderTarget, ClearRenderTargetPass.ClearOption.RenderTargetAndDepthStencil, "DepthTestClearRenderTargetPass");
         _depthTestRenderPass = new DepthTestRenderPass(_graphicPipeline, depthTestRenderTarget, "DepthTestRenderPass");
         _depthTestTechnique = new RenderTechnique(depthTestClearRenderTargetPass, _depthTestRenderPass);
 
-        _imGuiRenderTarget = new RenderTarget(forwardBuffer, null, "ImGuiRendnerTarget");
+        _imGuiRenderTarget = new RenderTarget(forwardBuffer, null, "ImGuiRenderTarget");
+
+        _renderTargets.Add(wireframeRenderTarget);
+        _renderTargets.Add(forwardRenderTarget);
+        _renderTargets.Add(shadowMapRenderTarget);
+        _renderTargets.Add(deferredGeometryRenderTarget);
+        _renderTargets.Add(deferredlightningRenderTarget);
+        _renderTargets.Add(depthTestRenderTarget);
+        _renderTargets.Add(_imGuiRenderTarget);
+
+    }
+
+    private void ResizeRenderTargets(TextureFactory textureFactory, ref readonly Size newSize)
+    {
+        textureFactory.Resize(_lightAccumulationGeometryBuffer, (uint)newSize.Width, (uint)newSize.Height);
+        textureFactory.Resize(_diffuseGeometryBuffer, (uint)newSize.Width, (uint)newSize.Height);
+        textureFactory.Resize(_specularGeometryBuffer, (uint)newSize.Width, (uint)newSize.Height);
+        textureFactory.Resize(_shadowGeometryBuffer, (uint)newSize.Width, (uint)newSize.Height);
+        textureFactory.Resize(_normalGeometryBuffer, (uint)newSize.Width, (uint)newSize.Height);
+        textureFactory.Resize(_defaultDepthTexture, (uint)newSize.Width, (uint)newSize.Height);
+
+        _shadowMapTexture.Resize(newSize);
+
+        foreach (RenderTarget renderTarget in _renderTargets)
+        {
+            renderTarget.ResetNativeCache();
+        }
     }
 
     private void InitRenderTargets(TextureManager textureManager, uint width, uint height)
@@ -760,7 +815,7 @@ public class Engine
         meshBlocHerringbone.Material.Specular = Vector4.Zero;
         meshBlocHerringbone.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("Assets\\textures\\herringbone_brick_diff.jpg");
         meshBlocHerringbone.Material.NormalTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("Assets\\textures\\herringbone_brick_norm.jpg");
-        
+
         Mesh meshBlocBrickwall = meshFactory.CreateBloc(4.0f, 4.0f, 4.0f);
         meshBlocBrickwall.Material.Specular = Vector4.Zero;
         meshBlocBrickwall.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("Assets\\textures\\brickwall.jpg");
@@ -768,7 +823,7 @@ public class Engine
 
         ObjetMesh bloc1 = new(meshBlocHerringbone, ressourceFactory);
         bloc1.Move(-4f, 2f, 0f);
-        
+
         ObjetMesh bloc2 = new(meshBlocBrickwall, ressourceFactory);
         bloc2.Move(4f, 2f, 0f);
 
@@ -796,7 +851,7 @@ public class Engine
 
         Mesh meshGround = meshFactory.CreatePlane(10f, 10f);
         meshGround.Material.DiffuseTexture = ressourceFactory.TextureManager.GetOrLoadTextureFromFile("Assets\\textures\\silk.png");
-        
+
         ObjetMesh ground = new(meshGround, ressourceFactory);
         ground.Rotate(Vector3.UnitX, (float)(Math.PI / 2f));
 

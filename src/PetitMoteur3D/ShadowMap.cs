@@ -113,6 +113,6 @@ internal sealed class ShadowMap
 
     public void Resize(Size newSize)
     {
-        InitDepthBuffer((uint)newSize.Width, (uint)newSize.Height);
+        _textureManager.Factory.Resize(_depthTexture, (uint)newSize.Width, (uint)newSize.Height);
     }
 }

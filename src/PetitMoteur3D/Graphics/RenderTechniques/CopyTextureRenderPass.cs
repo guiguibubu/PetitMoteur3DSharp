@@ -49,7 +49,7 @@ internal sealed class CopyTextureRenderPass : IRenderPass
     #region Private methods
     private void CopyTexture()
     {
-        _graphicPipeline.DeviceContext.CopyResource(_textureTarget.TextureRessource, _textureSource.TextureRessource);
+        _graphicPipeline.DeviceContext.CopyResource(_textureTarget.TextureRessource.NativeHandle, _textureSource.TextureRessource.NativeHandle);
     }
     #endregion
 }

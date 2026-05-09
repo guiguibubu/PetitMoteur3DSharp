@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using PetitMoteur3D.Graphics;
 using PetitMoteur3D.Graphics.Buffers;
 using PetitMoteur3D.Graphics.Shaders;
 using Silk.NET.Core.Native;
@@ -24,7 +25,7 @@ internal struct ImGuiImplDX11Data : IComVtbl<ImGuiImplDX11Data>
     public ConstantBuffer? VertexConstantBuffer = null;
     public PixelShader? PixelShader = null;
     public ComPtr<ID3D11SamplerState> FontSampler = null;
-    public ComPtr<ID3D11ShaderResourceView> FontTextureView = null;
+    public D3D11ShaderResourceView? FontTextureView = null;
     public ComPtr<ID3D11RasterizerState> RasterizerState = null;
     public ComPtr<ID3D11BlendState> BlendState = null;
     public ComPtr<ID3D11DepthStencilState> DepthStencilState = null;

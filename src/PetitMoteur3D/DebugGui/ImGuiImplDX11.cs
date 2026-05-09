@@ -442,7 +442,7 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
 
         // Store our identifier
         io.Fonts.ClearTexData();
-        io.Fonts.SetTexID((nint)_backendRendererUserData.FontTextureView.Handle);
+        io.Fonts.SetTexID((nint)_backendRendererUserData.FontTextureView!.NativeHandle.Handle);
 
         // Create texture sampler
         // (Bilinear sampling is required by default. Set 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false' to allow point/nearest sampling)
@@ -681,16 +681,16 @@ internal sealed class ImGuiImplDX11 : IImGuiBackendRenderer
         if (_backendRendererUserData.D3dDevice.Handle is null)
             return;
 
-        if (_backendRendererUserData.FontSampler.Handle != null) { _backendRendererUserData.FontSampler.Dispose(); _backendRendererUserData.FontSampler = null; }
-        if (_backendRendererUserData.FontTextureView.Handle != null) { _backendRendererUserData.FontTextureView.Dispose(); _backendRendererUserData.FontTextureView = null; ImGui.GetIO().Fonts.SetTexID(0); } // We copied data.FontTextureView to io.Fonts.TexID so let's clear that as well.
-        if (_backendRendererUserData.IndexBuffer != null) { _backendRendererUserData.IndexBuffer.Dispose(); _backendRendererUserData.IndexBuffer = null; }
-        if (_backendRendererUserData.VertexBuffer != null) { _backendRendererUserData.VertexBuffer.Dispose(); _backendRendererUserData.VertexBuffer = null; }
-        if (_backendRendererUserData.BlendState.Handle != null) { _backendRendererUserData.BlendState.Dispose(); _backendRendererUserData.BlendState = null; }
-        if (_backendRendererUserData.DepthStencilState.Handle != null) { _backendRendererUserData.DepthStencilState.Dispose(); _backendRendererUserData.DepthStencilState = null; }
-        if (_backendRendererUserData.RasterizerState.Handle != null) { _backendRendererUserData.RasterizerState.Dispose(); _backendRendererUserData.RasterizerState = null; }
-        if (_backendRendererUserData.PixelShader != null) { _backendRendererUserData.PixelShader.Dispose(); _backendRendererUserData.PixelShader = null; }
-        if (_backendRendererUserData.VertexConstantBuffer != null) { _backendRendererUserData.VertexConstantBuffer.Dispose(); _backendRendererUserData.VertexConstantBuffer = null; }
-        if (_backendRendererUserData.VertexShader != null) { _backendRendererUserData.VertexShader.Dispose(); _backendRendererUserData.VertexShader = null; }
+        if (_backendRendererUserData.FontSampler.Handle is not null) { _backendRendererUserData.FontSampler.Dispose(); _backendRendererUserData.FontSampler = null; }
+        if (_backendRendererUserData.FontTextureView is not null) { _backendRendererUserData.FontTextureView.Dispose(); _backendRendererUserData.FontTextureView = null; ImGui.GetIO().Fonts.SetTexID(0); } // We copied data.FontTextureView to io.Fonts.TexID so let's clear that as well.
+        if (_backendRendererUserData.IndexBuffer is not null) { _backendRendererUserData.IndexBuffer.Dispose(); _backendRendererUserData.IndexBuffer = null; }
+        if (_backendRendererUserData.VertexBuffer is not null) { _backendRendererUserData.VertexBuffer.Dispose(); _backendRendererUserData.VertexBuffer = null; }
+        if (_backendRendererUserData.BlendState.Handle is not null) { _backendRendererUserData.BlendState.Dispose(); _backendRendererUserData.BlendState = null; }
+        if (_backendRendererUserData.DepthStencilState.Handle is not null) { _backendRendererUserData.DepthStencilState.Dispose(); _backendRendererUserData.DepthStencilState = null; }
+        if (_backendRendererUserData.RasterizerState.Handle is not null) { _backendRendererUserData.RasterizerState.Dispose(); _backendRendererUserData.RasterizerState = null; }
+        if (_backendRendererUserData.PixelShader is not null) { _backendRendererUserData.PixelShader.Dispose(); _backendRendererUserData.PixelShader = null; }
+        if (_backendRendererUserData.VertexConstantBuffer is not null) { _backendRendererUserData.VertexConstantBuffer.Dispose(); _backendRendererUserData.VertexConstantBuffer = null; }
+        if (_backendRendererUserData.VertexShader is not null) { _backendRendererUserData.VertexShader.Dispose(); _backendRendererUserData.VertexShader = null; }
     }
 
     public static Matrix4x4 CreateOrthographicOffCenterLH(float left, float right, float bottom, float top, float zNearPlane, float zFarPlane)

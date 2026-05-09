@@ -40,7 +40,7 @@ internal sealed class D3D11SwapChain : IDisposable
         _textureManager = textureManager;
         _description = new SwapChainDesc1();
         UpdateDesc();
-        _backBufferTexture = InitRenderTargetView();
+        _backBufferTexture = InitBackBuffer();
         _disposed = false;
     }
 
@@ -58,12 +58,15 @@ internal sealed class D3D11SwapChain : IDisposable
             _nativeHandle.ResizeBuffers(bufferCount, width, height, newFormat, flags)
         );
         UpdateDesc();
-        UpdateRenderTargetView();
+        UpdateBackBuffer();
     }
 
     public void ResizeBuffers(uint width, uint height)
     {
-        ResizeBuffers(_description.BufferCount, width, height, _description.Format, _description.Flags);
+        //  According  to  documentation https://learn.microsoft.com/en-us/windows/win32/api/dxgi/nf-dxgi-idxgiswapchain-resizebuffers#remarks
+        // You can't resize a swap chain unless you release all outstanding references to its back buffers. You must release all of its direct and indirect references on the back buffers in order for ResizeBuffers to succeed. 
+        _backBufferTexture.ReleaseViews();
+        ResizeBuffers(0, width, height, Format.FormatUnknown, 0);
     }
 
     private void UpdateDesc()
@@ -71,7 +74,7 @@ internal sealed class D3D11SwapChain : IDisposable
         _nativeHandle.GetDesc1(ref _description);
     }
 
-    private unsafe Texture InitRenderTargetView()
+    private Texture InitBackBuffer()
     {
         // Create « render target view » 
         // Obtain the framebuffer for the swapchain's backbuffer.
@@ -79,7 +82,7 @@ internal sealed class D3D11SwapChain : IDisposable
         using (ComPtr<ID3D11Texture2D> framebuffer = _nativeHandle.GetBuffer<ID3D11Texture2D>(0))
         {
             texture = _textureManager.Factory
-                .CreateBuilder(framebuffer)
+                .CreateBuilder(new D3D11Texture2D(framebuffer, false, "SwapChain_BackBuffer_Texture"))
                 .WithRenderTargetView()
                 .WithName("SwapChain_BackBuffer")
                 .Build();
@@ -87,17 +90,14 @@ internal sealed class D3D11SwapChain : IDisposable
         return texture;
     }
 
-    private void UpdateRenderTargetView()
+    private void UpdateBackBuffer()
     {
         // Create « render target view » 
         // Obtain the framebuffer for the swapchain's backbuffer.
-        _backBufferTexture.Dispose();
         using (ComPtr<ID3D11Texture2D> framebuffer = _nativeHandle.GetBuffer<ID3D11Texture2D>(0))
         {
-            _backBufferTexture = _textureManager.Factory
-                .CreateBuilder(framebuffer, _backBufferTexture)
-                .WithRenderTargetView()
-                .Build();
+            _backBufferTexture.SetTextureRessource(framebuffer);
+            _textureManager.Factory.UpdateViews(_backBufferTexture);
         }
     }
 

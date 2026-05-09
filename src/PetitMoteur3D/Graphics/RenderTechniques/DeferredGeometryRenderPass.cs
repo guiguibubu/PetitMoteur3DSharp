@@ -69,32 +69,32 @@ internal sealed class DeferredGeometryRenderPass : BaseRenderPass, IDisposable
         _pixelObjectConstantBuffer.Bind(GraphicPipeline, ShaderType.PixelShader, idSlot: 1);
     }
 
-    public override unsafe void BindPixelShaderRessources()
+    public override void BindPixelShaderRessources()
     {
-        ComPtr<ID3D11ShaderResourceView> texture3D = _textureD3D?.ShaderRessourceView ?? new();
-        ComPtr<ID3D11ShaderResourceView> normalMap = _normalMap?.ShaderRessourceView ?? new();
-        ComPtr<ID3D11ShaderResourceView> shadowMap = _shadowMap?.ShaderRessourceView ?? new();
+        D3D11ShaderResourceView? texture3D = _textureD3D?.ShaderRessourceView;
+        D3D11ShaderResourceView? normalMap = _normalMap?.ShaderRessourceView;
+        D3D11ShaderResourceView? shadowMap = _shadowMap?.ShaderRessourceView;
 
         // Activation de la texture
-        if (texture3D.Handle is not null)
+        if (texture3D is not null)
         {
-            GraphicPipeline.PixelShaderStage.SetShaderResources(0, 1, ref texture3D);
+            GraphicPipeline.PixelShaderStage.SetShaderResources(0, 1, ref texture3D.NativeHandleRef);
         }
         else
         {
             GraphicPipeline.PixelShaderStage.ClearShaderResources(0);
         }
-        if (normalMap.Handle is not null)
+        if (normalMap is not null)
         {
-            GraphicPipeline.PixelShaderStage.SetShaderResources(1, 1, ref normalMap);
+            GraphicPipeline.PixelShaderStage.SetShaderResources(1, 1, ref normalMap.NativeHandleRef);
         }
         else
         {
             GraphicPipeline.PixelShaderStage.ClearShaderResources(1);
         }
-        if (shadowMap.Handle is not null)
+        if (shadowMap is not null)
         {
-            GraphicPipeline.PixelShaderStage.SetShaderResources(2, 1, ref shadowMap);
+            GraphicPipeline.PixelShaderStage.SetShaderResources(2, 1, ref shadowMap.NativeHandleRef);
         }
         else
         {
